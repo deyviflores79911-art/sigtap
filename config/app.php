@@ -11,5 +11,5 @@ return [
     'faker_locale' => 'es_ES',
     'key' => env('APP_KEY'),
     'cipher' => 'AES-256-CBC',
-    'providers' => Illuminate\Support\ServiceProvider::defaultProviders()->toArray(),
+    'providers' => Illuminate\Support\ServiceProvider::defaultProviders()->merge([App\Providers\RouteServiceProvider::class])->toArray(),
 ];
