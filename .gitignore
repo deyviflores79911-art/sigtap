@@ -1,9 +1,7 @@
-/vendor
-/node_modules
+venv/
+*.pyc
+__pycache__/
+db.sqlite3
 .env
-.env.backup
-.phpunit.result.cache
-/storage/*.key
-/public/hot
-/public/storage
-.DS_Store
+.vscode/
+.idea/
