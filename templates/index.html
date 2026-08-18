@@ -1,0 +1,974 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIGTA - Sistema de Gestión TI</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+
+  <!--
+    Esta maqueta usa solo HTML + CSS.
+    Los radio-buttons permiten cambiar de "pantalla" sin JavaScript.
+  -->
+  <input class="nav-radio" type="radio" name="pagina" id="nav-panel" checked>
+  <input class="nav-radio" type="radio" name="pagina" id="nav-soporte">
+  <input class="nav-radio" type="radio" name="pagina" id="nav-mantenimiento">
+  <input class="nav-radio" type="radio" name="pagina" id="nav-compras">
+  <input class="nav-radio" type="radio" name="pagina" id="nav-portal">
+
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">EMI</div>
+        <div>
+          <h1>SIGTA</h1>
+          <p>Sistema de Gestión TI</p>
+        </div>
+      </div>
+
+      <div class="institution">ESCUELA MILITAR DE INGENIERÍA</div>
+
+      <div class="profile">
+        <div class="profile-avatar">COMC</div>
+        <div>
+          <strong>Administrador SIGTA</strong>
+          <span>Global</span>
+        </div>
+      </div>
+
+      <div class="menu-title">ADMINISTRACIÓN</div>
+
+      <nav class="menu">
+        <label for="nav-panel" class="menu-item menu-panel">
+          <span class="menu-icon">▦</span>
+          <span>Panel</span>
+          <i></i>
+        </label>
+
+        <label for="nav-soporte" class="menu-item menu-soporte">
+          <span class="menu-icon">🎧</span>
+          <span>Soporte Técnico</span>
+          <i></i>
+        </label>
+
+        <label for="nav-mantenimiento" class="menu-item menu-mantenimiento">
+          <span class="menu-icon">🔧</span>
+          <span>Mantenimiento</span>
+          <i></i>
+        </label>
+
+        <label for="nav-compras" class="menu-item menu-compras">
+          <span class="menu-icon">🛒</span>
+          <span>Compras</span>
+          <i></i>
+        </label>
+      </nav>
+
+      <div class="menu-title">AUTOSERVICIO</div>
+
+      <nav class="menu">
+        <label for="nav-portal" class="menu-item menu-portal">
+          <span class="menu-icon">♙</span>
+          <span>Portal Solicitante</span>
+          <i></i>
+        </label>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="status-box">
+          <span class="status-dot"></span>
+          <div>
+            <strong>RF-KAN-02 ACTIVO</strong>
+            <small>v2026.08.10</small>
+          </div>
+        </div>
+        <button class="logout">↪ Cerrar sesión</button>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO -->
+    <div class="workspace">
+
+      <header class="topbar">
+        <div class="breadcrumb">SIGTA / <strong></strong></div>
+
+        <div class="top-user">
+          <span class="bell">♢<b></b></span>
+          <div class="separator"></div>
+          <div class="top-user-text">
+            <strong>Administrador SIGTA</strong>
+            <span>Administrador SIGTA</span>
+          </div>
+          <div class="top-avatar">COMC</div>
+        </div>
+      </header>
+
+      <main class="content">
+
+        <!-- ======================================================
+             PANEL
+        ======================================================= -->
+        <section class="page page-panel">
+          <div class="page-heading">
+            <div>
+              <h2>Panel de Control — SIGTA</h2>
+              <p>Escuela Militar de Ingeniería · Lunes, 10 de agosto de 2026</p>
+            </div>
+          </div>
+
+          <div class="metrics metrics-6">
+            <article class="metric-card">
+              <span>TOTAL DE ENTRADAS ST</span>
+              <strong>19</strong>
+              <small>14 activos</small>
+            </article>
+            <article class="metric-card">
+              <span>SLA EN RIESGO ST</span>
+              <strong class="danger">5</strong>
+              <small>entradas</small>
+            </article>
+            <article class="metric-card">
+              <span>BOLETOS MTO</span>
+              <strong>10</strong>
+              <small>6 preventivos</small>
+            </article>
+            <article class="metric-card">
+              <span>COMPRAS ACTIVAS</span>
+              <strong>10</strong>
+              <small>2 en aprobación</small>
+            </article>
+            <article class="metric-card">
+              <span>ÓRDENES EMITIDAS</span>
+              <strong class="success">3</strong>
+              <small>en proceso</small>
+            </article>
+            <article class="metric-card">
+              <span>SLA CUMPLIÓ ST</span>
+              <strong class="success">74%</strong>
+              <small>14 de 19</small>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="module-cards">
+              <article class="module-card">
+                <header>
+                  <div class="module-icon">🎧</div>
+                  <h3>Soporte Técnico</h3>
+                </header>
+                <div class="module-stats">
+                  <div><strong>14</strong><span>Entradas abiertas</span></div>
+                  <div><strong>74%</strong><span>SLA cumplido</span></div>
+                  <div><strong>4</strong><span>Críticos activos</span></div>
+                  <div><strong>3</strong><span>WIP real</span></div>
+                </div>
+                <label for="nav-soporte" class="primary-btn">Abrir Tablero →</label>
+              </article>
+
+              <article class="module-card">
+                <header>
+                  <div class="module-icon">🔧</div>
+                  <h3>Mantenimiento</h3>
+                </header>
+                <div class="module-stats">
+                  <div><strong>10</strong><span>Abiertos</span></div>
+                  <div><strong>75%</strong><span>SLA cumplido</span></div>
+                  <div><strong>6</strong><span>Preventivos</span></div>
+                  <div><strong>6</strong><span>Correctivos</span></div>
+                </div>
+                <label for="nav-mantenimiento" class="primary-btn">Abrir Tablero →</label>
+              </article>
+
+              <article class="module-card">
+                <header>
+                  <div class="module-icon">🛒</div>
+                  <h3>Compras</h3>
+                </header>
+                <div class="module-stats">
+                  <div><strong>10</strong><span>Activas</span></div>
+                  <div><strong>2</strong><span>Pend. aprobación</span></div>
+                  <div><strong>3</strong><span>Órdenes emitidas</span></div>
+                  <div><strong>1</strong><span>Bloqueadas</span></div>
+                </div>
+                <label for="nav-compras" class="primary-btn">Abrir Tablero →</label>
+              </article>
+            </div>
+
+            <aside class="activity-card">
+              <h3>Actividad Reciente</h3>
+
+              <div class="activity-item red">
+                <b>Soporte Técnico · ST-2026-001</b>
+                <span>Escalado a prioridad Crítica</span>
+                <small>Hace 25 minutos</small>
+              </div>
+
+              <div class="activity-item blue">
+                <b>Compras · CMP-2026-003</b>
+                <span>Solicitud de cotización enviada</span>
+                <small>Hace 1 hora</small>
+              </div>
+
+              <div class="activity-item orange">
+                <b>Mantenimiento · MTO-2026-008</b>
+                <span>SLA vencido — atención requiere</span>
+                <small>Hace 2 horas</small>
+              </div>
+
+              <div class="activity-item blue">
+                <b>Soporte Técnico · ST-2026-005</b>
+                <span>Ticket mueve a En pruebas</span>
+                <small>Hace 3 horas</small>
+              </div>
+
+              <div class="activity-item green">
+                <b>Compras · CMP-2026-001</b>
+                <span>Aprobación nivel 2 completada</span>
+                <small>Hace 5 horas</small>
+              </div>
+
+              <div class="activity-item green">
+                <b>Mantenimiento · MTO-2026-005</b>
+                <span>Mantenimiento finalizado</span>
+                <small>Hace 6 horas</small>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- ======================================================
+             SOPORTE
+        ======================================================= -->
+        <section class="page page-soporte">
+          <div class="page-heading icon-title">
+            <div class="big-icon">🎧</div>
+            <div>
+              <h2>Soporte Técnico</h2>
+              <p>RF-KAN-02 · Gestión de tickets de soporte TI</p>
+            </div>
+          </div>
+
+          <div class="metrics metrics-4">
+            <article class="metric-card top-blue">
+              <strong>19</strong>
+              <small>Total de entradas</small>
+            </article>
+            <article class="metric-card top-blue">
+              <strong>11</strong>
+              <small>En Proceso</small>
+            </article>
+            <article class="metric-card top-green">
+              <strong class="success">74%</strong>
+              <small>SLA Cumplido</small>
+            </article>
+            <article class="metric-card top-orange">
+              <strong class="warning">3</strong>
+              <small>WIP real</small>
+            </article>
+          </div>
+
+          <div class="board-scroll">
+            <div class="priority-board">
+
+              <div class="priority-header empty"></div>
+              <div class="kanban-head">Nuevo <b>3</b></div>
+              <div class="kanban-head yellow">En análisis <b>4</b></div>
+              <div class="kanban-head">Asignado <b>3</b></div>
+              <div class="kanban-head purple">En ejecución <b>3</b></div>
+              <div class="kanban-head pink">En pruebas <b>1</b></div>
+              <div class="kanban-head green">Resuelto</div>
+
+              <!-- CRITICA -->
+              <div class="lane-label critical"><span>●</span> CRÍTICA <b>4</b></div>
+              <div class="cell"><article class="ticket-card priority-critical">
+                <div class="card-top"><span class="badge critical">CRÍTICA</span><span class="sla risk">● En riesgo</span></div>
+                <small>ST-2026-004</small>
+                <h4>Pérdida de datos en servidor de archivos compartidos</h4>
+                <em>Sin asignar</em>
+                <span class="tag">Almacenamiento</span>
+                <footer>💬 1 &nbsp; 📎 0 <span>2d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-critical">
+                <div class="card-top"><span class="badge critical">CRÍTICA</span><span class="sla late">● Vencido</span></div>
+                <small>ST-2026-002</small>
+                <h4>Fallo en base de datos del SIS Académico</h4>
+                <p>Responsable: Srta. Roberto Mamani</p>
+                <span class="tag">Base de Datos</span>
+                <div class="progress-label">Progreso <b>25%</b></div>
+                <div class="progress"><i style="width:25%"></i></div>
+                <footer>💬 5 &nbsp; 📎 1 <span>Vence hoy</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-critical">
+                <div class="card-top"><span class="badge critical">CRÍTICA</span><span class="sla risk">● En riesgo</span></div>
+                <small>ST-2026-003</small>
+                <h4>Servidor EMI-SRV-01 con temperatura crítica</h4>
+                <p>Responsable: Sr. Carlos Mendoza</p>
+                <span class="tag">Hardware</span>
+                <div class="progress-label">Progreso <b>10%</b></div>
+                <div class="progress"><i style="width:10%"></i></div>
+                <footer>💬 3 &nbsp; 📎 3 <span>1d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-critical">
+                <div class="card-top"><span class="badge critical">CRÍTICA</span><span class="sla late">● Vencido</span></div>
+                <small>ST-2026-001</small>
+                <h4>Sistema de autenticación institucional caído</h4>
+                <p>Responsable: Cap. Ana Quispe</p>
+                <span class="tag">Infraestructura</span>
+                <div class="progress-label">Progreso <b>60%</b></div>
+                <div class="progress"><i style="width:60%"></i></div>
+                <footer>💬 8 &nbsp; 📎 2 <span>Vencido 1d</span></footer>
+              </article></div>
+              <div class="cell"></div>
+              <div class="cell"></div>
+
+              <!-- ALTA -->
+              <div class="lane-label high"><span>●</span> ALTA <b>6</b></div>
+              <div class="cell"></div>
+
+              <div class="cell"><article class="ticket-card priority-high">
+                <div class="card-top"><span class="badge high">ALTA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-008</small>
+                <h4>Actualización de parches de seguridad fallida en 24 equipos</h4>
+                <p>Responsable: Sr. Daniel Chávez</p>
+                <span class="tag">Seguridad</span>
+                <div class="progress-label">Progreso <b>20%</b></div>
+                <div class="progress orange"><i style="width:20%"></i></div>
+                <footer>💬 3 &nbsp; 📎 2 <span>6d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-high">
+                <div class="card-top"><span class="badge high">ALTA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-007</small>
+                <h4>VPN institucional desconectada - acceso remoto</h4>
+                <p>Responsable: Capitana Elena Rojas</p>
+                <span class="tag">Seguridad</span>
+                <div class="progress-label">Progreso <b>5%</b></div>
+                <div class="progress orange"><i style="width:5%"></i></div>
+                <footer>💬 2 &nbsp; 📎 0 <span>4d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-high">
+                <div class="card-top"><span class="badge high">ALTA</span><span class="sla risk">● En riesgo</span></div>
+                <small>ST-2026-006</small>
+                <h4>Red inalámbrica inaccesible en Bloque C</h4>
+                <p>Responsable: Srta. Roberto Mamani</p>
+                <span class="tag">Infraestructura</span>
+                <div class="progress-label">Progreso <b>50%</b></div>
+                <div class="progress orange"><i style="width:50%"></i></div>
+                <footer>💬 6 &nbsp; 📎 2 <span>2d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-high">
+                <div class="card-top"><span class="badge high">ALTA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-005</small>
+                <h4>Servicio de correo institucional sin respuesta</h4>
+                <p>Responsable: Cabo María Torrez</p>
+                <span class="tag">Comunicaciones</span>
+                <div class="progress-label">Progreso <b>85%</b></div>
+                <div class="progress orange"><i style="width:85%"></i></div>
+                <footer>💬 4 &nbsp; 📎 1 <span>5d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-high">
+                <div class="card-top"><span class="badge high">ALTA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-009</small>
+                <h4>Sistema de videoconferencia inoperativo Sala Directorio</h4>
+                <p>Responsable: Cabo Patricia Lima</p>
+                <span class="tag">Audiovisual/Multimedia</span>
+                <div class="progress-label">Progreso <b>100%</b></div>
+                <div class="progress orange"><i style="width:100%"></i></div>
+                <footer>💬 5 &nbsp; 📎 1 <span>10d</span></footer>
+              </article></div>
+
+              <!-- MEDIA -->
+              <div class="lane-label medium"><span>●</span> MEDIA <b>5</b></div>
+
+              <div class="cell"><article class="ticket-card priority-medium">
+                <div class="card-top"><span class="badge medium">MEDIA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-011</small>
+                <h4>Impresora HP LaserJet fuera de línea - Sala Docentes</h4>
+                <em>Sin asignar</em>
+                <span class="tag">Hardware</span>
+                <footer>💬 0 &nbsp; 📎 0 <span>7d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-medium">
+                <div class="card-top"><span class="badge medium">MEDIA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-012</small>
+                <h4>Actualización antivirus fallida en Lab. computación</h4>
+                <p>Responsable: Sargento Jorge Condori</p>
+                <span class="tag">Software</span>
+                <div class="progress-label">Progreso <b>30%</b></div>
+                <div class="progress gold"><i style="width:30%"></i></div>
+                <footer>💬 2 &nbsp; 📎 1 <span>8d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"></div>
+
+              <div class="cell"><article class="ticket-card priority-medium">
+                <div class="card-top"><span class="badge medium">MEDIA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-013</small>
+                <h4>Licencias Microsoft Office 365 vencidas - Administración</h4>
+                <p>Responsable: Cap. Ana Quispe</p>
+                <span class="tag">Licencias</span>
+                <div class="progress-label">Progreso <b>45%</b></div>
+                <div class="progress gold"><i style="width:45%"></i></div>
+                <footer>💬 3 &nbsp; 📎 4 <span>9d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"></div>
+
+              <div class="cell"><article class="ticket-card priority-medium">
+                <div class="card-top"><span class="badge medium">MEDIA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-014</small>
+                <h4>Configuración de cuentas nuevas - Depto. logística</h4>
+                <p>Responsable: Cabo María Torrez</p>
+                <span class="tag">Usuarios</span>
+                <div class="progress-label">Progreso <b>100%</b></div>
+                <div class="progress gold"><i style="width:100%"></i></div>
+                <footer>💬 1 &nbsp; 📎 0 <span>15d</span></footer>
+              </article></div>
+
+              <!-- BAJA -->
+              <div class="lane-label low"><span>●</span> BAJA <b>4</b></div>
+
+              <div class="cell"><article class="ticket-card priority-low">
+                <div class="card-top"><span class="badge low">BAJA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-016</small>
+                <h4>Proyector sin señal en Aula 204 - Bloque B</h4>
+                <em>Sin asignar</em>
+                <span class="tag">Audiovisual/Multimedia</span>
+                <footer>💬 0 &nbsp; 📎 0 <span>12d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-low">
+                <div class="card-top"><span class="badge low">BAJA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-018</small>
+                <h4>Instalación de AutoCAD 2026 - Laboratorio Diseño</h4>
+                <p>Responsable: Sargento Jorge Condori</p>
+                <span class="tag">Software</span>
+                <div class="progress-label">Progreso <b>15%</b></div>
+                <div class="progress green"><i style="width:15%"></i></div>
+                <footer>💬 2 &nbsp; 📎 3 <span>14d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"><article class="ticket-card priority-low">
+                <div class="card-top"><span class="badge low">BAJA</span><span class="sla ok">● En tiempo</span></div>
+                <small>ST-2026-017</small>
+                <h4>PC lenta en Secretaría - escritorio compartido</h4>
+                <p>Responsable: Cabo Patricia Lima</p>
+                <span class="tag">Hardware</span>
+                <div class="progress-label">Progreso <b>5%</b></div>
+                <div class="progress green"><i style="width:5%"></i></div>
+                <footer>💬 1 &nbsp; 📎 0 <span>10d restantes</span></footer>
+              </article></div>
+
+              <div class="cell"></div>
+              <div class="cell"></div>
+              <div class="cell"></div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- ======================================================
+             MANTENIMIENTO
+        ======================================================= -->
+        <section class="page page-mantenimiento">
+          <div class="page-heading icon-title">
+            <div class="big-icon">🔧</div>
+            <div>
+              <h2>Mantenimiento</h2>
+              <p>Tablero Kanban — Preventivo y Correctivo</p>
+            </div>
+          </div>
+
+          <div class="maintenance-section preventive-section">
+            <div class="section-bar">
+              <h3><span class="dot navy"></span> PREVENTIVO <b>6 entradas</b></h3>
+              <span>SLA cumplido: 5 / 6</span>
+            </div>
+
+            <div class="simple-kanban cols-6">
+              <div class="kanban-column">
+                <div class="column-title">Solicitud recibida <b>1</b></div>
+                <article class="ticket-card maintenance preventive">
+                  <div class="card-top"><span class="badge preventive-badge">PREVENTIVO</span><span class="sla ok">● 12d</span></div>
+                  <small>MTO-2026-003</small>
+                  <h4>Revisión semestral switch core y distribución</h4>
+                  <div class="asset-box">ACTIVO SW-CORE-01 / SW-DIST-02</div>
+                  <p>Ubicación: Cuarto de Comunicaciones</p>
+                  <em>Sin asignar</em>
+                  <span class="badge medium">Medios de comunicación</span>
+                  <footer>💬 0 · 📎 22 <span>20 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title yellow">Diagnóstico <b>1</b></div>
+                <article class="ticket-card maintenance preventive">
+                  <div class="card-top"><span class="badge preventive-badge">PREVENTIVO</span><span class="sla risk">● 3D</span></div>
+                  <small>MTO-2026-004</small>
+                  <h4>Actualización de firmware servidores EMI-SRV-01 y SRV-02</h4>
+                  <div class="asset-box">ACTIVO EMI-SRV-01 / EMI SRV 02</div>
+                  <p>Ubicación: Sala de Servidores</p>
+                  <p>Responsable: Sr. Carlos Mendoza</p>
+                  <span class="badge high">Alta</span>
+                  <div class="progress orange"><i style="width:15%"></i></div>
+                  <footer>💬 3 · 📎 13 <span>12 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title">Planificado <b>1</b></div>
+                <article class="ticket-card maintenance preventive">
+                  <div class="card-top"><span class="badge preventive-badge">PREVENTIVO</span><span class="sla ok">● 5d</span></div>
+                  <small>MTO-2026-001</small>
+                  <h4>Mantenimiento preventivo UPS - Sala Servidores</h4>
+                  <div class="asset-box">ACTIVO UPS-SALA-01 (APC Smart-UPS 3000)</div>
+                  <p>Ubicación: Sala de Servidores</p>
+                  <p>Responsable: Sargento Luis Flores</p>
+                  <span class="badge high">Alta</span>
+                  <footer>💬 2 · 📎 16 <span>15 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title purple">En ejecución <b>1</b></div>
+                <article class="ticket-card maintenance preventive">
+                  <div class="card-top"><span class="badge preventive-badge">PREVENTIVO</span><span class="sla ok">● 8d</span></div>
+                  <small>MTO-2026-002</small>
+                  <h4>Calibración y limpieza de proyectores Aulas 101-110</h4>
+                  <div class="asset-box">ACTIVO PROJ-AULA-101 al 110</div>
+                  <p>Ubicación: Bloque A - Aulas 101-110</p>
+                  <p>Responsable: Cabo Patricia Lima</p>
+                  <span class="badge medium">Media</span>
+                  <div class="progress gold"><i style="width:40%"></i></div>
+                  <footer>💬 1 · 📎 18 <span>08 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title pink">Verificación <b>1</b></div>
+                <article class="ticket-card maintenance preventive">
+                  <div class="card-top"><span class="badge preventive-badge">PREVENTIVO</span><span class="sla ok">● 6d</span></div>
+                  <small>MTO-2026-006</small>
+                  <h4>Revisión y prueba de APs WiFi campus completo</h4>
+                  <div class="asset-box">ACTIVO AP-BLKA/B/C/D-01-12</div>
+                  <p>Ubicación: Campus EMI - Todos los bloques</p>
+                  <p>Responsable: Srta. Roberto Mamani</p>
+                  <span class="badge medium">Media</span>
+                  <div class="progress gold"><i style="width:90%"></i></div>
+                  <footer>💬 5 · 📎 14 <span>05 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title green">Finalizado <b>1</b></div>
+                <article class="ticket-card maintenance preventive priority-low">
+                  <div class="card-top"><span class="badge preventive-badge">PREVENTIVO</span><span class="sla ok">● 25d</span></div>
+                  <small>MTO-2026-005</small>
+                  <h4>Laboratorio de mantenimiento preventivo de PCs</h4>
+                  <div class="asset-box">ACTIVO PC-LAB-C01 al C30</div>
+                  <p>Ubicación: Laboratorio Computación - Bloque C</p>
+                  <p>Responsable: Sargento Jorge Condori</p>
+                  <span class="badge low">Baja</span>
+                  <div class="progress green"><i style="width:100%"></i></div>
+                  <footer>💬 4 · 📎 8 <span>01 de agosto</span></footer>
+                </article>
+              </div>
+            </div>
+          </div>
+
+          <div class="maintenance-section corrective-section">
+            <div class="section-bar orange-line">
+              <h3><span class="dot orange-dot"></span> CORRECTIVO <b>6 entradas</b></h3>
+              <span>SLA cumplido: 4 / 6</span>
+            </div>
+
+            <div class="simple-kanban cols-6">
+              <div class="kanban-column">
+                <div class="column-title">Solicitud recibida <b>1</b></div>
+                <article class="ticket-card maintenance corrective">
+                  <div class="card-top"><span class="badge corrective-badge">CORRECTIVO</span><span class="sla ok">● 14d</span></div>
+                  <small>MTO-2026-010</small>
+                  <h4>Reparación de teclados y ratones deteriorados Bloque D</h4>
+                  <div class="asset-box">ACTIVO Periféricos PC-BLKD-001 al 015</div>
+                  <p>Ubicación: Bloque D - Aulas 301-308</p>
+                  <em>Sin asignar</em>
+                  <span class="badge low">Baja</span>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title yellow">Diagnóstico <b>1</b></div>
+                <article class="ticket-card maintenance corrective">
+                  <div class="card-top"><span class="badge corrective-badge">CORRECTIVO</span><span class="sla late">● Hoy</span></div>
+                  <small>MTO-2026-008</small>
+                  <h4>Reparación de aire acondicionado Sala Servidores</h4>
+                  <div class="asset-box">ACTIVO AC-SRV-01 (Daikin 24000 BTU)</div>
+                  <p>Ubicación: Sala de Servidores</p>
+                  <p>Responsable: Capitana Sandra Villca</p>
+                  <span class="badge critical">Crítica</span>
+                  <div class="progress orange"><i style="width:30%"></i></div>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title">Planificado <b>1</b></div>
+                <article class="ticket-card maintenance corrective">
+                  <div class="card-top"><span class="badge corrective-badge">CORRECTIVO</span><span class="sla ok">● 4d</span></div>
+                  <small>MTO-2026-009</small>
+                  <h4>Cambio de disco duro fallido en NAS Biblioteca</h4>
+                  <div class="asset-box">ACTIVO NAS-BIB-01 (Synology DS920+)</div>
+                  <p>Ubicación: Biblioteca EMI</p>
+                  <p>Responsable: Sr. Carlos Mendoza</p>
+                  <span class="badge high">Alta</span>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title purple">En ejecución <b>1</b></div>
+                <article class="ticket-card maintenance corrective">
+                  <div class="card-top"><span class="badge corrective-badge">CORRECTIVO</span><span class="sla risk">● 2d</span></div>
+                  <small>MTO-2026-007</small>
+                  <h4>Reemplazo de batería UPS - Bloque Administrativo</h4>
+                  <div class="asset-box">ACTIVO UPS-ADM-02 (APC Smart-UPS 1500)</div>
+                  <p>Responsable: Sargento Luis Flores</p>
+                  <span class="badge high">Alta</span>
+                  <div class="progress orange"><i style="width:65%"></i></div>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title pink">Verificación <b>1</b></div>
+                <article class="ticket-card maintenance corrective">
+                  <div class="card-top"><span class="badge corrective-badge">CORRECTIVO</span><span class="sla ok">● 7d</span></div>
+                  <small>MTO-2026-012</small>
+                  <h4>Reparación cableado estructurado Bloque B Piso 2</h4>
+                  <div class="asset-box">ACTIVO Cableado Cat6 - Bloque B</div>
+                  <p>Responsable: Srta. Roberto Mamani</p>
+                  <span class="badge high">Alta</span>
+                  <div class="progress orange"><i style="width:95%"></i></div>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title green">Finalizado <b>1</b></div>
+                <article class="ticket-card maintenance corrective priority-medium">
+                  <div class="card-top"><span class="badge corrective-badge">CORRECTIVO</span><span class="sla ok">● 20 días</span></div>
+                  <small>MTO-2026-011</small>
+                  <h4>Reemplazo monitor dañado PC-SEC-003 Secretaría</h4>
+                  <div class="asset-box">ACTIVO PC-SEC-003 Monitor Dell 24"</div>
+                  <p>Responsable: Sargento Jorge Condori</p>
+                  <span class="badge medium">Media</span>
+                  <div class="progress gold"><i style="width:100%"></i></div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======================================================
+             COMPRAS
+        ======================================================= -->
+        <section class="page page-compras">
+          <div class="page-heading icon-title">
+            <div class="big-icon">🛒</div>
+            <div>
+              <h2>Compras</h2>
+              <p>Tablero Kanban — Flujo de adquisiciones</p>
+            </div>
+          </div>
+
+          <div class="metrics metrics-4">
+            <article class="metric-card top-blue"><strong>10</strong><small>Solicitudes Activas</small></article>
+            <article class="metric-card top-orange"><strong class="warning">2</strong><small>Aprobaciones Pend.</small></article>
+            <article class="metric-card top-green"><strong class="success">3</strong><small>Órdenes Emitidas</small></article>
+            <article class="metric-card top-blue"><strong class="money">Bs. 161.400</strong><small>Monto en proceso</small></article>
+          </div>
+
+          <div class="board-scroll">
+            <div class="simple-kanban purchases cols-7">
+
+              <div class="kanban-column">
+                <div class="column-title">Solicitud <b>1</b></div>
+                <article class="ticket-card purchase-card">
+                  <div class="card-top"><span class="badge high">Alta</span><span class="sla ok">● 15d</span></div>
+                  <small>CMP-2026-005</small>
+                  <h4>Switch Cisco Catalyst 2960 de reemplazo</h4>
+                  <span class="tag">Redes</span>
+                  <p>Solicitante: TI - Redes</p>
+                  <em>Sin asignar</em>
+                  <div class="approval-dots">Aprobación: ○ ○ ○</div>
+                  <footer>💬 0 <span>25 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title yellow">En análisis <b>1</b></div>
+                <article class="ticket-card purchase-card">
+                  <div class="card-top"><span class="badge high">Alta</span><span class="sla ok">● 20 días</span></div>
+                  <small>CMP-2026-007</small>
+                  <h4>Servidor de respaldo NAS - 48TB de capacidad</h4>
+                  <span class="tag">Infraestructura</span>
+                  <p>Solicitante: TI - Infraestructura</p>
+                  <p>Asignado: Tte. Daniel Chávez</p>
+                  <div class="approval-dots">Aprobación: ○ ○ ○ ○</div>
+                  <footer>💬 5 <span>30 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title yellow">Cotización <b>2</b></div>
+
+                <article class="ticket-card purchase-card">
+                  <div class="card-top"><span class="badge critical">Crítica</span><span class="sla risk">● 2d</span></div>
+                  <small>CMP-2026-003</small>
+                  <h4>UPS de reemplazo para Sala de Servidores (2 unidades)</h4>
+                  <span class="tag">Infraestructura</span>
+                  <p>Solicitante: TI - Infraestructura</p>
+                  <p>Asignado: Tte. Daniel Chávez</p>
+                  <div class="approval-dots">Aprobación: ○ ○ ○</div>
+                  <footer>💬 4 <span>12 de agosto</span></footer>
+                </article>
+
+                <article class="ticket-card purchase-card">
+                  <div class="card-top"><span class="badge low">Baja</span><span class="sla ok">● 18d</span></div>
+                  <small>CMP-2026-011</small>
+                  <h4>Mobiliario para laboratorio Innovación - sillas ergonómicas</h4>
+                  <span class="tag">Mobiliario</span>
+                  <p>Solicitante: Lab. Innovación</p>
+                  <p>Asignado: Tte. Daniel Chávez</p>
+                  <div class="approval-dots">Aprobación: ○ ○ ○</div>
+                  <footer>💬 2 <span>28 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title purple">En aprobación <b>2</b></div>
+
+                <article class="ticket-card purchase-card blocked">
+                  <div class="blocked-banner">🔒 BLOQUEADO — Pendiente aprobación</div>
+                  <div class="card-top"><span class="badge high">Alta</span><span class="sla risk">● 3D</span></div>
+                  <small>CMP-2026-001</small>
+                  <h4>Adquisición de laptops para aulas virtuales (10 unidades)</h4>
+                  <span class="tag">Equipos TI</span>
+                  <p>Solicitante: Depto. académico</p>
+                  <p>Asignado: Cap. Sandra Villca</p>
+                  <div class="supplier-box">
+                    <small>PROVEEDOR Tecno Bolivia SRL</small>
+                    <strong>Bs. 85.000</strong>
+                  </div>
+                  <div class="approval-dots">Aprobación: ● ● ○</div>
+                  <footer>💬 7 <span>13 de agosto</span></footer>
+                </article>
+
+                <article class="ticket-card purchase-card">
+                  <div class="card-top"><span class="badge medium">Media</span><span class="sla ok">● 12d</span></div>
+                  <small>CMP-2026-010</small>
+                  <h4>Tabletas para instructores - Depto. Académico (8 unidades)</h4>
+                  <span class="tag">Equipos TI</span>
+                  <p>Solicitante: Depto. académico</p>
+                  <p>Asignado: Cap. Sandra Villca</p>
+                  <div class="supplier-box">
+                    <small>PROVEEDOR Tecno Bolivia SRL</small>
+                    <strong>Bs. 32.000</strong>
+                  </div>
+                  <div class="approval-dots">Aprobación: ● ○ ○</div>
+                  <footer>💬 4 <span>22 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title">Orden emitida <b>1</b></div>
+                <article class="ticket-card purchase-card">
+                  <div class="card-top"><span class="badge medium">Media</span><span class="sla ok">● 10 días</span></div>
+                  <small>CMP-2026-002</small>
+                  <h4>Tóner HP para impresoras - reposición trimestral</h4>
+                  <span class="tag">Consumibles</span>
+                  <p>Solicitante: Administración</p>
+                  <p>Asignado: Cap. Sandra Villca</p>
+                  <div class="supplier-box">
+                    <small>PROVEEDOR Distribuidora Andina SRL</small>
+                    <strong>Bs. 4.500</strong>
+                  </div>
+                  <div class="approval-dots">Aprobación: ● ● ●</div>
+                  <footer>💬 3 <span>20 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title green">En tránsito <b>2</b></div>
+
+                <article class="ticket-card purchase-card">
+                  <div class="card-top"><span class="badge high">Alta</span><span class="sla ok">● 5d</span></div>
+                  <small>CMP-2026-004</small>
+                  <h4>Licencias antivirus empresariales - 200 equipos</h4>
+                  <span class="tag">Software</span>
+                  <p>Solicitante: TI - Seguridad</p>
+                  <p>Asignado: Cap. Sandra Villca</p>
+                  <div class="supplier-box">
+                    <small>PROVEEDOR InfoSystems La Paz SA</small>
+                    <strong>Bs. 12.000</strong>
+                  </div>
+                  <div class="approval-dots">Aprobación: ● ● ●</div>
+                  <footer>💬 2 <span>15 de agosto</span></footer>
+                </article>
+
+                <article class="ticket-card purchase-card">
+                  <div class="card-top"><span class="badge low">Baja</span><span class="sla ok">● 7d</span></div>
+                  <small>CMP-2026-012</small>
+                  <h4>Cables y patch cords Cat6 - reposición anual</h4>
+                  <span class="tag">Redes</span>
+                  <p>Solicitante: TI - Infraestructura</p>
+                  <p>Asignado: Cap. Sandra Villca</p>
+                  <div class="supplier-box">
+                    <small>PROVEEDOR CompuBolivia Ltda.</small>
+                    <strong>Bs. 3.600</strong>
+                  </div>
+                  <div class="approval-dots">Aprobación: ● ● ●</div>
+                  <footer>💬 1 <span>17 de agosto</span></footer>
+                </article>
+              </div>
+
+              <div class="kanban-column">
+                <div class="column-title green">Recibido</div>
+                <article class="ticket-card purchase-card">
+                  <div class="card-top"><span class="badge low">Baja</span><span class="sla ok">● 9d</span></div>
+                  <small>CMP-2026-006</small>
+                  <h4>Material de oficina y papelería Secretaría General</h4>
+                  <span class="tag">Suministros</span>
+                  <p>Solicitante: Secretaría General</p>
+                  <p>Asignado: Cap. Sandra Villca</p>
+                  <div class="supplier-box">
+                    <small>PROVEEDOR Proveec SA</small>
+                    <strong>Bs. 1.800</strong>
+                  </div>
+                  <div class="approval-dots">Aprobación: ● ● ●</div>
+                  <footer>💬 1 <span>10 de agosto</span></footer>
+                </article>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- ======================================================
+             PORTAL
+        ======================================================= -->
+        <section class="page page-portal">
+          <div class="portal-subtitle">Rastrea el estado de tus pedidos de servicio · Escuela Militar de Ingeniería</div>
+
+          <div class="metrics metrics-3">
+            <article class="metric-card top-blue">
+              <strong>6</strong>
+              <b>En proceso</b>
+              <small>requerimientos activos</small>
+            </article>
+            <article class="metric-card top-red">
+              <strong class="danger">1</strong>
+              <b>Por su conformidad</b>
+              <small>requieren su verificación</small>
+            </article>
+            <article class="metric-card top-green">
+              <strong class="success">2</strong>
+              <b>Finalizados</b>
+              <small>requerimientos cerrados</small>
+            </article>
+          </div>
+
+          <div class="alert-box">
+            <span>🔔</span>
+            <strong>Tiene 1 requerimiento pendiente de conformidad</strong>
+            <span>— Haga clic para revisar</span>
+            <b>›</b>
+          </div>
+
+          <div class="tabs">
+            <span class="active">En proceso <b>6</b></span>
+            <span>Por confirmar <b class="red-count">1</b></span>
+            <span>Finalizados <b>2</b></span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="requests-table">
+              <thead>
+                <tr>
+                  <th>CÓDIGO</th>
+                  <th>TÍTULO</th>
+                  <th>ÁREA</th>
+                  <th>FECHA</th>
+                  <th>PRESUPUESTO</th>
+                  <th>ESTADO INSTITUCIONAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="status-mini orange-dot"></span><b>MTO-2026-0142</b></td>
+                  <td>Reparación de aire acondicionado — Sala 204</td>
+                  <td><span class="area-chip mto">Mantenimiento</span></td>
+                  <td>08/08/2026</td>
+                  <td>—</td>
+                  <td><span class="state-chip green">En curso / Realizando el trabajo</span></td>
+                </tr>
+                <tr>
+                  <td><span class="status-mini green-dot"></span><b>CMP-2026-0089</b></td>
+                  <td>Adquisición de cartuchos de tinta — Plotter Ingeniería</td>
+                  <td><span class="area-chip cmp">Compras</span></td>
+                  <td>03/08/2026</td>
+                  <td><b>BOB 850,00</b></td>
+                  <td><span class="state-chip yellow">En trámite administrativo (DAF/Tesorería)</span></td>
+                </tr>
+                <tr>
+                  <td><span class="status-mini red-dot"></span><b>SOP-2026-0219</b></td>
+                  <td>PC sin encendido — Lab. Computación B, puesto 12</td>
+                  <td><span class="area-chip sop">Soporte UTIC</span></td>
+                  <td>09/08/2026</td>
+                  <td>—</td>
+                  <td><span class="state-chip blue">Especialista asignado por Jefatura</span></td>
+                </tr>
+                <tr>
+                  <td><span class="status-mini red-dot"></span><b>SOP-2026-0209</b></td>
+                  <td>Falla de conectividad WiFi — Bloque Administrativo</td>
+                  <td><span class="area-chip sop">Soporte UTIC</span></td>
+                  <td>10/08/2026</td>
+                  <td>—</td>
+                  <td><span class="state-chip blue">Recibido / En espera de revisión</span></td>
+                </tr>
+                <tr>
+                  <td><span class="status-mini red-dot"></span><b>MTO-2026-0145</b></td>
+                  <td>Fuga de agua — Baño Piso 2, Bloque Administrativo</td>
+                  <td><span class="area-chip mto">Mantenimiento</span></td>
+                  <td>09/08/2026</td>
+                  <td>—</td>
+                  <td><span class="state-chip orange">En diagnóstico técnico</span></td>
+                </tr>
+                <tr>
+                  <td><span class="status-mini orange-dot"></span><b>SOP-2026-0225</b></td>
+                  <td>Configuración de impresora compartida — Administración</td>
+                  <td><span class="area-chip sop">Soporte UTIC</span></td>
+                  <td>06/08/2026</td>
+                  <td>—</td>
+                  <td><span class="state-chip yellow">En trámite administrativo (DAF/Tesorería)</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="table-footer">Mostrando 6 requerimientos</p>
+        </section>
+
+      </main>
+    </div>
+  </div>
+</body>
+</html>
