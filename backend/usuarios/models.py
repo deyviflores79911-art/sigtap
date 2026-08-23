@@ -1,0 +1,371 @@
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+
+# ==========================================================
+# USUARIO
+# ==========================================================
+
+class Usuario(AbstractUser):
+
+    email = models.EmailField(
+        unique=True,
+        verbose_name="Correo institucional"
+    )
+
+    nombre_completo = models.CharField(
+        max_length=150,
+        verbose_name="Nombre completo"
+    )
+
+    must_change_password = models.BooleanField(
+        default=True,
+        verbose_name="Debe cambiar contraseña"
+    )
+
+    failed_attempts = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name="Intentos fallidos"
+    )
+
+    locked_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Bloqueado hasta"
+    )
+
+    last_login_ip = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name="Última IP"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    USERNAME_FIELD = "email"
+
+    REQUIRED_FIELDS = [
+        "username",
+        "nombre_completo"
+    ]
+
+    def __str__(self):
+
+        return (
+            f"{self.nombre_completo} - "
+            f"{self.email}"
+        )
+
+
+# ==========================================================
+# ÁREA
+# ==========================================================
+
+class Area(models.Model):
+
+    codigo = models.CharField(
+        max_length=30,
+        unique=True
+    )
+
+    nombre = models.CharField(
+        max_length=100
+    )
+
+    descripcion = models.TextField(
+        blank=True
+    )
+
+    activo = models.BooleanField(
+        default=True
+    )
+
+    def __str__(self):
+
+        return self.nombre
+
+
+# ==========================================================
+# ROL
+# ==========================================================
+
+class Rol(models.Model):
+
+    codigo = models.CharField(
+        max_length=50,
+        unique=True
+    )
+
+    nombre = models.CharField(
+        max_length=100
+    )
+
+    descripcion = models.TextField(
+        blank=True
+    )
+
+    es_global = models.BooleanField(
+        default=False
+    )
+
+    activo = models.BooleanField(
+        default=True
+    )
+
+    def __str__(self):
+
+        return self.nombre
+
+
+# ==========================================================
+# PERMISO SIGTA
+# ==========================================================
+#
+# Estos permisos determinan:
+#
+# - qué módulos puede visualizar un rol;
+# - qué acciones puede ejecutar;
+# - qué opciones aparecen en la interfaz;
+# - qué acciones debe aceptar el backend.
+#
+# Ejemplos:
+#
+# VER_SOPORTE_TECNICO
+# RECIBIR_VALIDAR_TICKET
+# CLASIFICAR_PRIORIDAD_SLA
+# EVALUAR_EXPEDIENTE
+# REGISTRAR_DESEMBOLSO
+#
+# ==========================================================
+
+class Permiso(models.Model):
+
+    MODULOS = [
+
+        (
+            "GENERAL",
+            "General"
+        ),
+
+        (
+            "SOPORTE",
+            "Soporte Técnico"
+        ),
+
+        (
+            "MANTENIMIENTO",
+            "Mantenimiento"
+        ),
+
+        (
+            "COMPRAS",
+            "Compras"
+        ),
+
+        (
+            "ADMINISTRACION",
+            "Administración"
+        ),
+
+        (
+            "AUDITORIA",
+            "Auditoría"
+        ),
+
+        (
+            "CONFIGURACION",
+            "Configuración"
+        ),
+
+        (
+            "AUTOSERVICIO",
+            "Portal Solicitante"
+        ),
+    ]
+
+
+    codigo = models.CharField(
+        max_length=100,
+        unique=True
+    )
+
+    nombre = models.CharField(
+        max_length=150
+    )
+
+    descripcion = models.TextField(
+        blank=True
+    )
+
+    modulo = models.CharField(
+        max_length=30,
+        choices=MODULOS,
+        default="GENERAL"
+    )
+
+    activo = models.BooleanField(
+        default=True
+    )
+
+    creado_en = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    actualizado_en = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+
+        ordering = [
+            "modulo",
+            "nombre"
+        ]
+
+        verbose_name = "Permiso"
+
+        verbose_name_plural = "Permisos"
+
+    def __str__(self):
+
+        return (
+            f"{self.codigo} - "
+            f"{self.nombre}"
+        )
+
+
+# ==========================================================
+# RELACIÓN ROL - PERMISO
+# ==========================================================
+#
+# Un rol puede tener muchos permisos.
+#
+# Ejemplo:
+#
+# JEFE_UTIC
+#
+#   VER_SOPORTE_TECNICO
+#   RECIBIR_VALIDAR_TICKET
+#   CLASIFICAR_PRIORIDAD_SLA
+#   DESIGNAR_REVISION
+#
+# ==========================================================
+
+class RolPermiso(models.Model):
+
+    rol = models.ForeignKey(
+        Rol,
+        on_delete=models.CASCADE,
+        related_name="permisos_asignados"
+    )
+
+    permiso = models.ForeignKey(
+        Permiso,
+        on_delete=models.PROTECT,
+        related_name="roles_asignados"
+    )
+
+    activo = models.BooleanField(
+        default=True
+    )
+
+    fecha_asignacion = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+
+        constraints = [
+
+            models.UniqueConstraint(
+                fields=[
+                    "rol",
+                    "permiso"
+                ],
+                name="unique_rol_permiso"
+            )
+        ]
+
+        verbose_name = "Permiso del rol"
+
+        verbose_name_plural = "Permisos de los roles"
+
+    def __str__(self):
+
+        return (
+            f"{self.rol.codigo} - "
+            f"{self.permiso.codigo}"
+        )
+
+
+# ==========================================================
+# RELACIÓN USUARIO - ROL - ÁREA
+# ==========================================================
+
+class UsuarioRol(models.Model):
+
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="roles_asignados"
+    )
+
+    rol = models.ForeignKey(
+        Rol,
+        on_delete=models.PROTECT,
+        related_name="usuarios_asignados"
+    )
+
+    area = models.ForeignKey(
+        Area,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="usuarios_roles"
+    )
+
+    activo = models.BooleanField(
+        default=True
+    )
+
+    fecha_asignacion = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+
+        constraints = [
+
+            models.UniqueConstraint(
+                fields=[
+                    "usuario",
+                    "rol",
+                    "area"
+                ],
+                name="unique_usuario_rol_area"
+            )
+        ]
+
+        verbose_name = "Rol del usuario"
+
+        verbose_name_plural = "Roles de los usuarios"
+
+    def __str__(self):
+
+        area = (
+            self.area.nombre
+            if self.area
+            else "GLOBAL"
+        )
+
+        return (
+            f"{self.usuario.email} - "
+            f"{self.rol.codigo} - "
+            f"{area}"
+        )
