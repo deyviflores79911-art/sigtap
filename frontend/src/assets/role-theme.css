@@ -1,0 +1,534 @@
+/* Identidad visual compartida por los paneles institucionales.
+   Replica el lenguaje del Admin y del Portal Solicitante original. */
+.sigta-role-layout {
+  --role-blue: #174a7d;
+  --role-blue-dark: #123f70;
+  --role-yellow: #f2c400;
+  --role-bg: #eef3f7;
+  --role-text: #082d50;
+  --role-muted: #647e96;
+  --role-border: #d6e0e8;
+  min-height: 100vh !important;
+  background: var(--role-bg) !important;
+  color: var(--role-text) !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+.sigta-role-layout > aside {
+  width: 300px !important;
+  padding: 22px 16px !important;
+  background: var(--role-blue) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.sigta-role-layout > aside .brand {
+  min-height: 77px;
+  padding: 0 13px 20px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .18) !important;
+}
+
+.sigta-role-layout > aside .brand > span,
+.sigta-role-layout > aside .brand > b {
+  width: 53px !important;
+  height: 53px !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 10px !important;
+  background: var(--role-yellow) !important;
+  color: #064079 !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+}
+
+.sigta-role-layout > aside .brand strong,
+.sigta-role-layout > aside .brand b:not(:first-child) {
+  font-size: 25px !important;
+  color: #fff !important;
+}
+
+.sigta-role-layout > aside .brand small {
+  color: #c8d9e8 !important;
+  font-size: 10px !important;
+}
+
+.sigta-role-layout > aside .profile,
+.sigta-role-layout > aside .person,
+.sigta-role-layout > aside .user {
+  min-height: 88px;
+  padding: 20px 13px !important;
+}
+
+.sigta-role-layout > aside .avatar,
+.sigta-role-layout > aside .profile > i,
+.sigta-role-layout > aside .person > span,
+.sigta-role-layout > aside .user > i {
+  width: 43px !important;
+  height: 43px !important;
+  border-radius: 50% !important;
+  background: var(--role-yellow) !important;
+  color: #064079 !important;
+  font-size: 11px !important;
+}
+
+.sigta-role-layout > aside > p,
+.sigta-role-layout > aside .nav-label {
+  margin: 14px 13px 8px !important;
+  color: #82a9cb !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 1.4px !important;
+}
+
+.sigta-role-layout > aside > button,
+.sigta-role-layout > aside .bottom button,
+.sigta-role-layout > aside .logout button,
+.sigta-role-layout > aside .sidebar-foot button {
+  min-height: 49px !important;
+  margin: 2px 4px !important;
+  padding: 12px 14px !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+  font-size: 13px !important;
+}
+
+.sigta-role-layout > aside > button:hover,
+.sigta-role-layout > aside > button.active {
+  background: rgba(255, 255, 255, .13) !important;
+  box-shadow: inset 3px 0 var(--role-yellow) !important;
+}
+
+.sigta-role-layout > aside button i,
+.sigta-role-layout > aside button span {
+  color: #fff !important;
+}
+
+.sigta-role-layout > aside button em {
+  background: rgba(255, 255, 255, .16) !important;
+  color: #fff !important;
+}
+
+.sigta-role-layout > main {
+  margin-left: 300px !important;
+  padding: 36px 38px 60px !important;
+  background: var(--role-bg) !important;
+}
+
+.sigta-role-layout > main > header {
+  min-height: 108px;
+  margin-bottom: 18px !important;
+}
+
+.sigta-role-layout > main > header h1 {
+  margin: 7px 0 !important;
+  color: var(--role-text) !important;
+  font-size: 34px !important;
+  line-height: 1.1 !important;
+  letter-spacing: -.4px !important;
+}
+
+.sigta-role-layout > main > header p {
+  color: var(--role-muted) !important;
+  font-size: 14px !important;
+}
+
+.sigta-role-layout > main > header > div > span,
+.sigta-role-layout > main > header > div > small {
+  color: #6685a1 !important;
+  font-size: 10px !important;
+}
+
+.sigta-role-layout .refresh,
+.sigta-role-layout .reload,
+.sigta-role-layout .icon-btn {
+  background: #fff !important;
+  border: 1px solid var(--role-border) !important;
+  color: #075896 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 14px rgba(10, 53, 89, .06) !important;
+}
+
+.sigta-role-layout .hero,
+.sigta-role-layout .welcome {
+  padding: 25px 27px !important;
+  border: 0 !important;
+  border-top: 4px solid var(--role-yellow) !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  color: var(--role-text) !important;
+  box-shadow: 0 7px 18px rgba(12, 53, 86, .07) !important;
+}
+
+.sigta-role-layout .hero small,
+.sigta-role-layout .hero .eyebrow,
+.sigta-role-layout .welcome small {
+  color: #557691 !important;
+}
+
+.sigta-role-layout .hero h2,
+.sigta-role-layout .welcome h2 {
+  color: var(--role-text) !important;
+}
+
+.sigta-role-layout .hero p,
+.sigta-role-layout .welcome p {
+  color: var(--role-muted) !important;
+}
+
+.sigta-role-layout .hero > span,
+.sigta-role-layout .hero-mark,
+.sigta-role-layout .seal {
+  background: var(--role-blue) !important;
+  border: 3px solid var(--role-yellow) !important;
+  color: #fff !important;
+}
+
+.sigta-role-layout .stats {
+  gap: 15px !important;
+  margin: 18px 0 23px !important;
+}
+
+.sigta-role-layout .stats article {
+  min-height: 132px !important;
+  padding: 20px !important;
+  background: #fff !important;
+  border: 1px solid var(--role-border) !important;
+  border-top: 3px solid var(--role-yellow) !important;
+  border-radius: 11px !important;
+  box-shadow: 0 6px 16px rgba(12, 53, 86, .055) !important;
+}
+
+.sigta-role-layout .stats article > i,
+.sigta-role-layout .stats article > span {
+  background: var(--role-blue) !important;
+  color: #fff !important;
+}
+
+.sigta-role-layout .stats article b,
+.sigta-role-layout .stats article strong {
+  color: #073b6f !important;
+}
+
+.sigta-role-layout .panel,
+.sigta-role-layout .ticket,
+.sigta-role-layout .card,
+.sigta-role-layout .cards article,
+.sigta-role-layout .table,
+.sigta-role-layout .empty {
+  background: #fff !important;
+  border: 1px solid var(--role-border) !important;
+  border-radius: 11px !important;
+  box-shadow: 0 5px 14px rgba(12, 53, 86, .045) !important;
+}
+
+.sigta-role-layout .panel {
+  padding: 25px !important;
+}
+
+.sigta-role-layout .panel-head small,
+.sigta-role-layout .panel-title small,
+.sigta-role-layout .eyebrow {
+  color: #567993 !important;
+}
+
+.sigta-role-layout .task,
+.sigta-role-layout .flow,
+.sigta-role-layout .quick > button,
+.sigta-role-layout .flows button {
+  background: #fff !important;
+  border-color: #e2e9ef !important;
+}
+
+.sigta-role-layout .task:hover,
+.sigta-role-layout .flow:hover,
+.sigta-role-layout .quick > button:hover,
+.sigta-role-layout .flows button:hover {
+  background: #f8fbfd !important;
+}
+
+.sigta-role-layout .primary {
+  background: #075b9b !important;
+  border-color: #075b9b !important;
+  color: #fff !important;
+}
+
+.sigta-role-layout .toolbar label,
+.sigta-role-layout .tabs,
+.sigta-role-layout .filters {
+  border-color: var(--role-border) !important;
+}
+
+.sigta-role-layout .instruction,
+.sigta-role-layout .notice,
+.sigta-role-layout .alert {
+  border-left-color: var(--role-yellow) !important;
+  background: #fff9df !important;
+}
+
+@media (max-width: 720px) {
+  .sigta-role-layout > aside { position: static !important; width: 100% !important; }
+  .sigta-role-layout > main { margin-left: 0 !important; padding: 22px 18px 45px !important; }
+  .sigta-role-layout > main > header h1 { font-size: 27px !important; }
+}
+
+/* Paridad estructural con AdminDashboard + AdminMenu */
+.sigta-role-layout {
+  display: flex !important;
+  background: #f2f5f9 !important;
+}
+
+.sigta-role-layout > aside {
+  position: sticky !important;
+  inset: auto !important;
+  top: 0 !important;
+  width: 255px !important;
+  min-width: 255px !important;
+  height: 100vh !important;
+  padding: 20px 14px !important;
+  overflow-y: auto !important;
+  background: #123f73 !important;
+}
+
+.sigta-role-layout > aside .brand {
+  min-height: auto !important;
+  gap: 12px !important;
+  padding: 0 8px 20px !important;
+}
+
+.sigta-role-layout > aside .brand > span,
+.sigta-role-layout > aside .brand > b {
+  width: 48px !important;
+  height: 48px !important;
+  font-size: 13px !important;
+}
+
+.sigta-role-layout > aside .brand strong,
+.sigta-role-layout > aside .brand b:not(:first-child) {
+  font-size: 22px !important;
+}
+
+.sigta-role-layout > aside .brand small {
+  font-size: 9px !important;
+}
+
+.sigta-role-layout > aside .profile,
+.sigta-role-layout > aside .person,
+.sigta-role-layout > aside .user {
+  min-height: auto !important;
+  gap: 10px !important;
+  padding: 18px 8px 10px !important;
+}
+
+.sigta-role-layout > aside .avatar,
+.sigta-role-layout > aside .profile > i,
+.sigta-role-layout > aside .person > span,
+.sigta-role-layout > aside .user > i {
+  width: 38px !important;
+  height: 38px !important;
+  font-size: 10px !important;
+}
+
+.sigta-role-layout > aside .profile b,
+.sigta-role-layout > aside .person b,
+.sigta-role-layout > aside .user strong {
+  font-size: 10px !important;
+}
+
+.sigta-role-layout > aside .profile small,
+.sigta-role-layout > aside .person small,
+.sigta-role-layout > aside .user small,
+.sigta-role-layout > aside .profile span {
+  font-size: 8px !important;
+}
+
+.sigta-role-layout > aside > p,
+.sigta-role-layout > aside .nav-label {
+  margin: 17px 10px 6px !important;
+  font-size: 8px !important;
+  letter-spacing: 1px !important;
+}
+
+.sigta-role-layout > aside > button,
+.sigta-role-layout > aside .bottom button,
+.sigta-role-layout > aside .logout button,
+.sigta-role-layout > aside .sidebar-foot button {
+  min-height: 42px !important;
+  margin: 1px 0 !important;
+  padding: 0 11px !important;
+  gap: 9px !important;
+  border-radius: 7px !important;
+  font-size: 10px !important;
+}
+
+.sigta-role-layout > aside button i,
+.sigta-role-layout > aside button span {
+  width: 24px !important;
+  font-size: 8px !important;
+}
+
+.sigta-role-layout > aside button em,
+.sigta-role-layout > aside button > b {
+  font-size: 8px !important;
+}
+
+.sigta-role-layout > main {
+  flex: 1 !important;
+  min-width: 0 !important;
+  margin-left: 0 !important;
+  padding: 28px !important;
+  overflow-x: hidden !important;
+}
+
+.sigta-role-layout > main > header {
+  min-height: auto !important;
+  gap: 20px !important;
+  margin-bottom: 24px !important;
+}
+
+.sigta-role-layout > main > header h1 {
+  margin: 0 !important;
+  font-size: 28px !important;
+  color: #17324a !important;
+}
+
+.sigta-role-layout > main > header p {
+  margin: 5px 0 0 !important;
+  font-size: 12px !important;
+  color: #758391 !important;
+}
+
+.sigta-role-layout > main > header > div > span,
+.sigta-role-layout > main > header > div > small {
+  display: block !important;
+  margin-bottom: 7px !important;
+  font-size: 9px !important;
+  color: #8493a0 !important;
+}
+
+.sigta-role-layout .refresh,
+.sigta-role-layout .reload,
+.sigta-role-layout .icon-btn {
+  padding: 10px 14px !important;
+  font-size: 10px !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,.07) !important;
+}
+
+/* El Admin no utiliza una tarjeta de bienvenida intermedia. */
+.sigta-role-layout .hero,
+.sigta-role-layout .welcome {
+  display: none !important;
+}
+
+.sigta-role-layout .stats {
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 14px !important;
+  margin: 0 0 22px !important;
+}
+
+.sigta-role-layout .stats article {
+  min-width: 0 !important;
+  min-height: 120px !important;
+  display: block !important;
+  padding: 18px !important;
+  border: 0 !important;
+  border-top: 4px solid #f2c400 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.05) !important;
+}
+
+.sigta-role-layout .stats article > i,
+.sigta-role-layout .stats article > span.dot,
+.sigta-role-layout .stats article > span:not(.dot) {
+  display: none !important;
+}
+
+.sigta-role-layout .stats article small {
+  display: block !important;
+  margin-bottom: 7px !important;
+  color: #647484 !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+}
+
+.sigta-role-layout .stats article b,
+.sigta-role-layout .stats article strong {
+  display: block !important;
+  margin-bottom: 6px !important;
+  color: #073b6f !important;
+  font-size: 28px !important;
+}
+
+.sigta-role-layout .stats article p {
+  color: #8995a0 !important;
+  font-size: 8px !important;
+}
+
+.sigta-role-layout .panels,
+.sigta-role-layout .columns,
+.sigta-role-layout .grid {
+  gap: 14px !important;
+}
+
+.sigta-role-layout .panel {
+  margin-bottom: 20px !important;
+  padding: 22px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.05) !important;
+}
+
+.sigta-role-layout .panel-head small,
+.sigta-role-layout .panel-title small,
+.sigta-role-layout .eyebrow {
+  margin-bottom: 5px !important;
+  color: #0b5795 !important;
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  letter-spacing: .8px !important;
+}
+
+.sigta-role-layout .panel h3 {
+  font-size: 18px !important;
+  color: #1b3449 !important;
+}
+
+.sigta-role-layout .task,
+.sigta-role-layout .flow,
+.sigta-role-layout .flows button {
+  min-height: 72px !important;
+  padding: 13px !important;
+  font-size: 10px !important;
+}
+
+.sigta-role-layout .task b,
+.sigta-role-layout .flow b,
+.sigta-role-layout .flows b {
+  font-size: 11px !important;
+}
+
+.sigta-role-layout .task small,
+.sigta-role-layout .flow small,
+.sigta-role-layout .flows p,
+.sigta-role-layout .copy {
+  font-size: 9px !important;
+}
+
+.sigta-role-layout .cards {
+  gap: 14px !important;
+}
+
+.sigta-role-layout .cards article,
+.sigta-role-layout .ticket,
+.sigta-role-layout .card {
+  padding: 18px !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 720px) {
+  .sigta-role-layout { display: block !important; }
+  .sigta-role-layout > aside { position: static !important; width: 100% !important; min-width: 0 !important; height: auto !important; }
+  .sigta-role-layout > main { padding: 18px !important; }
+}

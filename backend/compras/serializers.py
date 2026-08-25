@@ -72,6 +72,12 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "ticket_soporte_vinculado",
 
             "observaciones",
+            "informe", "poa", "pedido", "proforma",
+            "certificacion_presupuestaria",
+            "factura", "acta_conformidad", "fotograma",
+            "motivo_rechazo", "monto_desembolsado",
+            "responsable_adquisicion", "monto_real", "proveedor",
+            "cerrado_inmutable",
 
             "activo",
 
@@ -85,6 +91,10 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "estado",
             "via_adquisicion",
             "observaciones",
+            "certificacion_presupuestaria", "factura",
+            "acta_conformidad", "fotograma", "motivo_rechazo",
+            "monto_desembolsado", "responsable_adquisicion",
+            "monto_real", "proveedor", "cerrado_inmutable",
             "creado_en",
             "actualizado_en",
         ]
@@ -133,6 +143,18 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
         return SolicitudCompra.objects.create(
             codigo=codigo,
             solicitante=usuario,
-            estado="NUEVO",
+            estado="CREADO_PENDIENTE_DAF",
             **validated_data
         )
+
+    def validate(self, attrs):
+        if self.instance is None:
+            faltantes = [
+                nombre for nombre in ("informe", "poa", "pedido", "proforma")
+                if not attrs.get(nombre)
+            ]
+            if faltantes:
+                raise serializers.ValidationError({
+                    "documentos": "Debe adjuntar Informe, POA, Pedido y Proforma. Faltan: " + ", ".join(faltantes)
+                })
+        return attrs

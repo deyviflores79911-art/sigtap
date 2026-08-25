@@ -253,6 +253,36 @@ function redirigirSegunRol() {
     return
   }
 
+  if (roles.includes('JEFE_UTIC')) {
+    router.push('/jefe-utic/dashboard')
+    return
+  }
+
+  if (roles.includes('ESPECIALISTA')) {
+    router.push('/especialista/dashboard')
+    return
+  }
+
+  if (roles.includes('TESORERIA')) {
+    router.push('/tesoreria/dashboard')
+    return
+  }
+
+  if (roles.includes('DIRECTOR')) {
+    router.push('/director/dashboard')
+    return
+  }
+
+  if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) {
+    router.push('/almacen/dashboard')
+    return
+  }
+
+  if (roles.includes('DAF')) {
+    router.push('/daf/dashboard')
+    return
+  }
+
   if (roles.includes('AGENTE')) {
     router.push('/tecnico/dashboard')
     return
@@ -580,4 +610,5 @@ footer span {
     font-size: 16px;
   }
 }
+
 </style>

@@ -404,6 +404,36 @@ async function iniciarSesion() {
       return
     }
 
+    if (codigosRoles.includes('JEFE_UTIC')) {
+      router.push('/jefe-utic/dashboard')
+      return
+    }
+
+    if (codigosRoles.includes('ESPECIALISTA')) {
+      router.push('/especialista/dashboard')
+      return
+    }
+
+    if (codigosRoles.includes('TESORERIA')) {
+      router.push('/tesoreria/dashboard')
+      return
+    }
+
+    if (codigosRoles.includes('DIRECTOR')) {
+      router.push('/director/dashboard')
+      return
+    }
+
+    if (codigosRoles.includes('ENCARGADO_COMPRAS_ALMACEN')) {
+      router.push('/almacen/dashboard')
+      return
+    }
+
+    if (codigosRoles.includes('DAF')) {
+      router.push('/daf/dashboard')
+      return
+    }
+
 
     /* ------------------------------
        AGENTE / TÉCNICO
@@ -1243,5 +1273,6 @@ footer span {
   }
 
 }
+
 
 </style>

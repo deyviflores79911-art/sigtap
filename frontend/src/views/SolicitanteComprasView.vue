@@ -185,8 +185,8 @@
 
               <button
                 v-if="
-                  solicitud.estado
-                  === 'NUEVO'
+                  ['NUEVO', 'CREADO_PENDIENTE_DAF']
+                    .includes(solicitud.estado)
                 "
                 class="edit"
                 @click="
@@ -198,8 +198,8 @@
 
               <button
                 v-if="
-                  solicitud.estado
-                  === 'NUEVO'
+                  ['NUEVO', 'CREADO_PENDIENTE_DAF']
+                    .includes(solicitud.estado)
                 "
                 class="cancel"
                 @click="
@@ -207,6 +207,14 @@
                 "
               >
                 Anular
+              </button>
+
+              <button
+                v-if="solicitud.estado === 'COMPRADO_Y_ENTREGADO'"
+                class="edit"
+                @click="presentarDescargo(solicitud)"
+              >
+                Presentar descargo
               </button>
 
             </div>
@@ -226,18 +234,19 @@
       class="overlay"
     >
 
+      <div class="purchase-page">
+        <div class="purchase-page-header">
+          <span>SIGTA / Portal Solicitante / Compras</span>
+          <h1>Registrar solicitud de compra</h1>
+          <p>Envíe el expediente de adquisición con toda la documentación requerida.</p>
+        </div>
+
       <section class="modal">
 
         <div class="modal-header">
 
           <div>
-            <h2>
-              {{
-                editando
-                  ? 'Editar solicitud'
-                  : 'Registrar solicitud de compra'
-              }}
-            </h2>
+            <h2>Información de la solicitud</h2>
 
             <p>
               Complete la información de la solicitud de compra.
@@ -286,6 +295,14 @@
                 required
               ></textarea>
 
+            </div>
+
+            <div class="form-section-title full">
+              <span>2</span>
+              <div>
+                <h3>Clasificación y presupuesto</h3>
+                <p>Seleccione el área, el tipo de adquisición, la cantidad y el monto estimado.</p>
+              </div>
             </div>
 
 
@@ -384,6 +401,14 @@
 
             </div>
 
+            <div class="form-section-title full">
+              <span>3</span>
+              <div>
+                <h3>Detalle técnico y justificación</h3>
+                <p>Describa las características requeridas y el motivo institucional de la compra.</p>
+              </div>
+            </div>
+
 
             <div class="field full">
 
@@ -444,6 +469,27 @@
 
             </div>
 
+            <div v-if="!editando" class="form-section-title full">
+              <span>4</span>
+              <div>
+                <h3>Expediente documental</h3>
+                <p>Adjunte los documentos obligatorios para remitir la solicitud a la DAF.</p>
+              </div>
+            </div>
+
+            <div v-if="!editando" class="field full documents-field">
+              <label>Expediente inicial obligatorio</label>
+              <p class="file-help">
+                Adjunte Informe, POA, Pedido y Proforma para enviar la solicitud a la DAF.
+              </p>
+              <div class="document-grid">
+                <label class="document-input"><span>Informe</span><input type="file" required @change="seleccionarArchivo('informe', $event)" /></label>
+                <label class="document-input"><span>POA</span><input type="file" required @change="seleccionarArchivo('poa', $event)" /></label>
+                <label class="document-input"><span>Pedido</span><input type="file" required @change="seleccionarArchivo('pedido', $event)" /></label>
+                <label class="document-input"><span>Proforma</span><input type="file" required @change="seleccionarArchivo('proforma', $event)" /></label>
+              </div>
+            </div>
+
           </div>
 
 
@@ -483,6 +529,8 @@
 
       </section>
 
+      </div>
+
     </div>
 
   </div>
@@ -516,7 +564,7 @@ const filtroEstado = ref('')
 const cargando = ref(true)
 const guardando = ref(false)
 
-const mostrarFormulario = ref(false)
+const mostrarFormulario = ref(true)
 const editando = ref(false)
 
 const solicitudId = ref(null)
@@ -536,6 +584,17 @@ const form = reactive({
   monto_estimado: '',
   ticket_soporte_vinculado: '',
 })
+
+const archivos = reactive({
+  informe: null,
+  poa: null,
+  pedido: null,
+  proforma: null,
+})
+
+function seleccionarArchivo(campo, evento) {
+  archivos[campo] = evento.target.files?.[0] || null
+}
 
 
 const token = () =>
@@ -841,38 +900,25 @@ async function guardar() {
 
   try {
 
-    const payload = {
-      titulo:
-        form.titulo,
+    const payload = new FormData()
 
-      descripcion:
-        form.descripcion,
+    payload.append('titulo', form.titulo)
+    payload.append('descripcion', form.descripcion)
+    payload.append('area', String(Number(form.area)))
+    payload.append('tipo', form.tipo)
+    payload.append('cantidad', String(Number(form.cantidad)))
+    payload.append('especificaciones', form.especificaciones)
+    payload.append('justificacion', form.justificacion)
+    payload.append('centro_costo', form.centro_costo || '')
+    if (form.monto_estimado) {
+      payload.append('monto_estimado', String(Number(form.monto_estimado)))
+    }
+    payload.append('ticket_soporte_vinculado', form.ticket_soporte_vinculado || '')
 
-      area:
-        Number(form.area),
-
-      tipo:
-        form.tipo,
-
-      cantidad:
-        Number(form.cantidad),
-
-      especificaciones:
-        form.especificaciones,
-
-      justificacion:
-        form.justificacion,
-
-      centro_costo:
-        form.centro_costo,
-
-      monto_estimado:
-        form.monto_estimado
-          ? Number(form.monto_estimado)
-          : null,
-
-      ticket_soporte_vinculado:
-        form.ticket_soporte_vinculado,
+    if (!editando.value) {
+      for (const campo of ['informe', 'poa', 'pedido', 'proforma']) {
+        if (archivos[campo]) payload.append(campo, archivos[campo])
+      }
     }
 
 
@@ -897,11 +943,11 @@ async function guardar() {
         {
           method,
 
-          headers:
-            authHeaders(),
+          headers: {
+            Authorization: `Token ${token()}`,
+          },
 
-          body:
-            JSON.stringify(payload),
+          body: payload,
         }
       )
 
@@ -922,9 +968,13 @@ async function guardar() {
     }
 
 
-    cerrarFormulario()
-
-    await cargarSolicitudes()
+    if (editando.value) {
+      cerrarFormulario()
+      await cargarSolicitudes()
+    } else {
+      limpiar()
+      router.push('/usuario/mis-solicitudes')
+    }
 
   } catch (e) {
 
@@ -1015,6 +1065,44 @@ function limpiar() {
   form.centro_costo = ''
   form.monto_estimado = ''
   form.ticket_soporte_vinculado = ''
+
+  archivos.informe = null
+  archivos.poa = null
+  archivos.pedido = null
+  archivos.proforma = null
+}
+
+function seleccionarDocumento(accept = '*/*') {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = accept
+    input.onchange = () => resolve(input.files?.[0] || null)
+    input.click()
+  })
+}
+
+async function presentarDescargo(solicitud) {
+  try {
+    alert('Seleccione la Factura, luego el Acta de Conformidad y finalmente el Fotograma.')
+    const factura = await seleccionarDocumento('.pdf,.jpg,.jpeg,.png')
+    if (!factura) return
+    const acta = await seleccionarDocumento('.pdf,.jpg,.jpeg,.png')
+    if (!acta) return
+    const fotograma = await seleccionarDocumento('image/*,.pdf')
+    if (!fotograma) return
+    const datos = new FormData()
+    datos.append('factura', factura)
+    datos.append('acta_conformidad', acta)
+    datos.append('fotograma', fotograma)
+    const respuesta = await fetch(`/api/compras/solicitudes/${solicitud.id}/presentar-descargo/`, {
+      method: 'POST', headers: { Authorization: `Token ${token()}` }, body: datos,
+    })
+    const resultado = await respuesta.json()
+    if (!respuesta.ok) throw new Error(resultado.detalle || 'No fue posible presentar el descargo.')
+    await cargarSolicitudes()
+    alert('Descargo enviado correctamente a Tesorería.')
+  } catch (error) { alert(error.message) }
 }
 
 
@@ -1345,5 +1433,258 @@ header p {
   .side {
     align-items: flex-start;
   }
+}
+
+/* Código retirado del bloque de estilos:
+function seleccionarDocumento(accept = '*/*') {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = accept
+    input.onchange = () => resolve(input.files?.[0] || null)
+    input.click()
+  })
+}
+
+async function presentarDescargo(solicitud) {
+  try {
+    alert('Seleccione la Factura, luego el Acta de Conformidad y finalmente el Fotograma.')
+    const factura = await seleccionarDocumento('.pdf,.jpg,.jpeg,.png')
+    if (!factura) return
+    const acta = await seleccionarDocumento('.pdf,.jpg,.jpeg,.png')
+    if (!acta) return
+    const fotograma = await seleccionarDocumento('image/*,.pdf')
+    if (!fotograma) return
+
+    const datos = new FormData()
+    datos.append('factura', factura)
+    datos.append('acta_conformidad', acta)
+    datos.append('fotograma', fotograma)
+
+    const respuesta = await fetch(
+      `/api/compras/solicitudes/${solicitud.id}/presentar-descargo/`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Token ${token()}` },
+        body: datos,
+      }
+    )
+    const resultado = await respuesta.json()
+    if (!respuesta.ok) throw new Error(resultado.detalle || 'No fue posible presentar el descargo.')
+    await cargarSolicitudes()
+    alert('Descargo enviado correctamente a Tesorería.')
+  } catch (error) {
+    alert(error.message)
+  }
+}
+
+*/
+.file-help {
+  margin: 0 0 10px;
+  color: #728393;
+  font-size: 10px;
+}
+
+.document-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.document-input {
+  padding: 11px;
+  border: 1px dashed #aebfcd;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.document-input span {
+  display: block;
+  margin-bottom: 7px;
+  color: #174a7d;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.document-input input {
+  width: 100%;
+  font-size: 9px;
+}
+
+@media (max-width: 560px) {
+  .document-grid { grid-template-columns: 1fr; }
+}
+
+/* Compras se presenta como formulario directo, igual que Soporte y Mantenimiento. */
+.layout > .content {
+  display: none;
+}
+
+.overlay {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  flex: 1;
+  min-width: 0;
+  display: block;
+  padding: 28px;
+  background: #f2f5f9;
+}
+
+.purchase-page {
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.purchase-page-header {
+  margin-bottom: 20px;
+}
+
+.purchase-page-header span {
+  display: block;
+  margin-bottom: 7px;
+  color: #8493a0;
+  font-size: 9px;
+}
+
+.purchase-page-header h1 {
+  margin: 0;
+  color: #17324a;
+  font-size: 28px;
+}
+
+.purchase-page-header p {
+  margin: 6px 0 0;
+  color: #758391;
+  font-size: 12px;
+}
+
+.modal {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  border-top: 4px solid #f2c400;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.05);
+}
+
+.modal-header {
+  padding: 22px 28px 17px;
+  border-bottom: 1px solid #e5ebf0;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+}
+
+.modal-header h2::before {
+  content: "1";
+  display: inline-grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  margin-right: 12px;
+  border-radius: 50%;
+  background: #174a7d;
+  color: #fff;
+  font-size: 12px;
+}
+
+.modal .close,
+.modal-actions .secondary {
+  display: none;
+}
+
+.modal form {
+  padding: 24px 28px 28px;
+}
+
+.grid {
+  gap: 18px;
+}
+
+.form-section-title {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px -28px 0;
+  padding: 22px 28px 2px;
+  border-top: 1px solid #e2e8ed;
+}
+
+.form-section-title > span {
+  width: 31px;
+  height: 31px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #174a7d;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.form-section-title h3 {
+  margin: 0;
+  color: #17324a;
+  font-size: 16px;
+}
+
+.form-section-title p {
+  margin: 4px 0 0;
+  color: #758391;
+  font-size: 9px;
+}
+
+.documents-field > label,
+.documents-field > .file-help {
+  display: none;
+}
+
+.field label {
+  color: #17324a;
+  font-size: 11px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  min-height: 44px;
+  padding: 11px 13px;
+  background: #fff;
+  border: 1px solid #cbd7e1;
+  border-radius: 7px;
+  font-family: inherit;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: #0a5794;
+  box-shadow: 0 0 0 3px rgba(10,87,148,.08);
+}
+
+.modal-actions {
+  padding-top: 20px;
+  border-top: 1px solid #e5ebf0;
+}
+
+.modal-actions .primary {
+  min-width: 210px;
+  min-height: 42px;
+  background: #075b9b;
+  color: #fff;
+}
+
+@media (max-width: 760px) {
+  .overlay { padding: 18px; }
+  .modal-header, .modal form { padding-inline: 18px; }
+  .form-section-title { margin-inline: -18px; padding-inline: 18px; }
 }
 </style>

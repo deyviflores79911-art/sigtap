@@ -75,7 +75,7 @@ import MisSolicitudesView
   from '../views/MisSolicitudesView.vue'
 
 import SolicitanteComprasView
-  from '../views/SolicitanteComprasView.vue'
+  from '../views/SolicitanteCompraFormView.vue'
 
 import SolicitanteMantenimientoView
   from '../views/SolicitanteMantenimientoView.vue'
@@ -85,6 +85,21 @@ import NotificacionesView
 
 import PerfilView
   from '../views/PerfilView.vue'
+
+import TecnicoDashboardView
+  from '../views/TecnicoDashboardView.vue'
+
+import TesoreriaDashboardView
+  from '../views/TesoreriaDashboardView.vue'
+
+import DirectorDashboardView
+  from '../views/DirectorDashboardView.vue'
+
+import AlmacenDashboardView
+  from '../views/AlmacenDashboardView.vue'
+
+import DafDashboardView
+  from '../views/DafDashboardView.vue'
 
 
 /* =========================================================
@@ -369,6 +384,48 @@ const router = createRouter({
       },
     },
 
+    {
+      path: '/jefe-utic/dashboard',
+      name: 'jefe-utic-dashboard',
+      component: TecnicoDashboardView,
+      meta: { requiereAuth: true, roles: ['JEFE_UTIC'] },
+    },
+
+    {
+      path: '/especialista/dashboard',
+      name: 'especialista-dashboard',
+      component: TecnicoDashboardView,
+      meta: { requiereAuth: true, roles: ['ESPECIALISTA'] },
+    },
+
+    {
+      path: '/tesoreria/dashboard',
+      name: 'tesoreria-dashboard',
+      component: TesoreriaDashboardView,
+      meta: { requiereAuth: true, roles: ['TESORERIA'] },
+    },
+
+    {
+      path: '/director/dashboard',
+      name: 'director-dashboard',
+      component: DirectorDashboardView,
+      meta: { requiereAuth: true, roles: ['DIRECTOR'] },
+    },
+
+    {
+      path: '/almacen/dashboard',
+      name: 'almacen-dashboard',
+      component: AlmacenDashboardView,
+      meta: { requiereAuth: true, roles: ['ENCARGADO_COMPRAS_ALMACEN'] },
+    },
+
+    {
+      path: '/daf/dashboard',
+      name: 'daf-dashboard',
+      component: DafDashboardView,
+      meta: { requiereAuth: true, roles: ['DAF'] },
+    },
+
 
     /* =====================================================
        RUTA NO ENCONTRADA
@@ -430,6 +487,24 @@ router.beforeEach(
       return '/login'
     }
 
+    /* El portal del solicitante no debe funcionar como ruta
+       de respaldo para actores institucionales. */
+    if (to.path.startsWith('/usuario/')) {
+      const roles = Array.isArray(usuario?.roles)
+        ? usuario.roles.map(rol => String(rol.codigo || '').toUpperCase())
+        : []
+
+      if (!roles.includes('SOLICITANTE')) {
+        if (roles.includes('ADMIN')) return '/admin/dashboard'
+        if (roles.includes('JEFE_UTIC')) return '/jefe-utic/dashboard'
+        if (roles.includes('ESPECIALISTA')) return '/especialista/dashboard'
+        if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
+        if (roles.includes('DIRECTOR')) return '/director/dashboard'
+        if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'
+        if (roles.includes('DAF')) return '/daf/dashboard'
+      }
+    }
+
 
     /* -----------------------------------------------------
        RUTAS ADMIN
@@ -454,6 +529,13 @@ router.beforeEach(
 
         return '/usuario/dashboard'
       }
+    }
+
+    if (Array.isArray(to.meta.roles)) {
+      const roles = Array.isArray(usuario?.roles)
+        ? usuario.roles.map(rol => String(rol.codigo || '').toUpperCase())
+        : []
+      if (!to.meta.roles.some(rol => roles.includes(rol))) return '/usuario/dashboard'
     }
 
 
@@ -486,6 +568,13 @@ router.beforeEach(
 
         return '/admin/dashboard'
       }
+
+      if (roles.includes('JEFE_UTIC')) return '/jefe-utic/dashboard'
+      if (roles.includes('ESPECIALISTA')) return '/especialista/dashboard'
+      if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
+      if (roles.includes('DIRECTOR')) return '/director/dashboard'
+      if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'
+      if (roles.includes('DAF')) return '/daf/dashboard'
     }
 
 
