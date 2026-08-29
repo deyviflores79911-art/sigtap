@@ -1,0 +1,70 @@
+Credenciales de prueba de SIGTA
+
+Uso exclusivo para desarrollo local. Este archivo contiene contraseñas en texto visible. No debe incluirse en un repositorio público ni utilizarse en producción.
+
+
+Administrador (Director)
+Correo: admin@emi.edu.bo
+Contraseña: SIGTA_Admin#2026!
+Ruta: /admin/dashboard
+
+Superusuario
+Correo: superuser@emi.edu.bo
+Contraseña: SIGTA_Superuser#2026!
+Ruta: /superuser/dashboard
+
+Solicitante
+Correo: solicitante@emi.edu.bo
+Contraseña: SIGTA_Usuario#2026!
+Ruta: /usuario/dashboard
+
+Jefe de UTIC
+Correo: jefe.utic@emi.edu.bo
+Contraseña: SIGTA_JefeUTIC#2026!
+Ruta: /jefe-utic/dashboard
+
+Especialista
+Correo: especialista@emi.edu.bo
+Contraseña: SIGTA_Especialista#2026!
+Ruta: /especialista/dashboard
+
+Tesorería
+Correo: tesoreria@emi.edu.bo
+Contraseña: SIGTA_Tesoreria#2026!
+Ruta: /tesoreria/dashboard
+
+Encargado de Compras y Almacén
+Correo: almacen@emi.edu.bo
+Contraseña: SIGTA_Almacen#2026!
+Ruta: /almacen/dashboard
+
+DAF
+Correo: daf@emi.edu.bo
+Contraseña: SIGTA_DAF#2026!
+Ruta: /daf/dashboard
+
+Servicios Generales
+Correo: servicios.generales@emi.edu.bo
+Contraseña: SIGTA_ServiciosGrales#2026!
+Ruta: /servicios-generales/dashboard
+
+Auxiliar de Servicios Generales
+Correo: auxiliar.sg@emi.edu.bo
+Contraseña: SIGTA_AuxiliarSG#2026!
+Ruta: /auxiliar-servicios-generales/dashboard
+
+
+Cuenta para probar HU-01 / HU-02 (cambio obligatorio de contraseña)
+
+Solicitante (recién creado)
+Correo: nuevo.ingreso@emi.edu.bo
+Contraseña temporal: SIGTA_Temporal#2026!
+Comportamiento esperado: must_change_password=true. Al iniciar sesión, el sistema exige cambiar la contraseña antes de permitir cualquier otra acción (bloqueado también en el backend, no solo en el redireccionamiento del frontend).
+
+
+Observaciones
+
+Las cuentas están activas en la base de datos local backend/db.sqlite3. Se generan/actualizan con python manage.py cargar_usuarios_prueba (además de cargar_permisos_sigta para roles y permisos).
+Las contraseñas fueron configuradas para pruebas y deben cambiarse antes de una implementación real.
+Si la base de datos no se copia a otra instalación, estas cuentas no existirán automáticamente hasta correr los comandos de carga.
+Las contraseñas se almacenan con Argon2id (no en texto plano); este archivo es solo para pruebas locales.

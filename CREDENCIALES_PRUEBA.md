@@ -4,12 +4,12 @@
 
 | Rol               | Correo          | Contraseña | Ruta principal |
 |---|---|---|---|
-| Administrador | `admin@emi.edu.bo` | `SIGTA_Admin#2026!` | `/admin/dashboard` |
+| Administrador (Director) | `admin@emi.edu.bo` | `SIGTA_Admin#2026!` | `/admin/dashboard` |
+| Superusuario | `superuser@emi.edu.bo` | `SIGTA_Superuser#2026!` | `/superuser/dashboard` |
 | Solicitante   | `solicitante@emi.edu.bo` | `SIGTA_Usuario#2026!` | `/usuario/dashboard` |
 | Jefe de UTIC  | `jefe.utic@emi.edu.bo` | `SIGTA_JefeUTIC#2026!` | `/jefe-utic/dashboard` |
 | Especialista  | `especialista@emi.edu.bo` | `SIGTA_Especialista#2026!` | `/especialista/dashboard`      |
 | Tesorería     | `tesoreria@emi.edu.bo` | `SIGTA_Tesoreria#2026!` | `/tesoreria/dashboard` |
-| Director      | `director@emi.edu.bo` | `SIGTA_Director#2026!` | `/director/dashboard` |
 | Encargado de Compras y Almacén | `almacen@emi.edu.bo` | `SIGTA_Almacen#2026!` | `/almacen/dashboard`      |
 | DAF | `daf@emi.edu.bo` | `SIGTA_DAF#2026!` | `/daf/dashboard` |
 | Servicios Generales | `servicios.generales@emi.edu.bo` | `SIGTA_ServiciosGrales#2026!` | `/servicios-generales/dashboard` |

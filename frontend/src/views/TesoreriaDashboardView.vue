@@ -1,85 +1,2349 @@
 <template>
-  <div class="layout sigta-role-layout">
-    <aside :class="{ abierto: menuAbierto }">
-      <div class="brand-row">
-        <div class="brand"><b><img src="/img/emi.jpg" alt="EMI"></b><div><strong>SIGTA</strong><small>Caja Chica</small></div></div>
-        <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
+  <div class="layout">
+
+    <TesoreriaMenu />
+
+    <main class="main">
+
+      <!-- =================================================
+           ENCABEZADO
+      ================================================== -->
+      <header class="page-header">
+
+        <div>
+          <h1>
+            Solicitudes
+          </h1>
+
+          <p>
+            Expedientes de Caja Chica pendientes de
+            verificación, desembolso y cierre.
+          </p>
+        </div>
+
+        <div class="header-actions">
+
+          <select
+            v-model="filtroEstado"
+            class="filtro-estado"
+          >
+            <option value="">Todas las solicitudes</option>
+            <option value="APROBADA">Solicitudes aprobadas</option>
+            <option value="RECHAZADA">Solicitudes rechazadas</option>
+          </select>
+
+          <button
+            class="refresh-button"
+            type="button"
+            :disabled="cargando"
+            @click="cargarCompras"
+          >
+            {{
+              cargando
+                ? 'Actualizando...'
+                : 'Actualizar'
+            }}
+          </button>
+
+        </div>
+
+      </header>
+
+
+      <!-- =================================================
+           CARGANDO
+      ================================================== -->
+      <div
+        v-if="cargando"
+        class="loading"
+      >
+        Cargando solicitudes de compra...
       </div>
-      <div class="person"><span>{{ iniciales }}</span><div><b>{{ nombre }}</b><small>Tesorería</small></div></div>
-      <p>GESTIÓN FINANCIERA</p>
-      <button v-for="item in menu" :key="item.id" :class="{active:vista===item.id}" @click="vista=item.id; menuAbierto=false"><i>{{ item.icono }}</i>{{ item.nombre }}<em v-if="item.total !== undefined">{{ item.total }}</em></button>
-      <div class="bottom"><button @click="cerrarSesion"><i>↪</i>Cerrar sesión</button></div>
-    </aside>
 
-    <main>
-      <header><div><span>SIGTA / Tesorería / {{ tituloVista }}</span><h1>{{ tituloVista }}</h1><p>Control contable y custodia de fondos de Caja Chica.</p></div><button class="reload" @click="cargar">↻ Actualizar</button></header>
 
-      <section v-if="vista==='resumen'">
-        <div class="welcome"><div><small>CONTROL DE TESORERÍA</small><h2>Buenos días, {{ primerNombre }}</h2><p>Revise los expedientes, desembolsos y descargos pendientes del periodo.</p></div><div class="seal">Bs</div></div>
-        <div class="stats">
-          <article><span class="blue">▤</span><div><small>Por verificar</small><b>{{ porVerificar.length }}</b><p>expedientes recibidos</p></div></article>
-          <article><span class="amber">$</span><div><small>Por desembolsar</small><b>{{ porDesembolsar.length }}</b><p>con visto bueno</p></div></article>
-          <article><span class="green">✓</span><div><small>Por cerrar</small><b>{{ porCerrar.length }}</b><p>descargos pendientes</p></div></article>
-          <article><span class="navy">Σ</span><div><small>Fondos registrados</small><b>{{ moneda(totalFondos) }}</b><p>en la bandeja actual</p></div></article>
-        </div>
-        <div class="grid"><section class="panel"><div class="panel-title"><div><small>FLUJO DE CAJA CHICA</small><h3>Acciones pendientes</h3></div></div>
-          <button class="task" @click="vista='verificacion'"><span class="blue">1</span><div><b>Verificar integridad del expediente</b><small>POA, Pedido, Proforma y Certificación DAF</small></div><em>{{ porVerificar.length }}</em><strong>›</strong></button>
-          <button class="task" @click="vista='desembolsos'"><span class="amber">2</span><div><b>Registrar desembolso</b><small>Monto entregado y responsable de adquisición</small></div><em>{{ porDesembolsar.length }}</em><strong>›</strong></button>
-          <button class="task" @click="vista='descargos'"><span class="green">3</span><div><b>Verificar descargo y cerrar</b><small>Factura, conformidad, fotograma y cuadre</small></div><em>{{ porCerrar.length }}</em><strong>›</strong></button>
-        </section><section class="panel rules"><div class="panel-title"><div><small>REGLAS DE CONTROL</small><h3>Responsabilidad</h3></div></div><p><b>Filtro preventivo</b><br>Solo los expedientes completos avanzan al Director.</p><p><b>Custodia de efectivo</b><br>Todo desembolso registra monto y responsable.</p><p><b>Cierre inmutable</b><br>El expediente se archiva después del cuadre documental.</p></section></div>
-      </section>
+      <!-- =================================================
+           SIN REGISTROS
+      ================================================== -->
+      <div
+        v-else-if="compras.length === 0"
+        class="empty"
+      >
+        No existen solicitudes de compra registradas.
+      </div>
 
-      <section v-else-if="vista==='delegar'">
-        <DelegacionesPanel rol-codigo="TESORERIA" rol-nombre="Tesorería" />
-      </section>
 
-      <section v-else>
-        <div class="toolbar"><div class="tabs"><button class="active">Pendientes</button><button>Procesados</button></div><label>⌕ <input v-model="busqueda" placeholder="Buscar expediente o solicitante"></label></div>
-        <div v-if="cargando" class="empty">Consultando expedientes…</div>
-        <div v-else-if="filtrados.length" class="cards">
-          <article v-for="exp in filtrados" :key="exp.id" class="card"><div class="card-top"><span>{{ codigo(exp) }}</span><em>{{ estado(exp) }}</em></div><h3>{{ titulo(exp) }}</h3><p>{{ detalle(exp) }}</p><div class="money"><small>Monto solicitado</small><b>{{ moneda(monto(exp)) }}</b></div>
-            <div v-if="vista==='verificacion'" class="checklist"><label v-for="doc in documentos" :key="doc"><input type="checkbox"> {{ doc }}</label></div>
-            <div class="card-foot"><button class="ghost" @click="verExpediente(exp)">Ver expediente</button><button class="primary" @click="ejecutar(exp)">{{ accion }}</button></div>
+      <div
+        v-else-if="comprasFiltradas.length === 0"
+        class="empty"
+      >
+        No hay {{ etiquetaFiltroVacio(filtroEstado) }}.
+      </div>
+
+
+      <!-- =================================================
+           LISTADO
+      ================================================== -->
+      <section
+        v-else
+        class="requests-card"
+      >
+
+        <div class="request-list">
+
+          <article
+            v-for="compra in comprasFiltradas"
+            :key="compra.id"
+            class="request"
+          >
+
+            <div class="request-main">
+
+              <div class="request-code">
+                <strong>
+                  {{ compra.codigo }}
+                </strong>
+
+                <small>
+                  {{ compra.area_nombre || 'Área no indicada' }}
+                </small>
+              </div>
+
+
+              <div class="request-info">
+
+                <h3>
+                  {{
+                    compra.titulo
+                    || compra.descripcion
+                    || 'Solicitud de compra'
+                  }}
+                </h3>
+
+                <div class="meta">
+
+                  <span>
+                    {{
+                      compra.solicitante_nombre
+                      || compra.solicitante_email
+                      || 'Sin información'
+                    }}
+                  </span>
+
+                  <span>
+                    {{
+                      compra.via_nombre
+                      || 'Vía no indicada'
+                    }}
+                  </span>
+
+                  <span v-if="compra.creado_en">
+                    {{ formatearFecha(compra.creado_en) }}
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <div class="request-side">
+
+              <span
+                :class="['status', claseBucket(bucketEstado(compra.estado))]"
+              >
+                {{ etiquetaBucket(bucketEstado(compra.estado)) }}
+              </span>
+
+              <div class="row-actions">
+
+                <button
+                  class="view"
+                  @click="verDetalle(compra)"
+                >
+                  Ver detalle
+                </button>
+
+                <button
+                  v-if="etapaAccion(compra) === 'decision'"
+                  class="row-aprobar"
+                  @click="aprobarDesdeLista(compra)"
+                >
+                  Verificar
+                </button>
+
+                <button
+                  v-if="etapaAccion(compra) === 'decision'"
+                  class="row-rechazar"
+                  @click="rechazarDesdeLista(compra)"
+                >
+                  Rechazar
+                </button>
+
+                <button
+                  v-if="etapaAccion(compra) === 'desembolso'"
+                  class="row-aprobar"
+                  @click="verDetalle(compra)"
+                >
+                  Desembolsar
+                </button>
+
+                <button
+                  v-if="etapaAccion(compra) === 'cierre'"
+                  class="row-aprobar"
+                  @click="verDetalle(compra)"
+                >
+                  Cerrar
+                </button>
+
+              </div>
+
+            </div>
+
           </article>
+
         </div>
-        <div v-else class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No existen expedientes pendientes en esta etapa.</p></div>
+
       </section>
+
     </main>
+
+
+    <!-- =================================================
+         DOCUMENTO DE DETALLE
+    ================================================== -->
+
+    <div
+      v-if="mostrarDetalle"
+      class="detalle-modal-backdrop"
+      @click.self="cerrarDetalle"
+    >
+      <div class="detalle-modal documento-modal">
+
+        <div class="detalle-modal-header">
+          <div class="documento-header-titulo">
+
+            <span class="documento-header-icono">📄</span>
+
+            <div>
+              <h3>{{ compraSeleccionada?.codigo }}</h3>
+              <small>{{ compraSeleccionada?.titulo }}</small>
+            </div>
+
+          </div>
+
+          <button
+            class="detalle-modal-close"
+            @click="cerrarDetalle"
+          >✕</button>
+        </div>
+
+        <div class="documento-body">
+
+          <div
+            :class="['estado-banner', claseBucket(bucketEstado(compraSeleccionada?.estado))]"
+          >
+            <span class="estado-banner-icono">
+              {{ iconoBucket(bucketEstado(compraSeleccionada?.estado)) }}
+            </span>
+
+            <div>
+              <strong>{{ etiquetaBucket(bucketEstado(compraSeleccionada?.estado)) }}</strong>
+              <span class="estado-banner-descripcion">
+                {{ descripcionBucket(bucketEstado(compraSeleccionada?.estado)) }}
+              </span>
+            </div>
+          </div>
+
+
+          <div class="documento-seccion">
+
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📦</span>
+              <span class="documento-titulo">
+                Producto o servicio a comprar
+              </span>
+            </div>
+
+            <h4>{{ compraSeleccionada?.titulo || 'Sin título' }}</h4>
+
+            <p>{{ compraSeleccionada?.descripcion || 'Sin descripción registrada.' }}</p>
+
+
+            <div class="documento-fila documento-fila-5">
+
+              <div>
+                <b>Tipo</b>
+                <span>{{ compraSeleccionada?.tipo_nombre || compraSeleccionada?.tipo || 'No indicado' }}</span>
+              </div>
+
+              <div>
+                <b>Cantidad</b>
+                <span>{{ compraSeleccionada?.cantidad || 1 }}</span>
+              </div>
+
+              <div>
+                <b>Monto estimado</b>
+                <span>
+                  {{
+                    compraSeleccionada?.monto_estimado
+                      ? `Bs ${Number(compraSeleccionada.monto_estimado).toFixed(2)}`
+                      : 'No indicado'
+                  }}
+                </span>
+              </div>
+
+              <div>
+                <b>Especificaciones</b>
+                <span>{{ compraSeleccionada?.especificaciones || 'No registradas.' }}</span>
+              </div>
+
+              <div>
+                <b>Justificación</b>
+                <span>{{ compraSeleccionada?.justificacion || 'No registrada.' }}</span>
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div class="documento-seccion">
+
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📁</span>
+              <span class="documento-titulo">
+                Datos del expediente
+              </span>
+            </div>
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Solicitante</b>
+                <button
+                  v-if="compraSeleccionada?.solicitante"
+                  type="button"
+                  class="solicitante-link"
+                  @click="abrirSolicitante(compraSeleccionada.solicitante)"
+                >
+                  <span>
+                    {{
+                      compraSeleccionada?.solicitante_nombre
+                      || 'Sin información'
+                    }}
+                  </span>
+                  <small v-if="compraSeleccionada?.solicitante_email">
+                    {{ compraSeleccionada.solicitante_email }}
+                  </small>
+                </button>
+                <span v-else>Sin información</span>
+              </div>
+
+              <div>
+                <b>Área</b>
+                <span>{{ compraSeleccionada?.area_nombre || 'No indicada' }}</span>
+              </div>
+
+              <div>
+                <b>Vía de adquisición</b>
+                <span>{{ compraSeleccionada?.via_nombre || 'No indicada' }}</span>
+              </div>
+
+            </div>
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Fecha de registro</b>
+                <span>{{ formatearFecha(compraSeleccionada?.creado_en) }}</span>
+              </div>
+
+              <div v-if="compraSeleccionada?.monto_desembolsado">
+                <b>Monto desembolsado</b>
+                <span>Bs {{ Number(compraSeleccionada.monto_desembolsado).toFixed(2) }}</span>
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div class="documento-seccion">
+
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📄</span>
+              <span class="documento-titulo">
+                Documentos del expediente
+              </span>
+            </div>
+
+            <div class="documento-lista">
+
+              <template
+                v-for="doc in documentosExpediente"
+                :key="doc.label"
+              >
+
+                <a
+                  v-if="doc.url"
+                  :href="doc.url"
+                  target="_blank"
+                  class="documento-item ok"
+                >
+                  <span class="documento-item-icono">📄</span>
+                  <span class="documento-item-label">{{ doc.label }}</span>
+                  <span class="documento-item-accion">
+                    Ver archivo
+                    <span class="documento-item-ojo">👁</span>
+                  </span>
+                </a>
+
+                <div
+                  v-else
+                  class="documento-item falta"
+                >
+                  <span class="documento-item-icono">📄</span>
+                  <span class="documento-item-label">{{ doc.label }}</span>
+                  <small>{{ doc.pendienteTexto || 'No adjuntado' }}</small>
+                </div>
+
+              </template>
+
+            </div>
+
+          </div>
+
+
+          <div
+            class="documento-seccion motivo-rechazo"
+            v-if="compraSeleccionada?.motivo_rechazo"
+          >
+            <span class="documento-titulo">
+              Motivo de rechazo
+            </span>
+
+            <p>{{ compraSeleccionada.motivo_rechazo }}</p>
+          </div>
+
+
+          <!-- ACCIONES -->
+
+          <div
+            v-if="etapaAccion(compraSeleccionada)"
+            class="documento-acciones"
+          >
+
+            <p
+              v-if="errorAccion"
+              class="accion-error"
+            >
+              {{ errorAccion }}
+            </p>
+
+
+            <!-- VERIFICACIÓN / RECHAZO -->
+
+            <template v-if="etapaAccion(compraSeleccionada) === 'decision'">
+
+              <div
+                v-if="!mostrarFormRechazo"
+                class="acciones-botones"
+              >
+                <button
+                  class="btn-aprobar"
+                  :disabled="procesando"
+                  @click="confirmarVerificacion"
+                >
+                  Verificar expediente
+                </button>
+
+                <button
+                  class="btn-rechazar"
+                  :disabled="procesando"
+                  @click="abrirFormRechazo"
+                >
+                  Rechazar
+                </button>
+              </div>
+
+              <div
+                v-else
+                class="form-rechazo"
+              >
+                <label>
+                  Motivo del rechazo
+                  <span>*</span>
+                </label>
+
+                <textarea
+                  v-model="motivoRechazoTexto"
+                  rows="3"
+                  placeholder="Explique por qué se rechaza el expediente..."
+                ></textarea>
+
+                <div class="acciones-botones">
+
+                  <button
+                    class="btn-cancelar"
+                    :disabled="procesando"
+                    @click="cancelarRechazo"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    class="btn-rechazar"
+                    :disabled="procesando"
+                    @click="confirmarRechazo"
+                  >
+                    Confirmar rechazo
+                  </button>
+
+                </div>
+              </div>
+
+            </template>
+
+
+            <!-- DESEMBOLSO -->
+
+            <template v-else-if="etapaAccion(compraSeleccionada) === 'desembolso'">
+
+              <p class="nota-tramite">
+                Registre el monto efectivo entregado y el
+                responsable que recibe el efectivo para la
+                adquisición.
+              </p>
+
+              <label>
+                Monto desembolsado (Bs)
+                <span>*</span>
+              </label>
+
+              <input
+                v-model="montoDesembolso"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+              />
+
+              <label>
+                Responsable que recibe el efectivo
+                <span>*</span>
+              </label>
+
+              <input
+                v-model="responsableDesembolso"
+                type="text"
+                placeholder="Nombre del responsable"
+              />
+
+              <div class="acciones-botones">
+
+                <button
+                  class="btn-aprobar"
+                  :disabled="procesando"
+                  @click="confirmarDesembolso"
+                >
+                  Registrar desembolso
+                </button>
+
+              </div>
+
+            </template>
+
+
+            <!-- CIERRE -->
+
+            <template v-else-if="etapaAccion(compraSeleccionada) === 'cierre'">
+
+              <p class="nota-tramite">
+                Verifique que el descargo (factura, acta de
+                conformidad y fotograma) esté completo antes
+                de archivar el expediente de forma inmutable.
+              </p>
+
+              <div class="acciones-botones">
+
+                <button
+                  class="btn-aprobar"
+                  :disabled="procesando"
+                  @click="confirmarCierre"
+                >
+                  Cerrar y archivar
+                </button>
+
+              </div>
+
+            </template>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- =================================================
+         DATOS DEL SOLICITANTE
+    ================================================== -->
+
+    <div
+      v-if="mostrarSolicitante"
+      class="solicitante-modal-backdrop"
+      @click.self="cerrarSolicitante"
+    >
+      <div class="detalle-modal">
+
+        <div class="detalle-modal-header">
+          <div>
+            <h3>Datos del solicitante</h3>
+          </div>
+
+          <button
+            class="detalle-modal-close"
+            @click="cerrarSolicitante"
+          >✕</button>
+        </div>
+
+        <div class="detalle-modal-body">
+
+          <p
+            v-if="cargandoSolicitante"
+            class="detalle-vacio"
+          >
+            Cargando...
+          </p>
+
+          <template v-else-if="solicitanteDetalle">
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Nombre completo</b>
+                <span>{{ solicitanteDetalle.nombre_completo || '—' }}</span>
+              </div>
+
+              <div>
+                <b>Correo</b>
+                <span>{{ solicitanteDetalle.email || '—' }}</span>
+              </div>
+
+            </div>
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Usuario</b>
+                <span>{{ solicitanteDetalle.username || '—' }}</span>
+              </div>
+
+              <div>
+                <b>Estado de la cuenta</b>
+                <span>{{ solicitanteDetalle.is_active ? 'Activa' : 'Inactiva' }}</span>
+              </div>
+
+            </div>
+
+            <div class="detalle-campo">
+              <b>Roles</b>
+              <span>
+                {{
+                  (solicitanteDetalle.roles || [])
+                    .map(rol => rol.rol_nombre || rol.nombre)
+                    .join(', ')
+                  || 'Sin rol asignado'
+                }}
+              </span>
+            </div>
+
+          </template>
+
+          <p
+            v-else
+            class="detalle-vacio"
+          >
+            No fue posible cargar los datos del solicitante.
+          </p>
+
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </template>
 
+
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import DelegacionesPanel from '../components/DelegacionesPanel.vue'
-const router=useRouter(); const usuario=ref(JSON.parse(localStorage.getItem('sigta_usuario')||'{}'))
-const vista=ref('resumen'), menuAbierto=ref(false), compras=ref([]), cargando=ref(false), busqueda=ref('')
-const nombre=computed(()=>usuario.value.nombre||usuario.value.nombre_completo||'Responsable de Tesorería')
-const primerNombre=computed(()=>nombre.value.split(' ')[0]); const iniciales=computed(()=>nombre.value.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase())
-const estadoTexto=x=>String(x?.estado_nombre||x?.estado?.nombre||x?.estado||'Pendiente')
-const porVerificar=computed(()=>compras.value.filter(x=>x.estado==='CERTIFICADO_PENDIENTE_VERIFICACION'))
-const porDesembolsar=computed(()=>compras.value.filter(x=>x.estado==='APROBADO_PARA_DESEMBOLSO'))
-const porCerrar=computed(()=>compras.value.filter(x=>x.estado==='DESCARGO_PENDIENTE_LIQUIDACION'))
-const totalFondos=computed(()=>compras.value.reduce((s,x)=>s+Number(x.monto||x.monto_total||x.presupuesto||0),0))
-const menu=computed(()=>[{id:'resumen',icono:'⌂',nombre:'Resumen'},{id:'verificacion',icono:'✓',nombre:'Verificar expedientes',total:porVerificar.value.length},{id:'desembolsos',icono:'Bs',nombre:'Desembolsos',total:porDesembolsar.value.length},{id:'descargos',icono:'▣',nombre:'Descargos y cierre',total:porCerrar.value.length},{id:'delegar',icono:'DL',nombre:'Delegar aprobación'}])
-const tituloVista=computed(()=>({resumen:'Panel de Tesorería',verificacion:'Verificación preventiva',desembolsos:'Registro de desembolsos',descargos:'Descargos y cierre',delegar:'Delegar aprobación temporal'})[vista.value])
-const lista=computed(()=>vista.value==='verificacion'?porVerificar.value:vista.value==='desembolsos'?porDesembolsar.value:porCerrar.value)
-const filtrados=computed(()=>lista.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())))
-const accion=computed(()=>vista.value==='verificacion'?'Habilitar para Director':vista.value==='desembolsos'?'Registrar desembolso':'Cerrar Caja Chica')
-const documentos=['POA','Pedido institucional','Proforma','Certificación DAF']
-const codigo=x=>x.codigo||x.numero_solicitud||`CP-${String(x.id).padStart(4,'0')}`
-const titulo=x=>x.titulo||x.objeto||x.descripcion_corta||'Adquisición por Caja Chica'
-const detalle=x=>String(x.descripcion||x.justificacion||'Expediente de adquisición institucional.').slice(0,120)
-const estado=x=>estadoTexto(x); const monto=x=>x.monto||x.monto_total||x.presupuesto||0
-const moneda=n=>new Intl.NumberFormat('es-BO',{style:'currency',currency:'BOB',maximumFractionDigits:2}).format(Number(n)||0)
-async function cargar(){cargando.value=true;try{const r=await fetch('/api/compras/solicitudes/',{headers:{Authorization:`Token ${localStorage.getItem('sigta_token')}`}});if(!r.ok)throw 0;const d=await r.json();compras.value=Array.isArray(d)?d:(d.results||[])}catch{compras.value=[]}finally{cargando.value=false}}
-async function postAccion(exp,endpoint,body={}){const r=await fetch(`/api/compras/solicitudes/${exp.id}/${endpoint}/`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Token ${localStorage.getItem('sigta_token')}`},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.detalle||'No fue posible completar la acción.');await cargar();return d}
-async function ejecutar(exp){try{if(vista.value==='verificacion'){if(!confirm('¿Confirma que Informe, POA, Pedido, Proforma y Certificación están completos?'))return;await postAccion(exp,'verificar-tesoreria')}else if(vista.value==='desembolsos'){const monto=prompt('Monto efectivo desembolsado (Bs):',exp.monto_estimado||'');if(!monto)return;const responsable=prompt('Nombre del responsable que recibe el efectivo:','Encargado de Compras y Almacén');if(!responsable?.trim())return;await postAccion(exp,'desembolsar',{monto_desembolsado:monto,responsable_adquisicion:responsable.trim()})}else{if(!confirm('Esta acción cerrará y archivará el expediente de forma inmutable. ¿Continuar?'))return;await postAccion(exp,'cerrar-archivar')}alert('Acción registrada correctamente.')}catch(e){alert(e.message)}}
-function verExpediente(exp){const archivo=exp.certificacion_presupuestaria||exp.informe||exp.factura||exp.acta_conformidad||exp.fotograma;if(archivo)window.open(archivo,'_blank');else alert('No existe un documento disponible para abrir.')}
-function cerrarSesion(){localStorage.removeItem('sigta_token');localStorage.removeItem('sigta_usuario');router.push('/login')}
-onMounted(cargar)
+
+import {
+  computed,
+  onMounted,
+  ref
+} from 'vue'
+
+import {
+  useRouter
+} from 'vue-router'
+
+import TesoreriaMenu
+  from '../components/TesoreriaMenu.vue'
+
+
+const router =
+  useRouter()
+
+
+// ==========================================================
+// DATOS
+// ==========================================================
+
+const compras =
+  ref([])
+
+const cargando =
+  ref(true)
+
+
+// ==========================================================
+// FILTRO
+// ==========================================================
+
+const filtroEstado =
+  ref('')
+
+const comprasFiltradas =
+  computed(() => {
+
+    if (!filtroEstado.value) {
+      return compras.value
+    }
+
+    return compras.value.filter(
+      compra =>
+        bucketEstado(compra.estado)
+        === filtroEstado.value
+    )
+  })
+
+
+// ==========================================================
+// DETALLE (DOCUMENTO)
+// ==========================================================
+
+const mostrarDetalle =
+  ref(false)
+
+const compraSeleccionada =
+  ref(null)
+
+const documentosExpediente =
+  computed(() => {
+
+    const c =
+      compraSeleccionada.value
+
+    if (!c) {
+      return []
+    }
+
+    return [
+      { label: 'Informe', url: c.informe },
+      { label: 'POA', url: c.poa },
+      { label: 'Pedido', url: c.pedido },
+      { label: 'Proforma', url: c.proforma },
+      {
+        label: 'Certificación presupuestaria',
+        url: c.certificacion_presupuestaria,
+        pendienteTexto: 'Pendiente (la genera la DAF)',
+      },
+      {
+        label: 'Factura',
+        url: c.factura,
+        pendienteTexto: 'Pendiente (descargo del solicitante)',
+      },
+      {
+        label: 'Acta de conformidad',
+        url: c.acta_conformidad,
+        pendienteTexto: 'Pendiente (descargo del solicitante)',
+      },
+      {
+        label: 'Fotograma',
+        url: c.fotograma,
+        pendienteTexto: 'Pendiente (descargo del solicitante)',
+      },
+    ]
+  })
+
+const procesando =
+  ref(false)
+
+const mostrarFormRechazo =
+  ref(false)
+
+const motivoRechazoTexto =
+  ref('')
+
+const montoDesembolso =
+  ref('')
+
+const responsableDesembolso =
+  ref('')
+
+const errorAccion =
+  ref('')
+
+
+function resetearFormularios() {
+
+  mostrarFormRechazo.value =
+    false
+
+  motivoRechazoTexto.value =
+    ''
+
+  montoDesembolso.value =
+    ''
+
+  responsableDesembolso.value =
+    ''
+
+  errorAccion.value =
+    ''
+}
+
+
+function verDetalle(
+  compra
+) {
+
+  compraSeleccionada.value =
+    compra
+
+  mostrarDetalle.value =
+    true
+
+  resetearFormularios()
+
+  if (
+    compra.monto_estimado
+    &&
+    !montoDesembolso.value
+  ) {
+
+    montoDesembolso.value =
+      compra.monto_estimado
+  }
+}
+
+
+function rechazarDesdeLista(
+  compra
+) {
+
+  compraSeleccionada.value =
+    compra
+
+  mostrarDetalle.value =
+    true
+
+  resetearFormularios()
+
+  mostrarFormRechazo.value =
+    true
+}
+
+
+async function aprobarDesdeLista(
+  compra
+) {
+
+  compraSeleccionada.value =
+    compra
+
+  resetearFormularios()
+
+  await confirmarVerificacion()
+}
+
+
+function cerrarDetalle() {
+
+  mostrarDetalle.value =
+    false
+
+  compraSeleccionada.value =
+    null
+
+  resetearFormularios()
+}
+
+
+// ==========================================================
+// DATOS DEL SOLICITANTE
+// ==========================================================
+
+const mostrarSolicitante =
+  ref(false)
+
+const solicitanteDetalle =
+  ref(null)
+
+const cargandoSolicitante =
+  ref(false)
+
+
+async function abrirSolicitante(
+  usuarioId
+) {
+
+  mostrarSolicitante.value =
+    true
+
+  cargandoSolicitante.value =
+    true
+
+  solicitanteDetalle.value =
+    null
+
+  try {
+
+    const respuesta =
+      await fetch(
+        `/api/usuarios/usuarios/${usuarioId}/`,
+        {
+          headers: {
+            Authorization: `Token ${token()}`,
+            Accept: 'application/json',
+          }
+        }
+      )
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
+      return
+    }
+
+    if (respuesta.ok) {
+
+      solicitanteDetalle.value =
+        await respuesta.json()
+    }
+
+  } catch (error) {
+
+    console.error(
+      'Error cargando datos del solicitante:',
+      error
+    )
+
+  } finally {
+
+    cargandoSolicitante.value =
+      false
+  }
+}
+
+
+function cerrarSolicitante() {
+
+  mostrarSolicitante.value =
+    false
+
+  solicitanteDetalle.value =
+    null
+}
+
+
+// ==========================================================
+// ETAPA DE TESORERÍA
+// ==========================================================
+//
+// Tesorería interviene en 3 compuertas del BPMN de Compra
+// Caja Chica: verificar el expediente certificado por la DAF
+// (o rechazarlo), registrar el desembolso una vez que el
+// Director dio el visto bueno, y cerrar/archivar el
+// expediente tras revisar el descargo final. Cada etapa usa
+// su propio formulario.
+// ==========================================================
+
+function etapaAccion(
+  compra
+) {
+
+  const codigo =
+    String(
+      compra?.estado
+      || ''
+    )
+      .trim()
+      .toUpperCase()
+
+  if (
+    codigo === 'CERTIFICADO_PENDIENTE_VERIFICACION'
+  ) {
+
+    return 'decision'
+  }
+
+  if (
+    codigo === 'APROBADO_PARA_DESEMBOLSO'
+  ) {
+
+    return 'desembolso'
+  }
+
+  if (
+    codigo === 'DESCARGO_PENDIENTE_LIQUIDACION'
+  ) {
+
+    return 'cierre'
+  }
+
+  return null
+}
+
+
+function abrirFormRechazo() {
+
+  resetearFormularios()
+
+  mostrarFormRechazo.value =
+    true
+}
+
+
+function cancelarRechazo() {
+
+  resetearFormularios()
+}
+
+
+async function confirmarVerificacion() {
+
+  if (!compraSeleccionada.value) {
+    return
+  }
+
+  const confirmar =
+    window.confirm(
+      `¿Confirma que el expediente ${compraSeleccionada.value.codigo} está completo y puede continuar a Dirección?`
+    )
+
+  if (!confirmar) {
+    return
+  }
+
+  await ejecutarAccion(
+    'verificar-tesoreria',
+    {},
+    'aprobar'
+  )
+}
+
+
+async function confirmarRechazo() {
+
+  const motivo =
+    motivoRechazoTexto.value.trim()
+
+  if (!motivo) {
+
+    errorAccion.value =
+      'Debe indicar el motivo del rechazo.'
+
+    return
+  }
+
+  await ejecutarAccion(
+    'rechazar',
+    { motivo },
+    'rechazar'
+  )
+}
+
+
+async function confirmarDesembolso() {
+
+  const monto =
+    String(
+      montoDesembolso.value
+      || ''
+    ).trim()
+
+  const responsable =
+    responsableDesembolso.value.trim()
+
+  if (
+    !monto
+    ||
+    Number(monto) <= 0
+  ) {
+
+    errorAccion.value =
+      'Debe indicar el monto desembolsado.'
+
+    return
+  }
+
+  if (!responsable) {
+
+    errorAccion.value =
+      'Debe indicar el responsable que recibe el efectivo.'
+
+    return
+  }
+
+  await ejecutarAccion(
+    'desembolsar',
+    {
+      monto_desembolsado: monto,
+      responsable_adquisicion: responsable,
+    },
+    'aprobar'
+  )
+}
+
+
+async function confirmarCierre() {
+
+  if (!compraSeleccionada.value) {
+    return
+  }
+
+  const confirmar =
+    window.confirm(
+      'Esta acción archivará el expediente de forma inmutable. ¿Continuar?'
+    )
+
+  if (!confirmar) {
+    return
+  }
+
+  await ejecutarAccion(
+    'cerrar-archivar',
+    {},
+    'aprobar'
+  )
+}
+
+
+async function ejecutarAccion(
+  endpoint,
+  body,
+  tipo
+) {
+
+  procesando.value =
+    true
+
+  errorAccion.value =
+    ''
+
+  try {
+
+    const respuesta =
+      await fetch(
+        `/api/compras/solicitudes/${compraSeleccionada.value.id}/${endpoint}/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Token ${token()}`,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(body),
+        }
+      )
+
+    let datos = {}
+
+    try {
+      datos = await respuesta.json()
+    } catch {
+      datos = {}
+    }
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
+      return
+    }
+
+    if (!respuesta.ok) {
+
+      errorAccion.value =
+        datos.detalle
+        || `No fue posible ${tipo === 'aprobar' ? 'registrar' : 'rechazar'} la solicitud.`
+
+      return
+    }
+
+    cerrarDetalle()
+
+    await cargarCompras()
+
+  } catch (error) {
+
+    console.error(
+      'Error ejecutando la acción:',
+      error
+    )
+
+    errorAccion.value =
+      'No fue posible comunicarse con el servidor.'
+
+  } finally {
+
+    procesando.value =
+      false
+  }
+}
+
+
+// ==========================================================
+// TOKEN
+// ==========================================================
+
+function token() {
+
+  return localStorage.getItem(
+    'sigta_token'
+  )
+}
+
+
+// ==========================================================
+// INICIO
+// ==========================================================
+
+onMounted(
+  async () => {
+
+    if (!token()) {
+
+      router.push(
+        '/login'
+      )
+
+      return
+    }
+
+
+    await cargarCompras()
+  }
+)
+
+
+// ==========================================================
+// NORMALIZAR
+// ==========================================================
+
+function normalizarLista(
+  datos
+) {
+
+  if (
+    Array.isArray(datos)
+  ) {
+
+    return datos
+  }
+
+
+  if (
+    Array.isArray(
+      datos?.results
+    )
+  ) {
+
+    return datos.results
+  }
+
+
+  return []
+}
+
+
+// ==========================================================
+// CARGAR COMPRAS
+// ==========================================================
+
+async function cargarCompras() {
+
+  cargando.value =
+    true
+
+
+  try {
+
+    const respuesta =
+      await fetch(
+        '/api/compras/solicitudes/',
+        {
+          headers: {
+
+            Authorization:
+              `Token ${token()}`,
+
+            Accept:
+              'application/json',
+          }
+        }
+      )
+
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
+      return
+    }
+
+
+    if (!respuesta.ok) {
+
+      console.error(
+        'Compras:',
+        respuesta.status
+      )
+
+      compras.value = []
+
+      return
+    }
+
+
+    const datos =
+      await respuesta.json()
+
+
+    compras.value =
+      normalizarLista(
+        datos
+      )
+      .sort(
+        (a, b) => {
+
+          const fechaA =
+            new Date(a.creado_en || 0).getTime()
+
+          const fechaB =
+            new Date(b.creado_en || 0).getTime()
+
+          return fechaB - fechaA
+        }
+      )
+
+
+  } catch (error) {
+
+    console.error(
+      'Error cargando compras:',
+      error
+    )
+
+    compras.value = []
+
+
+  } finally {
+
+    cargando.value =
+      false
+  }
+}
+
+
+// ==========================================================
+// ESTADO (AGRUPACIÓN VISUAL SIMPLIFICADA PARA TESORERÍA)
+// ==========================================================
+//
+// Para Tesorería, "en espera" son los 3 estados que le
+// corresponde resolver: CERTIFICADO_PENDIENTE_VERIFICACION,
+// APROBADO_PARA_DESEMBOLSO y DESCARGO_PENDIENTE_LIQUIDACION.
+// ==========================================================
+
+function bucketEstado(
+  estado
+) {
+
+  const codigo =
+    String(
+      estado
+      || ''
+    )
+      .trim()
+      .toUpperCase()
+
+
+  if (
+    codigo === 'RECHAZADO'
+    ||
+    codigo === 'ANULADO'
+  ) {
+
+    return 'RECHAZADA'
+  }
+
+
+  if (
+    codigo === 'CERTIFICADO_PENDIENTE_VERIFICACION'
+    ||
+    codigo === 'APROBADO_PARA_DESEMBOLSO'
+    ||
+    codigo === 'DESCARGO_PENDIENTE_LIQUIDACION'
+  ) {
+
+    return 'EN_ESPERA'
+  }
+
+
+  return 'APROBADA'
+}
+
+
+function etiquetaBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: 'Aprobación en espera',
+      APROBADA: 'Aprobada',
+      RECHAZADA: 'Rechazada',
+    }[bucket]
+    || bucket
+  )
+}
+
+
+function etiquetaFiltroVacio(
+  bucket
+) {
+
+  return (
+    {
+      APROBADA: 'solicitudes aprobadas',
+      RECHAZADA: 'solicitudes rechazadas',
+    }[bucket]
+    || 'solicitudes'
+  )
+}
+
+
+function claseBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: 'working',
+      APROBADA: 'closed',
+      RECHAZADA: 'cancelled',
+    }[bucket]
+    || 'working'
+  )
+}
+
+
+function iconoBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: '⏳',
+      APROBADA: '✅',
+      RECHAZADA: '❌',
+    }[bucket]
+    || '⏳'
+  )
+}
+
+
+function descripcionBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: 'El expediente se encuentra pendiente de verificación, desembolso o cierre.',
+      APROBADA: 'El expediente ya avanzó fuera de la bandeja de Tesorería.',
+      RECHAZADA: 'El expediente fue rechazado.',
+    }[bucket]
+    || ''
+  )
+}
+
+
+// ==========================================================
+// FECHA
+// ==========================================================
+
+function formatearFecha(
+  fecha
+) {
+
+  if (!fecha) {
+
+    return ''
+  }
+
+
+  try {
+
+    return new Date(
+      fecha
+    ).toLocaleString(
+      'es-BO',
+      {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }
+    )
+
+  } catch {
+
+    return ''
+  }
+}
+
+
+// ==========================================================
+// SESIÓN
+// ==========================================================
+
+function cerrarSesion() {
+
+  localStorage.removeItem(
+    'sigta_token'
+  )
+
+  localStorage.removeItem(
+    'sigta_usuario'
+  )
+
+  router.push(
+    '/login'
+  )
+}
+
 </script>
 
+
 <style scoped>
-*{box-sizing:border-box}.layout{min-height:100vh;background:#f4f7fa;color:#193047;font-family:Inter,Segoe UI,sans-serif}aside{position:fixed;inset:0 auto 0 0;width:272px;background:#0d385e;color:white;padding:22px 16px;display:flex;flex-direction:column}.brand,.person{display:flex;align-items:center;gap:12px}.brand{padding:0 9px 20px;border-bottom:1px solid #ffffff22}.brand>b{background:#f6c719;color:#113c61;padding:14px 10px;border-radius:9px}.brand strong,.brand small,.person b,.person small{display:block}.brand strong{font-size:23px}.brand small,.person small{color:#b7cee0;margin-top:3px}.person{padding:22px 9px}.person>span{width:42px;height:42px;border-radius:50%;background:#f6c719;color:#153d5e;display:grid;place-items:center;font-weight:900}aside>p{color:#80a7c5;font-size:10px;font-weight:800;letter-spacing:1.4px;margin:14px 10px 8px}aside button{background:transparent;border:0;color:#d9e9f6;padding:12px;border-radius:8px;display:flex;gap:11px;align-items:center;text-align:left;cursor:pointer;margin:2px 0}aside button i{font-style:normal;font-size:11px;font-weight:900;width:27px}aside button em{margin-left:auto;background:#ffffff20;padding:2px 8px;border-radius:10px;font-style:normal}aside button.active,aside button:hover{background:#ffffff18;box-shadow:inset 3px 0 #f6c719}.bottom{margin-top:auto;border-top:1px solid #ffffff20;padding-top:10px}.bottom button{width:100%}main{margin-left:272px;padding:30px 38px 60px;max-width:1650px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:27px}header span{font-size:11px;color:#73869a}h1{margin:6px 0;font-size:29px}header p{margin:0;color:#708295}.reload{background:white;border:1px solid #d5e0e8;padding:10px 14px;border-radius:8px;color:#1c4e76;cursor:pointer}.welcome{background:linear-gradient(120deg,#0f3b62,#1b6582);padding:27px 30px;border-radius:13px;color:white;display:flex;justify-content:space-between;align-items:center}.welcome small,.panel-title small{font-size:10px;font-weight:800;letter-spacing:1.5px;color:#f6c719}.welcome h2{font-size:24px;margin:7px 0}.welcome p{margin:0;color:#d4e5ed}.seal{height:65px;width:65px;border-radius:50%;border:2px solid #f6c719;display:grid;place-items:center;font-size:20px;font-weight:800}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0}.stats article{background:white;border:1px solid #e0e8ee;border-radius:10px;padding:19px;display:flex;gap:13px}.stats article>span,.task>span{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;color:white;font-weight:800}.blue{background:#2582bd}.amber{background:#e3a42a}.green{background:#25a477}.navy{background:#164767}.stats small,.stats b,.stats p{display:block}.stats b{font-size:25px;margin:3px 0}.stats p{font-size:11px;color:#8494a4;margin:0}.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px}.panel{background:white;border:1px solid #e0e8ee;border-radius:11px;padding:22px}.panel-title h3{margin:5px 0 15px}.task{width:100%;border:0;border-top:1px solid #ebf0f4;background:white;padding:15px 3px;display:flex;align-items:center;gap:13px;text-align:left;cursor:pointer}.task div b,.task div small{display:block}.task div small{color:#8291a0;margin-top:4px}.task em{margin-left:auto;background:#edf3f6;border-radius:12px;padding:4px 9px;font-style:normal}.task>strong{font-size:22px;color:#668097}.rules p{padding:12px 0;margin:0;border-top:1px solid #ebf0f4;color:#748595;font-size:12px;line-height:1.6}.rules b{color:#29465f}.toolbar{display:flex;justify-content:space-between;margin-bottom:17px}.tabs{background:#e7edf2;padding:4px;border-radius:8px}.tabs button{border:0;background:transparent;padding:9px 14px;border-radius:6px}.tabs .active{background:white;box-shadow:0 2px 6px #19304720}.toolbar label{background:white;border:1px solid #d8e2e9;border-radius:8px;padding:9px 12px;width:330px}.toolbar input{border:0;outline:0;margin-left:7px;width:88%}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{background:white;border:1px solid #dde6ed;border-radius:11px;padding:19px}.card-top{display:flex;justify-content:space-between}.card-top span{color:#176a9b;font-weight:800;font-size:12px}.card-top em{font-size:10px;background:#edf3f6;padding:4px 8px;border-radius:10px;font-style:normal}.card h3{font-size:17px;margin:15px 0 7px}.card>p{color:#738598;font-size:12px;min-height:42px}.money{background:#f4f7f9;padding:10px;border-radius:7px;margin:13px 0}.money small,.money b{display:block}.money small{color:#7b8d9e;font-size:10px}.money b{font-size:18px;margin-top:3px}.checklist{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;font-size:11px;color:#526a7f}.card-foot{display:flex;gap:8px;border-top:1px solid #e9eef2;padding-top:14px}.card-foot button{flex:1;padding:9px 6px;border-radius:7px;font-weight:700;cursor:pointer}.ghost{background:white;border:1px solid #cbd8e1;color:#3b5b74}.primary{background:#12547c;border:1px solid #12547c;color:white}.empty{text-align:center;background:white;border:1px dashed #cbd8df;border-radius:11px;padding:70px;color:#748797}.empty>span{font-size:32px;color:#25a477}@media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}@media(max-width:720px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}.toolbar,header{align-items:flex-start;flex-direction:column;gap:12px}.toolbar label{width:100%}}
+
+* {
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   LAYOUT
+========================================================= */
+
+.layout {
+  min-height: 100vh;
+  display: flex;
+  background: #f2f5f9;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 27px;
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+
+.page-header h1 {
+  margin: 0;
+  color: #17324a;
+  font-size: 33px;
+}
+
+
+.page-header p {
+  margin: 5px 0 0;
+  color: #718294;
+  font-size: 17px;
+}
+
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+.filtro-estado {
+  min-height: 41px;
+  padding: 0 12px;
+  border: 1px solid #d0dae2;
+  border-radius: 7px;
+  background: white;
+  color: #17324a;
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+
+.refresh-button {
+  min-height: 41px;
+  padding: 0 15px;
+  border: 1px solid #073b6f;
+  border-radius: 7px;
+  background: white;
+  color: #073b6f;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+
+.refresh-button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   LISTADO
+========================================================= */
+
+.requests-card {
+  overflow: hidden;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 4px 14px rgba(0,0,0,.05);
+}
+
+
+.request-list {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.request {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 17px 20px;
+  border-bottom: 1px solid #edf0f2;
+}
+
+
+.request:last-child {
+  border-bottom: none;
+}
+
+
+.request-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 155px 1fr;
+  gap: 15px;
+}
+
+
+.request-code strong {
+  display: block;
+  color: #07518d;
+  font-size: 15px;
+}
+
+
+.request-code small {
+  display: block;
+  margin-top: 4px;
+  color: #81909c;
+  font-size: 13px;
+}
+
+
+.request-info h3 {
+  margin: 0 0 5px;
+  color: #29475e;
+  font-size: 18px;
+}
+
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+
+.meta span {
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: #f3f6f8;
+  color: #687986;
+  font-size: 13px;
+}
+
+
+.request-side {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 9px;
+}
+
+
+/* =========================================================
+   ESTADO
+========================================================= */
+
+.status {
+  display: inline-block;
+  padding: 5px 8px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+
+.status.working {
+  background: #fff6d9;
+  color: #866400;
+}
+
+
+.status.closed {
+  background: #e8f6ee;
+  color: #237345;
+}
+
+
+.status.cancelled {
+  background: #fdeaea;
+  color: #a53232;
+}
+
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+
+.view,
+.row-aprobar,
+.row-rechazar {
+  padding: 6px 8px;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+
+.view {
+  background: #edf3f8;
+  color: #435a6e;
+}
+
+
+.row-aprobar {
+  background: #e5f3ea;
+  color: #237345;
+}
+
+
+.row-rechazar {
+  background: #fdecec;
+  color: #a53232;
+}
+
+
+/* =========================================================
+   VACÍOS
+========================================================= */
+
+.loading,
+.empty {
+  padding: 45px 20px;
+  text-align: center;
+  color: #798793;
+  font-size: 16px;
+}
+
+
+.empty {
+  border-radius: 10px;
+  background: white;
+}
+
+
+/* =========================================================
+   DOCUMENTO DE DETALLE
+========================================================= */
+
+.documento-modal {
+  max-width: 700px;
+}
+
+
+.documento-modal .detalle-modal-header h3 {
+  font-size: 20px;
+}
+
+
+.documento-modal .detalle-modal-header small {
+  font-size: 13px;
+}
+
+
+.documento-body {
+  padding: 18px 22px 22px;
+}
+
+
+.estado-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: 8px;
+}
+
+
+.estado-banner-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.6);
+  font-size: 19px;
+}
+
+
+.estado-banner strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+
+.estado-banner-descripcion {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  opacity: .85;
+}
+
+
+.estado-banner.working {
+  background: #fff6d9;
+  color: #866400;
+}
+
+
+.estado-banner.closed {
+  background: #e8f6ee;
+  color: #237345;
+}
+
+
+.estado-banner.cancelled {
+  background: #fdeaea;
+  color: #a53232;
+}
+
+
+.documento-seccion {
+  padding: 16px 0;
+  border-top: 1px solid #edf0f2;
+}
+
+
+.documento-seccion:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+
+.documento-header-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+
+.documento-header-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fdf3d9;
+  font-size: 17px;
+}
+
+
+.documento-titulo-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+
+.documento-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #eef1f8;
+  font-size: 13px;
+}
+
+
+.documento-titulo {
+  display: block;
+  margin-bottom: 8px;
+  color: #8592a0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+
+.documento-titulo-fila .documento-titulo {
+  margin-bottom: 0;
+}
+
+
+.documento-seccion h4 {
+  margin: 0 0 6px;
+  color: #17324a;
+  font-size: 20px;
+}
+
+
+.documento-seccion > p {
+  margin: 0 0 10px;
+  color: #354d60;
+  font-size: 16px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+
+.documento-seccion b {
+  display: block;
+  margin-bottom: 4px;
+  color: #8592a0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+
+.documento-fila {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+
+.documento-fila-5 {
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+}
+
+
+.documento-fila > div span {
+  display: block;
+  color: #26333f;
+  font-size: 16px;
+}
+
+
+.solicitante-link {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+
+.solicitante-link span {
+  display: block;
+  color: #07518d;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+
+.solicitante-link:hover span {
+  color: #073b6f;
+}
+
+
+.solicitante-link small {
+  display: block;
+  margin-top: 2px;
+  color: #26333f;
+  font-size: 13px;
+}
+
+
+.solicitante-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(10, 20, 35, .55);
+}
+
+
+.documento-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+.documento-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 7px;
+  font-family: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+
+.documento-item-icono {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+
+.documento-item-label {
+  flex: 1;
+  color: #26333f;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+.documento-item small {
+  font-size: 13px;
+}
+
+
+.documento-item-accion {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+
+.documento-item-ojo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.6);
+  font-size: 11px;
+}
+
+
+.documento-item.ok {
+  background: #e8f6ee;
+}
+
+
+.documento-item.ok .documento-item-accion {
+  color: #237345;
+  font-weight: 700;
+}
+
+
+.documento-item.falta {
+  background: #f3f6f8;
+}
+
+
+.documento-item.falta small {
+  color: #8a97a2;
+}
+
+
+.motivo-rechazo {
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: #fdecec;
+}
+
+
+.motivo-rechazo .documento-titulo {
+  color: #a53232;
+}
+
+
+.motivo-rechazo p {
+  margin: 0;
+  color: #7a2828;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   ACCIONES DE DECISIÓN
+========================================================= */
+
+.documento-acciones {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #edf0f2;
+}
+
+
+.nota-tramite {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 7px;
+  background: #eef3f8;
+  color: #536575;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+.accion-error {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #fdecec;
+  color: #a53232;
+  font-size: 14px;
+}
+
+
+.acciones-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+
+.btn-aprobar,
+.btn-rechazar,
+.btn-cancelar {
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+
+.btn-aprobar {
+  background: #237345;
+  color: white;
+}
+
+
+.btn-rechazar {
+  background: #a53232;
+  color: white;
+}
+
+
+.btn-cancelar {
+  background: #edf0f2;
+  color: #435a6e;
+}
+
+
+.btn-aprobar:disabled,
+.btn-rechazar:disabled,
+.btn-cancelar:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+
+.form-rechazo label,
+.documento-acciones > label {
+  display: block;
+  margin-bottom: 6px;
+  color: #344a5d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+.form-rechazo label span,
+.documento-acciones > label span {
+  color: #a53232;
+}
+
+
+.form-rechazo textarea {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #d0dae2;
+  border-radius: 7px;
+  background: white;
+  color: #26333f;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+}
+
+
+.documento-acciones > input {
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: 12px;
+  padding: 0 12px;
+  border: 1px solid #d0dae2;
+  border-radius: 7px;
+  background: white;
+  color: #26333f;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 760px) {
+
+  .layout {
+    display: block;
+  }
+
+
+  .main {
+    padding: 16px;
+  }
+
+
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+
+  .header-actions {
+    width: 100%;
+  }
+
+
+  .filtro-estado {
+    flex: 1;
+  }
+
+
+  .request {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+
+  .request-main {
+    grid-template-columns: 1fr;
+  }
+
+
+  .request-side {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+
+  .documento-fila {
+    grid-template-columns: 1fr;
+  }
+
+}
+
 </style>

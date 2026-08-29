@@ -479,13 +479,13 @@
             <div v-if="!editando" class="field full documents-field">
               <label>Expediente inicial obligatorio</label>
               <p class="file-help">
-                Adjunte Informe, POA, Pedido y Proforma para enviar la solicitud a la DAF.
+                Adjunte Informe, POA, Pedido y Proforma en PDF para enviar la solicitud a la DAF.
               </p>
               <div class="document-grid">
-                <label class="document-input"><span>Informe</span><input type="file" required @change="seleccionarArchivo('informe', $event)" /></label>
-                <label class="document-input"><span>POA</span><input type="file" required @change="seleccionarArchivo('poa', $event)" /></label>
-                <label class="document-input"><span>Pedido</span><input type="file" required @change="seleccionarArchivo('pedido', $event)" /></label>
-                <label class="document-input"><span>Proforma</span><input type="file" required @change="seleccionarArchivo('proforma', $event)" /></label>
+                <label class="document-input"><span>Informe</span><input type="file" accept="application/pdf" required @change="seleccionarArchivo('informe', $event)" /></label>
+                <label class="document-input"><span>POA</span><input type="file" accept="application/pdf" required @change="seleccionarArchivo('poa', $event)" /></label>
+                <label class="document-input"><span>Pedido</span><input type="file" accept="application/pdf" required @change="seleccionarArchivo('pedido', $event)" /></label>
+                <label class="document-input"><span>Proforma</span><input type="file" accept="application/pdf" required @change="seleccionarArchivo('proforma', $event)" /></label>
               </div>
             </div>
 
@@ -893,9 +893,19 @@ function editarSolicitud(solicitud) {
 
 async function guardar() {
 
-  guardando.value = true
-
   mensajeModal.value = ''
+
+  if (!editando.value) {
+    for (const campo of ['informe', 'poa', 'pedido', 'proforma']) {
+      const archivo = archivos[campo]
+      if (archivo && !archivo.name.toLowerCase().endsWith('.pdf')) {
+        mensajeModal.value = 'Informe, POA, Pedido y Proforma deben ser archivos PDF.'
+        return
+      }
+    }
+  }
+
+  guardando.value = true
 
   try {
 

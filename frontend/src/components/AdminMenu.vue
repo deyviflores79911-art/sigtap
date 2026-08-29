@@ -48,35 +48,6 @@
     >
 
     <!-- =====================================================
-         USUARIO AUTENTICADO
-    ====================================================== -->
-
-    <div class="admin-info">
-
-      <div class="avatar">
-        {{ iniciales }}
-      </div>
-
-      <div class="admin-data">
-
-        <strong>
-          {{ nombreUsuario }}
-        </strong>
-
-        <span>
-          {{ nombreRol }}
-        </span>
-
-        <small>
-          {{ nombreArea }}
-        </small>
-
-      </div>
-
-    </div>
-
-
-    <!-- =====================================================
          MI PORTAL
     ====================================================== -->
 
@@ -222,46 +193,6 @@ if (usuarioGuardado) {
 
 
 /* =========================================================
-   DATOS DEL USUARIO
-========================================================= */
-
-const nombreUsuario =
-  computed(() => {
-
-    return (
-      usuario.value?.nombre
-      ||
-      usuario.value?.nombre_completo
-      ||
-      'Administrador SIGTA'
-    )
-  })
-
-
-const iniciales =
-  computed(() => {
-
-    const nombre =
-      nombreUsuario.value
-
-
-    return nombre
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map(
-        palabra =>
-          palabra
-            .charAt(0)
-            .toUpperCase()
-      )
-      .join('')
-      ||
-      'AS'
-  })
-
-
-/* =========================================================
    ROLES
 ========================================================= */
 
@@ -299,48 +230,6 @@ const codigoRolPrincipal =
       .trim()
       .toUpperCase()
       .replace(/\s+/g, '_')
-  })
-
-
-const nombreRol =
-  computed(() => {
-
-    const rol =
-      rolesUsuario.value[0]
-
-
-    return (
-      rol?.nombre
-      ||
-      rol?.rol_nombre
-      ||
-      (
-        esAdministrador.value
-          ? 'Administrador SIGTA'
-          : 'Usuario'
-      )
-    )
-  })
-
-
-const nombreArea =
-  computed(() => {
-
-    const rol =
-      rolesUsuario.value[0]
-
-
-    return (
-      rol?.area
-      ||
-      rol?.area_nombre
-      ||
-      (
-        esAdministrador.value
-          ? 'Global'
-          : 'Sin área'
-      )
-    )
   })
 
 
@@ -623,96 +512,6 @@ function cerrarSesion() {
 
 
 /* =========================================================
-   USUARIO
-========================================================= */
-
-.admin-info {
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 10px;
-
-  padding:
-    18px
-    8px
-    10px;
-}
-
-
-.avatar {
-
-  width: 38px;
-  height: 38px;
-
-  flex-shrink: 0;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 50%;
-
-  background: #FFFF00;
-
-  color: #6576B4;
-
-  font-size: 12px;
-
-  font-weight: 900;
-}
-
-
-.admin-data {
-  min-width: 0;
-}
-
-
-.admin-info strong,
-.admin-info span,
-.admin-info small {
-
-  display: block;
-}
-
-
-.admin-info strong {
-
-  overflow: hidden;
-
-  color: #ffffff;
-
-  font-size: 13px;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-}
-
-
-.admin-info span {
-
-  margin-top: 3px;
-
-  color: #d1dce6;
-
-  font-size: 10px;
-}
-
-
-.admin-info small {
-
-  margin-top: 2px;
-
-  color: #94afc7;
-
-  font-size: 10px;
-}
-
-
-/* =========================================================
    SECCIONES
 ========================================================= */
 
@@ -838,6 +637,42 @@ nav {
 /* =========================================================
    CERRAR SESIÓN
 ========================================================= */
+
+.switch-link {
+
+  display: block;
+
+  margin-top: auto;
+
+  padding: 10px 11px;
+
+  border-radius: 7px;
+
+  color: #FFFF00;
+
+  text-decoration: none;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  text-align: center;
+
+  transition: background .2s;
+}
+
+
+.switch-link:hover {
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      .1
+    );
+}
+
 
 .logout {
 

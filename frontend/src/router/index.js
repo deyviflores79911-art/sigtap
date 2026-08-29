@@ -45,6 +45,14 @@ import AdminPreferenciasView
 
 
 /* =========================================================
+   SUPERUSUARIO
+========================================================= */
+
+import SuperuserDashboardView
+  from '../views/SuperuserDashboardView.vue'
+
+
+/* =========================================================
    ADMINISTRADOR - NUEVOS MÓDULOS
 ========================================================= */
 
@@ -100,9 +108,6 @@ import AuxiliarServiciosGeneralesDashboardView
 
 import TesoreriaDashboardView
   from '../views/TesoreriaDashboardView.vue'
-
-import DirectorDashboardView
-  from '../views/DirectorDashboardView.vue'
 
 import AlmacenDashboardView
   from '../views/AlmacenDashboardView.vue'
@@ -237,36 +242,6 @@ const router = createRouter({
 
 
     /* -----------------------------------------------------
-       CRUD USUARIOS
-    ----------------------------------------------------- */
-
-    {
-      path: '/admin/usuarios',
-      name: 'admin-usuarios',
-      component: AdminUsuariosView,
-      meta: {
-        requiereAuth: true,
-        admin: true,
-      },
-    },
-
-
-    /* -----------------------------------------------------
-       ROLES Y ÁREAS
-    ----------------------------------------------------- */
-
-    {
-      path: '/admin/roles-areas',
-      name: 'admin-roles-areas',
-      component: AdminRolesAreasView,
-      meta: {
-        requiereAuth: true,
-        admin: true,
-      },
-    },
-
-
-    /* -----------------------------------------------------
        MANTENEMOS TU PANTALLA ANTERIOR DE TICKETS
     ----------------------------------------------------- */
 
@@ -282,7 +257,8 @@ const router = createRouter({
 
 
     /* -----------------------------------------------------
-       BITÁCORA
+       BITÁCORA (misma pantalla, ruta propia por portal
+       para que cada uno conserve su propio sidebar)
     ----------------------------------------------------- */
 
     {
@@ -291,37 +267,77 @@ const router = createRouter({
       component: AdminBitacoraView,
       meta: {
         requiereAuth: true,
-        admin: true,
+        roles: ['ADMIN', 'SUPERUSER'],
+      },
+    },
+
+    {
+      path: '/superuser/bitacora',
+      name: 'superuser-bitacora',
+      component: AdminBitacoraView,
+      meta: {
+        requiereAuth: true,
+        roles: ['ADMIN', 'SUPERUSER'],
       },
     },
 
 
-    /* -----------------------------------------------------
-       SMTP
-    ----------------------------------------------------- */
+    /* =====================================================
+       SUPERUSUARIO
+
+       Vista separada del panel del Director (/admin/...):
+       administración técnica del sistema (usuarios, roles y
+       permisos, correo SMTP, preferencias). Reutiliza el
+       mismo rol ADMIN para la autorización.
+    ===================================================== */
 
     {
-      path: '/admin/smtp',
-      name: 'admin-smtp',
+      path: '/superuser/dashboard',
+      name: 'superuser-dashboard',
+      component: SuperuserDashboardView,
+      meta: {
+        requiereAuth: true,
+        roles: ['ADMIN', 'SUPERUSER'],
+      },
+    },
+
+    {
+      path: '/superuser/usuarios',
+      name: 'superuser-usuarios',
+      component: AdminUsuariosView,
+      meta: {
+        requiereAuth: true,
+        roles: ['ADMIN', 'SUPERUSER'],
+      },
+    },
+
+    {
+      path: '/superuser/roles-permisos',
+      name: 'superuser-roles-permisos',
+      component: AdminRolesAreasView,
+      meta: {
+        requiereAuth: true,
+        roles: ['ADMIN', 'SUPERUSER'],
+      },
+    },
+
+    {
+      path: '/superuser/smtp',
+      name: 'superuser-smtp',
       component: AdminSMTPView,
       meta: {
         requiereAuth: true,
-        admin: true,
+        roles: ['ADMIN', 'SUPERUSER'],
       },
     },
 
-
-    /* -----------------------------------------------------
-       PREFERENCIAS
-    ----------------------------------------------------- */
-
     {
-      path: '/admin/preferencias',
-      name: 'admin-preferencias',
+      path: '/superuser/preferencias',
+      name: 'superuser-preferencias',
       component: AdminPreferenciasView,
       meta: {
         requiereAuth: true,
-        admin: true,
+        roles: ['ADMIN', 'SUPERUSER'],
       },
     },
 
@@ -429,15 +445,15 @@ const router = createRouter({
     },
 
     {
-      path: '/director/dashboard',
-      name: 'director-dashboard',
-      component: DirectorDashboardView,
-      meta: { requiereAuth: true, roles: ['DIRECTOR'] },
+      path: '/almacen/dashboard',
+      name: 'almacen-dashboard',
+      component: AlmacenDashboardView,
+      meta: { requiereAuth: true, roles: ['ENCARGADO_COMPRAS_ALMACEN'] },
     },
 
     {
-      path: '/almacen/dashboard',
-      name: 'almacen-dashboard',
+      path: '/almacen/requerimientos',
+      name: 'almacen-requerimientos',
       component: AlmacenDashboardView,
       meta: { requiereAuth: true, roles: ['ENCARGADO_COMPRAS_ALMACEN'] },
     },
@@ -536,12 +552,12 @@ router.beforeEach(
 
       if (!roles.includes('SOLICITANTE')) {
         if (roles.includes('ADMIN')) return '/admin/dashboard'
+        if (roles.includes('SUPERUSER')) return '/superuser/dashboard'
         if (roles.includes('JEFE_UTIC')) return '/jefe-utic/dashboard'
         if (roles.includes('ESPECIALISTA')) return '/especialista/dashboard'
         if (roles.includes('SERVICIOS_GENERALES')) return '/servicios-generales/dashboard'
         if (roles.includes('AUXILIAR_SERVICIOS_GENERALES')) return '/auxiliar-servicios-generales/dashboard'
         if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
-        if (roles.includes('DIRECTOR')) return '/director/dashboard'
         if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'
         if (roles.includes('DAF')) return '/daf/dashboard'
       }
@@ -611,12 +627,12 @@ router.beforeEach(
         return '/admin/dashboard'
       }
 
+      if (roles.includes('SUPERUSER')) return '/superuser/dashboard'
       if (roles.includes('JEFE_UTIC')) return '/jefe-utic/dashboard'
       if (roles.includes('ESPECIALISTA')) return '/especialista/dashboard'
       if (roles.includes('SERVICIOS_GENERALES')) return '/servicios-generales/dashboard'
       if (roles.includes('AUXILIAR_SERVICIOS_GENERALES')) return '/auxiliar-servicios-generales/dashboard'
       if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
-      if (roles.includes('DIRECTOR')) return '/director/dashboard'
       if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'
       if (roles.includes('DAF')) return '/daf/dashboard'
     }

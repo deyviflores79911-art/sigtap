@@ -12,10 +12,6 @@
       <header class="page-header">
 
         <div>
-          <span class="breadcrumb">
-            SIGTA / Operación / Soporte Técnico
-          </span>
-
           <h1>Soporte Técnico</h1>
 
           <p>

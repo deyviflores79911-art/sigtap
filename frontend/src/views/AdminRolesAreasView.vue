@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 
   <div class="layout">
 
@@ -6,7 +6,7 @@
          MENÚ ADMIN ÚNICO
     ====================================================== -->
 
-    <AdminMenu />
+    <SuperuserMenu />
 
 
     <!-- =====================================================
@@ -22,10 +22,6 @@
       <header class="page-header">
 
         <div>
-
-          <span class="breadcrumb">
-            SIGTA / Administración / Roles, permisos y áreas
-          </span>
 
           <h1>
             Roles, permisos y áreas
@@ -1143,8 +1139,8 @@ import {
   useRouter
 } from 'vue-router'
 
-import AdminMenu
-  from '../components/AdminMenu.vue'
+import SuperuserMenu
+  from '../components/SuperuserMenu.vue'
 
 
 const router =
@@ -2528,7 +2524,7 @@ function cerrarSesion() {
 
   color: #8493a0;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -2553,7 +2549,7 @@ function cerrarSesion() {
 
   color: #71818f;
 
-  font-size: 11px;
+  font-size: 17px;
 
   line-height: 1.5;
 }
@@ -2573,7 +2569,7 @@ function cerrarSesion() {
 
   border-radius: 7px;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -2637,7 +2633,7 @@ function cerrarSesion() {
 
   color: #647484;
 
-  font-size: 8px;
+  font-size: 14px;
 
   font-weight: 800;
 
@@ -2664,7 +2660,7 @@ function cerrarSesion() {
 
   color: #8995a0;
 
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -2706,7 +2702,7 @@ function cerrarSesion() {
 
   color: #617586;
 
-  font-size: 9px;
+  font-size: 15px;
 
   font-weight: 700;
 
@@ -2774,7 +2770,7 @@ function cerrarSesion() {
 
   color: #0b5795;
 
-  font-size: 7px;
+  font-size: 13px;
 
   font-weight: 900;
 
@@ -2801,7 +2797,7 @@ function cerrarSesion() {
 
   color: #71818f;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -2822,7 +2818,7 @@ function cerrarSesion() {
 
   border-radius: 6px;
 
-  font-size: 8px;
+  font-size: 14px;
 
   font-weight: 800;
 
@@ -2930,7 +2926,7 @@ function cerrarSesion() {
 
   color: #07518d;
 
-  font-size: 7px;
+  font-size: 13px;
 
   font-weight: 900;
 }
@@ -2942,7 +2938,7 @@ function cerrarSesion() {
 
   color: #17324a;
 
-  font-size: 12px;
+  font-size: 18px;
 }
 
 
@@ -2956,7 +2952,7 @@ function cerrarSesion() {
 
   color: #71818f;
 
-  font-size: 8px;
+  font-size: 14px;
 
   line-height: 1.45;
 }
@@ -2997,7 +2993,7 @@ function cerrarSesion() {
 
   color: #8a97a2;
 
-  font-size: 7px;
+  font-size: 13px;
 }
 
 
@@ -3007,7 +3003,7 @@ function cerrarSesion() {
 
   color: #29475e;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -3036,7 +3032,7 @@ function cerrarSesion() {
 
   border-radius: 14px;
 
-  font-size: 7px;
+  font-size: 13px;
 
   font-weight: 800;
 }
@@ -3094,7 +3090,7 @@ function cerrarSesion() {
 
   color: #344b5e;
 
-  font-size: 9px;
+  font-size: 15px;
 
   outline: none;
 }
@@ -3140,7 +3136,7 @@ function cerrarSesion() {
 
   color: #84919c;
 
-  font-size: 7px;
+  font-size: 13px;
 }
 
 
@@ -3153,7 +3149,7 @@ function cerrarSesion() {
 
   color: #17324a;
 
-  font-size: 11px;
+  font-size: 17px;
 }
 
 
@@ -3175,7 +3171,7 @@ function cerrarSesion() {
 
   color: white;
 
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -3203,7 +3199,7 @@ function cerrarSesion() {
 
   color: #29475e;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -3215,7 +3211,7 @@ function cerrarSesion() {
 
   color: #07518d;
 
-  font-size: 7px;
+  font-size: 13px;
 
   font-weight: 700;
 }
@@ -3230,7 +3226,7 @@ function cerrarSesion() {
 
   color: #7c8a95;
 
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -3274,7 +3270,7 @@ function cerrarSesion() {
 
   color: #617586;
 
-  font-size: 8px;
+  font-size: 14px;
 
   font-weight: 800;
 
@@ -3292,7 +3288,7 @@ function cerrarSesion() {
 
   color: #526777;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -3386,7 +3382,7 @@ function cerrarSesion() {
 
   color: #0b5795;
 
-  font-size: 7px;
+  font-size: 13px;
 
   font-weight: 900;
 }
@@ -3414,7 +3410,7 @@ function cerrarSesion() {
 
   color: #7c8a95;
 
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -3452,7 +3448,7 @@ function cerrarSesion() {
 
   color: #344b5e;
 
-  font-size: 9px;
+  font-size: 15px;
 
   font-weight: 800;
 }
@@ -3476,7 +3472,7 @@ function cerrarSesion() {
 
   font-family: inherit;
 
-  font-size: 9px;
+  font-size: 15px;
 
   outline: none;
 }
@@ -3494,7 +3490,7 @@ function cerrarSesion() {
 
   color: #87939d;
 
-  font-size: 7px;
+  font-size: 13px;
 }
 
 
@@ -3531,7 +3527,7 @@ function cerrarSesion() {
 
   color: #344b5e;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -3541,7 +3537,7 @@ function cerrarSesion() {
 
   color: #84919b;
 
-  font-size: 7px;
+  font-size: 13px;
 }
 
 
@@ -3576,7 +3572,7 @@ function cerrarSesion() {
 
   color: #07518d;
 
-  font-size: 8px;
+  font-size: 14px;
 
   line-height: 1.45;
 }
@@ -3628,7 +3624,7 @@ function cerrarSesion() {
 
   color: #17324a;
 
-  font-size: 10px;
+  font-size: 16px;
 }
 
 
@@ -3636,7 +3632,7 @@ function cerrarSesion() {
 
   color: #07518d;
 
-  font-size: 8px;
+  font-size: 14px;
 
   font-weight: 800;
 }
@@ -3679,7 +3675,7 @@ function cerrarSesion() {
 
   color: #29475e;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -3689,7 +3685,7 @@ function cerrarSesion() {
 
   color: #07518d;
 
-  font-size: 7px;
+  font-size: 13px;
 }
 
 
@@ -3702,7 +3698,7 @@ function cerrarSesion() {
 
   color: #7d8a95;
 
-  font-size: 7px;
+  font-size: 13px;
 }
 
 
@@ -3719,7 +3715,7 @@ function cerrarSesion() {
 
   color: #788794;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 

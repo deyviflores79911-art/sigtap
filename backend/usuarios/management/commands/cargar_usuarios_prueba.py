@@ -15,6 +15,13 @@ class Command(BaseCommand):
 
     USUARIOS = [
         {
+            "email": "superuser@emi.edu.bo",
+            "nombre_completo": "Superusuario SIGTA",
+            "rol": "SUPERUSER",
+            "password": "SIGTA_Superuser#2026!",
+            "must_change_password": False,
+        },
+        {
             "email": "servicios.generales@emi.edu.bo",
             "nombre_completo": "Servicios Generales",
             "rol": "SERVICIOS_GENERALES",

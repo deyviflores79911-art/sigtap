@@ -3,10 +3,14 @@
   <div class="layout">
 
     <!-- ================================================
-         MENÚ ÚNICO DEL ADMINISTRADOR
+         MENÚ: cada portal conserva su propio sidebar
+         (esta pantalla se comparte entre Director y
+         Superusuario, pero cada uno accede por su
+         propia ruta).
     ================================================= -->
 
-    <AdminMenu />
+    <SuperuserMenu v-if="esRutaSuperuser" />
+    <AdminMenu v-else />
 
 
     <!-- ================================================
@@ -22,10 +26,6 @@
       <header class="topbar">
 
         <div>
-
-          <span class="breadcrumb">
-            SIGTA / Administración / Bitácora
-          </span>
 
           <h1>
             Bitácora del sistema
@@ -468,15 +468,27 @@ import {
 } from 'vue'
 
 import {
+  useRoute,
   useRouter
 } from 'vue-router'
 
 import AdminMenu
   from '../components/AdminMenu.vue'
 
+import SuperuserMenu
+  from '../components/SuperuserMenu.vue'
+
 
 const router =
   useRouter()
+
+const route =
+  useRoute()
+
+const esRutaSuperuser =
+  computed(() =>
+    route.path.startsWith('/superuser')
+  )
 
 
 // ==========================================================
@@ -842,25 +854,17 @@ function cerrarSesion() {
 }
 
 
-.breadcrumb {
-  display: block;
-  margin-bottom: 6px;
-  color: #8493a0;
-  font-size: 9px;
-}
-
-
 .topbar h1 {
   margin: 0;
   color: #17324a;
-  font-size: 27px;
+  font-size: 33px;
 }
 
 
 .topbar p {
   margin: 5px 0 0;
   color: #718294;
-  font-size: 11px;
+  font-size: 17px;
   line-height: 1.45;
 }
 
@@ -886,7 +890,7 @@ function cerrarSesion() {
 
 .security-box span {
   color: #237345;
-  font-size: 7px;
+  font-size: 13px;
   font-weight: 900;
   letter-spacing: .5px;
 }
@@ -895,7 +899,7 @@ function cerrarSesion() {
 .security-box strong {
   margin-top: 4px;
   color: #29475e;
-  font-size: 11px;
+  font-size: 17px;
 }
 
 
@@ -929,7 +933,7 @@ function cerrarSesion() {
 
 .summary span {
   color: #718294;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -939,13 +943,13 @@ function cerrarSesion() {
   display: block;
   margin: 7px 0 4px;
   color: #073b6f;
-  font-size: 26px;
+  font-size: 32px;
 }
 
 
 .summary small {
   color: #8593a0;
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -975,7 +979,7 @@ function cerrarSesion() {
   display: block;
   margin-bottom: 4px;
   color: #07518d;
-  font-size: 7px;
+  font-size: 13px;
   font-weight: 900;
   letter-spacing: .8px;
 }
@@ -985,14 +989,14 @@ function cerrarSesion() {
 .table-title h2 {
   margin: 0;
   color: #17324a;
-  font-size: 15px;
+  font-size: 21px;
 }
 
 
 .filters-header p {
   margin: 4px 0 0;
   color: #778895;
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -1003,7 +1007,7 @@ function cerrarSesion() {
   border-radius: 6px;
   background: white;
   color: #526777;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -1037,7 +1041,7 @@ function cerrarSesion() {
 
 .filters label {
   color: #536575;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -1052,7 +1056,7 @@ function cerrarSesion() {
   background: white;
   color: #344b5e;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 15px;
   outline: none;
 }
 
@@ -1091,7 +1095,7 @@ function cerrarSesion() {
   border-radius: 20px;
   background: #edf4fa;
   color: #07518d;
-  font-size: 7px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -1130,7 +1134,7 @@ function cerrarSesion() {
   padding: 0 16px;
   background: #f7f9fb;
   color: #607383;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -1141,7 +1145,7 @@ function cerrarSesion() {
   padding: 11px 16px;
   border-top: 1px solid #edf0f2;
   color: #536777;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -1158,14 +1162,14 @@ function cerrarSesion() {
 
 .table-row strong {
   color: #29475e;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
 .table-row small {
   margin-top: 3px;
   color: #84919b;
-  font-size: 7px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
@@ -1180,7 +1184,7 @@ function cerrarSesion() {
   border-radius: 5px;
   background: #edf3f7;
   color: #587183;
-  font-size: 7px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -1193,7 +1197,7 @@ function cerrarSesion() {
   display: inline-block;
   padding: 5px 8px;
   border-radius: 20px;
-  font-size: 7px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -1241,13 +1245,13 @@ function cerrarSesion() {
 
 .empty strong {
   color: #526777;
-  font-size: 10px;
+  font-size: 16px;
 }
 
 
 .empty span {
   margin-top: 6px;
-  font-size: 8px;
+  font-size: 14px;
 }
 
 

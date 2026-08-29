@@ -39,6 +39,18 @@ class Command(BaseCommand):
         },
 
         {
+            "codigo": "SUPERUSER",
+            "nombre": "Superusuario",
+            "descripcion": (
+                "Administración técnica del sistema: usuarios, "
+                "roles y permisos, bitácora, correo SMTP y "
+                "preferencias. No opera los procesos de negocio "
+                "(Soporte, Mantenimiento, Compras) que sí ve ADMIN."
+            ),
+            "es_global": True,
+        },
+
+        {
             "codigo": "SOLICITANTE",
             "nombre": "Solicitante",
             "descripcion": (
@@ -649,6 +661,16 @@ class Command(BaseCommand):
 
         # ADMINISTRADOR
         "ADMIN": "__TODOS__",
+
+        # SUPERUSUARIO: administración técnica del sistema,
+        # separada de los procesos de negocio que ve ADMIN.
+        "SUPERUSER": [
+            "GESTIONAR_USUARIOS",
+            "GESTIONAR_ROLES_PERMISOS",
+            "CONSULTAR_BITACORA",
+            "CONFIGURAR_SMTP",
+            "CONFIGURAR_PREFERENCIAS",
+        ],
 
         # AUDITOR QUE YA EXISTE
         "AUDITOR": [

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 
   <div class="admin-layout">
 
@@ -6,7 +6,7 @@
          MENÚ ÚNICO DEL ADMINISTRADOR
     ====================================================== -->
 
-    <AdminMenu />
+    <SuperuserMenu />
 
 
     <!-- =====================================================
@@ -22,10 +22,6 @@
       <header class="topbar">
 
         <div>
-
-          <span class="breadcrumb">
-            SIGTA / Administración / Usuarios
-          </span>
 
           <h1>
             Gestión de Usuarios
@@ -785,8 +781,8 @@ import {
    COMPONENTE MENÚ
 ========================================================= */
 
-import AdminMenu
-  from '../components/AdminMenu.vue'
+import SuperuserMenu
+  from '../components/SuperuserMenu.vue'
 
 
 const router =
@@ -2067,7 +2063,7 @@ function cerrarSesion() {
 
   color: #8493a0;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -2090,7 +2086,7 @@ function cerrarSesion() {
 
   color: #748391;
 
-  font-size: 12px;
+  font-size: 18px;
 }
 
 
@@ -2110,7 +2106,7 @@ function cerrarSesion() {
 
   color: #143250;
 
-  font-size: 11px;
+  font-size: 17px;
 
   font-weight: 800;
 
@@ -2168,7 +2164,7 @@ function cerrarSesion() {
 
   color: #637789;
 
-  font-size: 9px;
+  font-size: 15px;
 
   font-weight: 800;
 
@@ -2194,7 +2190,7 @@ function cerrarSesion() {
 
   color: #8996a1;
 
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -2242,7 +2238,7 @@ function cerrarSesion() {
 
   color: #52687b;
 
-  font-size: 9px;
+  font-size: 15px;
 
   font-weight: 700;
 }
@@ -2268,7 +2264,7 @@ function cerrarSesion() {
 
   color: #30495d;
 
-  font-size: 11px;
+  font-size: 17px;
 
   outline: none;
 }
@@ -2302,7 +2298,7 @@ function cerrarSesion() {
 
   border-radius: 7px;
 
-  font-size: 11px;
+  font-size: 17px;
 }
 
 
@@ -2368,7 +2364,7 @@ function cerrarSesion() {
 
   color: #17324a;
 
-  font-size: 15px;
+  font-size: 21px;
 }
 
 
@@ -2381,7 +2377,7 @@ function cerrarSesion() {
 
   color: #82909c;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -2397,7 +2393,7 @@ function cerrarSesion() {
 
   color: #5d7385;
 
-  font-size: 8px;
+  font-size: 14px;
 
   font-weight: 700;
 }
@@ -2434,7 +2430,7 @@ th {
 
   text-align: left;
 
-  font-size: 9px;
+  font-size: 15px;
 
   font-weight: 800;
 
@@ -2453,7 +2449,7 @@ td {
 
   color: #405464;
 
-  font-size: 10px;
+  font-size: 16px;
 
   vertical-align: middle;
 }
@@ -2499,7 +2495,7 @@ td strong {
 
   color: #07518d;
 
-  font-size: 9px;
+  font-size: 15px;
 
   font-weight: 900;
 }
@@ -2518,7 +2514,7 @@ td strong {
 
   color: #9aa5ae;
 
-  font-size: 7px;
+  font-size: 13px;
 }
 
 
@@ -2536,7 +2532,7 @@ td strong {
 
   border-radius: 20px;
 
-  font-size: 8px;
+  font-size: 14px;
 
   font-weight: 700;
 }
@@ -2572,13 +2568,13 @@ td strong {
 
   color: #405f79;
 
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
 .first-login {
 
-  font-size: 9px;
+  font-size: 15px;
 
   font-weight: 700;
 }
@@ -2618,7 +2614,7 @@ td strong {
 
   border-radius: 5px;
 
-  font-size: 8px;
+  font-size: 14px;
 
   font-weight: 700;
 
@@ -2663,7 +2659,7 @@ td strong {
 
   color: #758391;
 
-  font-size: 11px;
+  font-size: 17px;
 }
 
 
@@ -2740,7 +2736,7 @@ td strong {
 
   color: #7e8f9c;
 
-  font-size: 8px;
+  font-size: 14px;
 
   text-transform:
     uppercase;
@@ -2768,7 +2764,7 @@ td strong {
 
   color: #788794;
 
-  font-size: 10px;
+  font-size: 16px;
 }
 
 
@@ -2823,7 +2819,7 @@ td strong {
 
   color: #34495b;
 
-  font-size: 10px;
+  font-size: 16px;
 
   font-weight: 700;
 }
@@ -2857,7 +2853,7 @@ td strong {
 
   outline: none;
 
-  font-size: 11px;
+  font-size: 17px;
 }
 
 
@@ -2889,7 +2885,7 @@ td strong {
 
   color: #7a8995;
 
-  font-size: 8px;
+  font-size: 14px;
 
   line-height: 1.4;
 }
@@ -2911,7 +2907,7 @@ td strong {
 
   color: #aa2f2f;
 
-  font-size: 10px;
+  font-size: 16px;
 }
 
 
@@ -2943,7 +2939,7 @@ td strong {
 
   border-radius: 7px;
 
-  font-size: 10px;
+  font-size: 16px;
 
   font-weight: 700;
 

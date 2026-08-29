@@ -10,10 +10,6 @@
 
         <div>
 
-          <span class="breadcrumb">
-            SIGTA / Administración / Portal Solicitante
-          </span>
-
           <h1>
             Portal Solicitante
           </h1>

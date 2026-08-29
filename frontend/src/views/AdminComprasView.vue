@@ -154,12 +154,32 @@
                 {{ etiquetaBucket(bucketEstado(compra.estado)) }}
               </span>
 
-              <button
-                class="view"
-                @click="verDetalle(compra)"
-              >
-                Ver detalle
-              </button>
+              <div class="row-actions">
+
+                <button
+                  class="view"
+                  @click="verDetalle(compra)"
+                >
+                  Ver detalle
+                </button>
+
+                <button
+                  v-if="puedeAprobar(compra)"
+                  class="row-aprobar"
+                  @click="aprobarDesdeLista(compra)"
+                >
+                  Aprobar
+                </button>
+
+                <button
+                  v-if="puedeRechazar(compra)"
+                  class="row-rechazar"
+                  @click="rechazarDesdeLista(compra)"
+                >
+                  Rechazar
+                </button>
+
+              </div>
 
             </div>
 
@@ -184,9 +204,15 @@
       <div class="detalle-modal documento-modal">
 
         <div class="detalle-modal-header">
-          <div>
-            <h3>{{ compraSeleccionada?.codigo }}</h3>
-            <small>{{ compraSeleccionada?.titulo }}</small>
+          <div class="documento-header-titulo">
+
+            <span class="documento-header-icono">📄</span>
+
+            <div>
+              <h3>{{ compraSeleccionada?.codigo }}</h3>
+              <small>{{ compraSeleccionada?.titulo }}</small>
+            </div>
+
           </div>
 
           <button
@@ -200,22 +226,34 @@
           <div
             :class="['estado-banner', claseBucket(bucketEstado(compraSeleccionada?.estado))]"
           >
-            {{ etiquetaBucket(bucketEstado(compraSeleccionada?.estado)) }}
+            <span class="estado-banner-icono">
+              {{ iconoBucket(bucketEstado(compraSeleccionada?.estado)) }}
+            </span>
+
+            <div>
+              <strong>{{ etiquetaBucket(bucketEstado(compraSeleccionada?.estado)) }}</strong>
+              <span class="estado-banner-descripcion">
+                {{ descripcionBucket(bucketEstado(compraSeleccionada?.estado)) }}
+              </span>
+            </div>
           </div>
 
 
           <div class="documento-seccion">
 
-            <span class="documento-titulo">
-              Producto o servicio a comprar
-            </span>
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📦</span>
+              <span class="documento-titulo">
+                Producto o servicio a comprar
+              </span>
+            </div>
 
             <h4>{{ compraSeleccionada?.titulo || 'Sin título' }}</h4>
 
             <p>{{ compraSeleccionada?.descripcion || 'Sin descripción registrada.' }}</p>
 
 
-            <div class="documento-fila">
+            <div class="documento-fila documento-fila-5">
 
               <div>
                 <b>Tipo</b>
@@ -238,35 +276,51 @@
                 </span>
               </div>
 
+              <div>
+                <b>Especificaciones</b>
+                <span>{{ compraSeleccionada?.especificaciones || 'No registradas.' }}</span>
+              </div>
+
+              <div>
+                <b>Justificación</b>
+                <span>{{ compraSeleccionada?.justificacion || 'No registrada.' }}</span>
+              </div>
+
             </div>
-
-
-            <b>Especificaciones</b>
-            <p>{{ compraSeleccionada?.especificaciones || 'No registradas.' }}</p>
-
-            <b>Justificación</b>
-            <p>{{ compraSeleccionada?.justificacion || 'No registrada.' }}</p>
 
           </div>
 
 
           <div class="documento-seccion">
 
-            <span class="documento-titulo">
-              Datos del expediente
-            </span>
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📁</span>
+              <span class="documento-titulo">
+                Datos del expediente
+              </span>
+            </div>
 
             <div class="documento-fila">
 
               <div>
                 <b>Solicitante</b>
-                <span>
-                  {{
-                    compraSeleccionada?.solicitante_nombre
-                    || compraSeleccionada?.solicitante_email
-                    || 'Sin información'
-                  }}
-                </span>
+                <button
+                  v-if="compraSeleccionada?.solicitante"
+                  type="button"
+                  class="solicitante-link"
+                  @click="abrirSolicitante(compraSeleccionada.solicitante)"
+                >
+                  <span>
+                    {{
+                      compraSeleccionada?.solicitante_nombre
+                      || 'Sin información'
+                    }}
+                  </span>
+                  <small v-if="compraSeleccionada?.solicitante_email">
+                    {{ compraSeleccionada.solicitante_email }}
+                  </small>
+                </button>
+                <span v-else>Sin información</span>
               </div>
 
               <div>
@@ -298,6 +352,52 @@
           </div>
 
 
+          <div class="documento-seccion">
+
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📄</span>
+              <span class="documento-titulo">
+                Documentos del expediente
+              </span>
+            </div>
+
+            <div class="documento-lista">
+
+              <template
+                v-for="doc in documentosExpediente"
+                :key="doc.label"
+              >
+
+                <a
+                  v-if="doc.url"
+                  :href="doc.url"
+                  target="_blank"
+                  class="documento-item ok"
+                >
+                  <span class="documento-item-icono">📄</span>
+                  <span class="documento-item-label">{{ doc.label }}</span>
+                  <span class="documento-item-accion">
+                    Ver archivo
+                    <span class="documento-item-ojo">👁</span>
+                  </span>
+                </a>
+
+                <div
+                  v-else
+                  class="documento-item falta"
+                >
+                  <span class="documento-item-icono">📄</span>
+                  <span class="documento-item-label">{{ doc.label }}</span>
+                  <small>{{ doc.pendienteTexto || 'No adjuntado' }}</small>
+                </div>
+
+              </template>
+
+            </div>
+
+          </div>
+
+
           <div
             class="documento-seccion motivo-rechazo"
             v-if="compraSeleccionada?.motivo_rechazo"
@@ -317,83 +417,207 @@
             class="documento-acciones"
           >
 
-            <template v-if="puedeDecidir(compraSeleccionada)">
+            <p
+              v-if="errorAccion"
+              class="accion-error"
+            >
+              {{ errorAccion }}
+            </p>
 
-              <p
-                v-if="errorAccion"
-                class="accion-error"
+            <div
+              v-if="!mostrarFormRechazo && !mostrarFormCertificacion"
+              class="acciones-botones"
+            >
+              <button
+                class="btn-aprobar"
+                :disabled="procesando"
+                @click="iniciarAprobacion"
               >
-                {{ errorAccion }}
-              </p>
+                Aprobar
+              </button>
 
-              <div
-                v-if="!mostrarFormRechazo"
-                class="acciones-botones"
+              <button
+                class="btn-rechazar"
+                :disabled="procesando"
+                @click="abrirFormRechazo"
               >
+                Rechazar
+              </button>
+            </div>
+
+            <div
+              v-else-if="mostrarFormRechazo"
+              class="form-rechazo"
+            >
+              <label>
+                Motivo del rechazo
+                <span>*</span>
+              </label>
+
+              <textarea
+                v-model="motivoRechazoTexto"
+                rows="3"
+                placeholder="Explique por qué se rechaza esta solicitud..."
+              ></textarea>
+
+              <div class="acciones-botones">
+
                 <button
-                  class="btn-aprobar"
+                  class="btn-cancelar"
                   :disabled="procesando"
-                  @click="aprobarCompra"
+                  @click="cancelarRechazo"
                 >
-                  Aprobar
+                  Cancelar
                 </button>
 
                 <button
                   class="btn-rechazar"
                   :disabled="procesando"
-                  @click="abrirFormRechazo"
+                  @click="confirmarRechazo"
                 >
-                  Rechazar
+                  Confirmar rechazo
                 </button>
+
               </div>
+            </div>
 
-              <div
-                v-else
-                class="form-rechazo"
-              >
-                <label>
-                  Motivo del rechazo
-                  <span>*</span>
-                </label>
-
-                <textarea
-                  v-model="motivoRechazoTexto"
-                  rows="3"
-                  placeholder="Explique por qué se rechaza esta solicitud..."
-                ></textarea>
-
-                <div class="acciones-botones">
-
-                  <button
-                    class="btn-cancelar"
-                    :disabled="procesando"
-                    @click="cancelarRechazo"
-                  >
-                    Cancelar
-                  </button>
-
-                  <button
-                    class="btn-rechazar"
-                    :disabled="procesando"
-                    @click="confirmarRechazo"
-                  >
-                    Confirmar rechazo
-                  </button>
-
-                </div>
-              </div>
-
-            </template>
-
-            <p
-              v-else
-              class="nota-tramite"
+            <div
+              v-else-if="mostrarFormCertificacion"
+              class="form-certificacion"
             >
-              Este expediente está en trámite interno (documentación de
-              DAF/Tesorería) y todavía no requiere una decisión de aprobación.
-            </p>
+              <p class="nota-tramite">
+                DAF debe hacer llegar la certificación presupuestaria en
+                PDF. Adjúntela aquí para completar la aprobación.
+              </p>
+
+              <label>
+                Certificación presupuestaria (PDF)
+                <span>*</span>
+              </label>
+
+              <input
+                type="file"
+                accept="application/pdf"
+                @change="onSeleccionarCertificacion"
+              />
+
+              <span
+                v-if="archivoCertificacion"
+                class="archivo-seleccionado"
+              >
+                {{ archivoCertificacion.name }}
+              </span>
+
+              <div class="acciones-botones">
+
+                <button
+                  class="btn-cancelar"
+                  :disabled="procesando"
+                  @click="cancelarCertificacion"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  class="btn-aprobar"
+                  :disabled="procesando"
+                  @click="confirmarCertificacion"
+                >
+                  Confirmar aprobación
+                </button>
+
+              </div>
+            </div>
 
           </div>
+
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- =================================================
+         DATOS DEL SOLICITANTE
+    ================================================== -->
+
+    <div
+      v-if="mostrarSolicitante"
+      class="solicitante-modal-backdrop"
+      @click.self="cerrarSolicitante"
+    >
+      <div class="detalle-modal">
+
+        <div class="detalle-modal-header">
+          <div>
+            <h3>Datos del solicitante</h3>
+          </div>
+
+          <button
+            class="detalle-modal-close"
+            @click="cerrarSolicitante"
+          >✕</button>
+        </div>
+
+        <div class="detalle-modal-body">
+
+          <p
+            v-if="cargandoSolicitante"
+            class="detalle-vacio"
+          >
+            Cargando...
+          </p>
+
+          <template v-else-if="solicitanteDetalle">
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Nombre completo</b>
+                <span>{{ solicitanteDetalle.nombre_completo || '—' }}</span>
+              </div>
+
+              <div>
+                <b>Correo</b>
+                <span>{{ solicitanteDetalle.email || '—' }}</span>
+              </div>
+
+            </div>
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Usuario</b>
+                <span>{{ solicitanteDetalle.username || '—' }}</span>
+              </div>
+
+              <div>
+                <b>Estado de la cuenta</b>
+                <span>{{ solicitanteDetalle.is_active ? 'Activa' : 'Inactiva' }}</span>
+              </div>
+
+            </div>
+
+            <div class="detalle-campo">
+              <b>Roles</b>
+              <span>
+                {{
+                  (solicitanteDetalle.roles || [])
+                    .map(rol => rol.rol_nombre || rol.nombre)
+                    .join(', ')
+                  || 'Sin rol asignado'
+                }}
+              </span>
+            </div>
+
+          </template>
+
+          <p
+            v-else
+            class="detalle-vacio"
+          >
+            No fue posible cargar los datos del solicitante.
+          </p>
 
         </div>
 
@@ -467,6 +691,29 @@ const mostrarDetalle =
 const compraSeleccionada =
   ref(null)
 
+const documentosExpediente =
+  computed(() => {
+
+    const c =
+      compraSeleccionada.value
+
+    if (!c) {
+      return []
+    }
+
+    return [
+      { label: 'Informe', url: c.informe },
+      { label: 'POA', url: c.poa },
+      { label: 'Pedido', url: c.pedido },
+      { label: 'Proforma', url: c.proforma },
+      {
+        label: 'Certificación presupuestaria',
+        url: c.certificacion_presupuestaria,
+        pendienteTexto: 'Pendiente (la genera OAF/DAF)',
+      },
+    ]
+  })
+
 const procesando =
   ref(false)
 
@@ -476,8 +723,33 @@ const mostrarFormRechazo =
 const motivoRechazoTexto =
   ref('')
 
+const mostrarFormCertificacion =
+  ref(false)
+
+const archivoCertificacion =
+  ref(null)
+
 const errorAccion =
   ref('')
+
+
+function resetearFormularios() {
+
+  mostrarFormRechazo.value =
+    false
+
+  motivoRechazoTexto.value =
+    ''
+
+  mostrarFormCertificacion.value =
+    false
+
+  archivoCertificacion.value =
+    null
+
+  errorAccion.value =
+    ''
+}
 
 
 function verDetalle(
@@ -490,14 +762,50 @@ function verDetalle(
   mostrarDetalle.value =
     true
 
+  resetearFormularios()
+}
+
+
+function rechazarDesdeLista(
+  compra
+) {
+
+  compraSeleccionada.value =
+    compra
+
+  mostrarDetalle.value =
+    true
+
+  resetearFormularios()
+
   mostrarFormRechazo.value =
-    false
+    true
+}
 
-  motivoRechazoTexto.value =
-    ''
 
-  errorAccion.value =
-    ''
+async function aprobarDesdeLista(
+  compra
+) {
+
+  compraSeleccionada.value =
+    compra
+
+  if (
+    compra.estado === 'EVALUADO_PENDIENTE_CERTIFICACION'
+  ) {
+
+    mostrarDetalle.value =
+      true
+
+    resetearFormularios()
+
+    mostrarFormCertificacion.value =
+      true
+
+    return
+  }
+
+  await aprobarCompra()
 }
 
 
@@ -509,14 +817,89 @@ function cerrarDetalle() {
   compraSeleccionada.value =
     null
 
-  mostrarFormRechazo.value =
+  resetearFormularios()
+}
+
+
+// ==========================================================
+// DATOS DEL SOLICITANTE
+// ==========================================================
+
+const mostrarSolicitante =
+  ref(false)
+
+const solicitanteDetalle =
+  ref(null)
+
+const cargandoSolicitante =
+  ref(false)
+
+
+async function abrirSolicitante(
+  usuarioId
+) {
+
+  mostrarSolicitante.value =
+    true
+
+  cargandoSolicitante.value =
+    true
+
+  solicitanteDetalle.value =
+    null
+
+  try {
+
+    const respuesta =
+      await fetch(
+        `/api/usuarios/usuarios/${usuarioId}/`,
+        {
+          headers: {
+            Authorization: `Token ${token()}`,
+            Accept: 'application/json',
+          }
+        }
+      )
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
+      return
+    }
+
+    if (respuesta.ok) {
+
+      solicitanteDetalle.value =
+        await respuesta.json()
+    }
+
+  } catch (error) {
+
+    console.error(
+      'Error cargando datos del solicitante:',
+      error
+    )
+
+  } finally {
+
+    cargandoSolicitante.value =
+      false
+  }
+}
+
+
+function cerrarSolicitante() {
+
+  mostrarSolicitante.value =
     false
 
-  motivoRechazoTexto.value =
-    ''
-
-  errorAccion.value =
-    ''
+  solicitanteDetalle.value =
+    null
 }
 
 
@@ -524,52 +907,135 @@ function cerrarDetalle() {
 // DECISIÓN (APROBAR / RECHAZAR)
 // ==========================================================
 //
-// Solo hay una decisión simple de sí/no en dos momentos del
-// flujo: la evaluación inicial de DAF (CREADO_PENDIENTE_DAF)
-// y el visto bueno final del Director (VERIFICADO_PENDIENTE_
-// AUTORIZACION). Los pasos intermedios (certificación DAF con
-// PDF, verificación de Tesorería con 5 documentos) requieren
-// más que un botón y se completan en sus propios flujos.
+// El BPMN de Compra Caja Chica exige, antes de aprobar, el
+// expediente completo: INFORME, POA, PEDIDO y PROFORMA (los
+// sube la Unidad Solicitante al crear la solicitud) y la
+// CERTIFICACIÓN PRESUPUESTARIA (la genera OAF/DAF, en PDF).
+// Cuando la solicitud está en EVALUADO_PENDIENTE_CERTIFICACION,
+// "Aprobar" pide adjuntar ese PDF (DAF se lo hace llegar al
+// administrador) en vez de un simple sí/no. Rechazar, en
+// cambio, no necesita ningún documento adicional y está
+// disponible en cualquier estado "en espera".
 // ==========================================================
 
-function puedeDecidir(
+function puedeAprobar(
   compra
 ) {
 
-  const estado =
-    compra?.estado
+  return (
+    bucketEstado(compra?.estado)
+    === 'EN_ESPERA'
+  )
+}
+
+
+function puedeRechazar(
+  compra
+) {
 
   return (
-    estado === 'CREADO_PENDIENTE_DAF'
-    ||
-    estado === 'VERIFICADO_PENDIENTE_AUTORIZACION'
+    bucketEstado(compra?.estado)
+    === 'EN_ESPERA'
   )
 }
 
 
 function abrirFormRechazo() {
 
+  resetearFormularios()
+
   mostrarFormRechazo.value =
     true
-
-  motivoRechazoTexto.value =
-    ''
-
-  errorAccion.value =
-    ''
 }
 
 
 function cancelarRechazo() {
 
-  mostrarFormRechazo.value =
-    false
+  resetearFormularios()
+}
 
-  motivoRechazoTexto.value =
-    ''
+
+function abrirFormCertificacion() {
+
+  resetearFormularios()
+
+  mostrarFormCertificacion.value =
+    true
+}
+
+
+function cancelarCertificacion() {
+
+  resetearFormularios()
+}
+
+
+function onSeleccionarCertificacion(
+  evento
+) {
 
   errorAccion.value =
     ''
+
+  archivoCertificacion.value =
+    evento.target.files?.[0]
+    || null
+}
+
+
+function iniciarAprobacion() {
+
+  if (
+    compraSeleccionada.value?.estado
+    === 'EVALUADO_PENDIENTE_CERTIFICACION'
+  ) {
+
+    abrirFormCertificacion()
+
+    return
+  }
+
+  aprobarCompra()
+}
+
+
+async function confirmarCertificacion() {
+
+  const archivo =
+    archivoCertificacion.value
+
+  if (!archivo) {
+
+    errorAccion.value =
+      'Debe adjuntar el PDF de la certificación presupuestaria.'
+
+    return
+  }
+
+  if (
+    !archivo.name.toLowerCase().endsWith('.pdf')
+  ) {
+
+    errorAccion.value =
+      'La certificación debe ser un archivo PDF.'
+
+    return
+  }
+
+  const datosFormulario =
+    new FormData()
+
+  datosFormulario.append(
+    'certificacion_presupuestaria',
+    archivo
+  )
+
+  await ejecutarAccion(
+    'certificar-daf',
+    datosFormulario,
+    'aprobar',
+    true
+  )
 }
 
 
@@ -591,10 +1057,18 @@ async function aprobarCompra() {
   const estado =
     compraSeleccionada.value.estado
 
+  const endpointsPorEstado = {
+    CREADO_PENDIENTE_DAF: 'evaluar-daf',
+    CERTIFICADO_PENDIENTE_VERIFICACION: 'verificar-tesoreria',
+    VERIFICADO_PENDIENTE_AUTORIZACION: 'visto-bueno-director',
+  }
+
   const endpoint =
-    estado === 'CREADO_PENDIENTE_DAF'
-      ? 'evaluar-daf'
-      : 'visto-bueno-director'
+    endpointsPorEstado[estado]
+
+  if (!endpoint) {
+    return
+  }
 
   const body =
     estado === 'CREADO_PENDIENTE_DAF'
@@ -646,7 +1120,8 @@ async function confirmarRechazo() {
 async function ejecutarAccion(
   endpoint,
   body,
-  tipo
+  tipo,
+  esArchivo = false
 ) {
 
   procesando.value =
@@ -657,17 +1132,22 @@ async function ejecutarAccion(
 
   try {
 
+    const headers = {
+      Authorization: `Token ${token()}`,
+      Accept: 'application/json',
+    }
+
+    if (!esArchivo) {
+      headers['Content-Type'] = 'application/json'
+    }
+
     const respuesta =
       await fetch(
         `/api/compras/solicitudes/${compraSeleccionada.value.id}/${endpoint}/`,
         {
           method: 'POST',
-          headers: {
-            Authorization: `Token ${token()}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(body),
+          headers,
+          body: esArchivo ? body : JSON.stringify(body),
         }
       )
 
@@ -982,6 +1462,36 @@ function claseBucket(
 }
 
 
+function iconoBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: '⏳',
+      APROBADA: '✅',
+      RECHAZADA: '❌',
+    }[bucket]
+    || '⏳'
+  )
+}
+
+
+function descripcionBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: 'La solicitud se encuentra pendiente de aprobación.',
+      APROBADA: 'La solicitud fue aprobada.',
+      RECHAZADA: 'La solicitud fue rechazada.',
+    }[bucket]
+    || ''
+  )
+}
+
+
 // ==========================================================
 // FECHA
 // ==========================================================
@@ -1250,15 +1760,41 @@ function cerrarSesion() {
 }
 
 
-.view {
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+
+.view,
+.row-aprobar,
+.row-rechazar {
   padding: 6px 8px;
   border: none;
   border-radius: 5px;
-  background: #edf3f8;
-  color: #435a6e;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+}
+
+
+.view {
+  background: #edf3f8;
+  color: #435a6e;
+}
+
+
+.row-aprobar {
+  background: #e5f3ea;
+  color: #237345;
+}
+
+
+.row-rechazar {
+  background: #fdecec;
+  color: #a53232;
 }
 
 
@@ -1286,7 +1822,17 @@ function cerrarSesion() {
 ========================================================= */
 
 .documento-modal {
-  max-width: 620px;
+  max-width: 700px;
+}
+
+
+.documento-modal .detalle-modal-header h3 {
+  font-size: 20px;
+}
+
+
+.documento-modal .detalle-modal-header small {
+  font-size: 13px;
 }
 
 
@@ -1296,12 +1842,41 @@ function cerrarSesion() {
 
 
 .estado-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   margin-bottom: 18px;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border-radius: 8px;
-  text-align: center;
-  font-size: 16px;
+}
+
+
+.estado-banner-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.6);
+  font-size: 19px;
+}
+
+
+.estado-banner strong {
+  display: block;
+  font-size: 18px;
   font-weight: 800;
+}
+
+
+.estado-banner-descripcion {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  opacity: .85;
 }
 
 
@@ -1335,28 +1910,74 @@ function cerrarSesion() {
 }
 
 
+.documento-header-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+
+.documento-header-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fdf3d9;
+  font-size: 17px;
+}
+
+
+.documento-titulo-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+
+.documento-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #eef1f8;
+  font-size: 13px;
+}
+
+
 .documento-titulo {
   display: block;
   margin-bottom: 8px;
   color: #8592a0;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: .6px;
   text-transform: uppercase;
 }
 
 
+.documento-titulo-fila .documento-titulo {
+  margin-bottom: 0;
+}
+
+
 .documento-seccion h4 {
   margin: 0 0 6px;
   color: #17324a;
-  font-size: 18px;
+  font-size: 20px;
 }
 
 
 .documento-seccion > p {
   margin: 0 0 10px;
   color: #354d60;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
   white-space: pre-wrap;
 }
@@ -1366,7 +1987,7 @@ function cerrarSesion() {
   display: block;
   margin-bottom: 4px;
   color: #8592a0;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: .5px;
   text-transform: uppercase;
@@ -1381,10 +2002,144 @@ function cerrarSesion() {
 }
 
 
+.documento-fila-5 {
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+}
+
+
 .documento-fila > div span {
   display: block;
   color: #26333f;
+  font-size: 16px;
+}
+
+
+.solicitante-link {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+
+.solicitante-link span {
+  display: block;
+  color: #07518d;
   font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+
+.solicitante-link:hover span {
+  color: #073b6f;
+}
+
+
+.solicitante-link small {
+  display: block;
+  margin-top: 2px;
+  color: #26333f;
+  font-size: 13px;
+}
+
+
+.solicitante-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(10, 20, 35, .55);
+}
+
+
+.documento-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+.documento-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 7px;
+  font-family: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+
+.documento-item-icono {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+
+.documento-item-label {
+  flex: 1;
+  color: #26333f;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+.documento-item small {
+  font-size: 13px;
+}
+
+
+.documento-item-accion {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+
+.documento-item-ojo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.6);
+  font-size: 11px;
+}
+
+
+.documento-item.ok {
+  background: #e8f6ee;
+}
+
+
+.documento-item.ok .documento-item-accion {
+  color: #237345;
+  font-weight: 700;
+}
+
+
+.documento-item.falta {
+  background: #f3f6f8;
+}
+
+
+.documento-item.falta small {
+  color: #8a97a2;
 }
 
 
@@ -1513,6 +2268,40 @@ function cerrarSesion() {
   font-size: 14px;
   resize: vertical;
   outline: none;
+}
+
+
+.form-certificacion .nota-tramite {
+  margin-bottom: 12px;
+}
+
+
+.form-certificacion label {
+  display: block;
+  margin-bottom: 6px;
+  color: #344a5d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+.form-certificacion label span {
+  color: #a53232;
+}
+
+
+.form-certificacion input[type="file"] {
+  width: 100%;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+
+.archivo-seleccionado {
+  display: block;
+  margin-bottom: 10px;
+  color: #536575;
+  font-size: 13px;
 }
 
 

@@ -244,7 +244,20 @@
               <span v-if="item.subtitulo">{{ item.subtitulo }}</span>
             </div>
 
-            <small v-if="item.meta">{{ item.meta }}</small>
+            <div class="stat-item-side">
+
+              <small v-if="item.meta">{{ item.meta }}</small>
+
+              <button
+                v-if="statCategoria === 'compras'"
+                type="button"
+                class="stat-item-revisar"
+                @click="router.push('/admin/compras')"
+              >
+                Ir a revisar
+              </button>
+
+            </div>
           </div>
         </div>
 
@@ -1433,9 +1446,21 @@ function cerrarSesion() {
 }
 
 
-.stat-item > small {
+.stat-item-side {
 
   flex-shrink: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  gap: 6px;
+}
+
+
+.stat-item-side > small {
 
   padding: 4px 8px;
 
@@ -1447,6 +1472,31 @@ function cerrarSesion() {
 
   font-size: 12px;
   font-weight: 700;
+}
+
+
+.stat-item-revisar {
+
+  padding: 0;
+
+  border: none;
+
+  background: transparent;
+
+  color: #07518d;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-decoration: underline;
+
+  cursor: pointer;
+}
+
+
+.stat-item-revisar:hover {
+
+  color: #073b6f;
 }
 
 

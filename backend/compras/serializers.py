@@ -1,6 +1,27 @@
+from urllib.parse import urlsplit
+
 from rest_framework import serializers
 
 from .models import SolicitudCompra
+
+
+# ==========================================================
+# ARCHIVOS DEL EXPEDIENTE
+# ==========================================================
+#
+# Se sirven como ruta relativa ("/media/...") en vez de URL
+# absoluta con el host interno del backend (127.0.0.1:8000),
+# que nunca es alcanzable desde fuera de esta máquina. El
+# frontend (Vite) reenvía /media al backend, así que la ruta
+# relativa siempre resuelve contra el mismo origen que sirvió
+# la página (localhost o el túnel público).
+# ==========================================================
+
+CAMPOS_ARCHIVO = (
+    "informe", "poa", "pedido", "proforma",
+    "certificacion_presupuestaria",
+    "factura", "acta_conformidad", "fotograma",
+)
 
 
 class SolicitudCompraSerializer(serializers.ModelSerializer):
@@ -110,6 +131,19 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "actualizado_en",
         ]
 
+    def to_representation(self, instance):
+
+        data = super().to_representation(instance)
+
+        for campo in CAMPOS_ARCHIVO:
+
+            valor = data.get(campo)
+
+            if valor:
+                data[campo] = urlsplit(valor).path
+
+        return data
+
     def create(self, validated_data):
 
         request = self.context["request"]
@@ -133,6 +167,18 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     "documentos": "Debe adjuntar Informe, POA, Pedido y Proforma. Faltan: " + ", ".join(faltantes)
                 })
+
+        # Se exige PDF para que el expediente sea previsualizable
+        # (el navegador no puede renderizar .docx/.pptx en línea).
+        no_pdf = [
+            nombre for nombre in ("informe", "poa", "pedido", "proforma")
+            if attrs.get(nombre) and not attrs[nombre].name.lower().endswith(".pdf")
+        ]
+        if no_pdf:
+            raise serializers.ValidationError({
+                "documentos": "Informe, POA, Pedido y Proforma deben ser archivos PDF: " + ", ".join(no_pdf)
+            })
+
         return attrs
 
 

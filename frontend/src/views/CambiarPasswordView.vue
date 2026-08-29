@@ -278,11 +278,6 @@ function redirigirSegunRol() {
     return
   }
 
-  if (roles.includes('DIRECTOR')) {
-    router.push('/director/dashboard')
-    return
-  }
-
   if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) {
     router.push('/almacen/dashboard')
     return

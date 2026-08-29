@@ -12,10 +12,6 @@
       <header class="page-header">
 
         <div>
-          <span class="breadcrumb">
-            SIGTA / Operación / Mantenimiento
-          </span>
-
           <h1>
             Mantenimiento
           </h1>

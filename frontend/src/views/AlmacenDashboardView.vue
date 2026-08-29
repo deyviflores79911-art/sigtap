@@ -1,97 +1,2373 @@
 <template>
-  <div class="layout sigta-role-layout">
-    <aside :class="{ abierto: menuAbierto }">
-      <div class="brand-row">
-        <div class="brand"><b><img src="/img/emi.jpg" alt="EMI"></b><div><strong>SIGTA</strong><small>Almacén e Inventarios</small></div></div>
-        <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
-      </div>
-      <div class="person"><span>{{ iniciales }}</span><div><b>{{ nombre }}</b><small>Compras y Almacén</small></div></div>
-      <p>OPERACIÓN DE BODEGA</p>
-      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id; menuAbierto=false"><i>{{ m.icono }}</i>{{ m.nombre }}<em v-if="m.total!==undefined">{{ m.total }}</em></button>
-      <div class="bottom"><button @click="salir"><i>↪</i>Cerrar sesión</button></div>
-    </aside>
+  <div class="layout">
 
-    <main>
-      <header><div><span>SIGTA / Almacén / {{ titulo }}</span><h1>{{ titulo }}</h1><p>Gestión física, operativa e inventariable de bienes e insumos.</p></div><button class="refresh" @click="cargar">↻ Actualizar</button></header>
+    <AlmacenMenu />
 
-      <section v-if="vista==='resumen'">
-        <div class="hero"><div><small>CONSOLA OPERATIVA</small><h2>{{ saludo }}, {{ primerNombre }}</h2><p>Controle compras, requerimientos y movimientos físicos de almacén.</p></div><span>ALM</span></div>
-        <div class="stats">
-          <article><i class="blue">CP</i><div><small>Adquisiciones</small><b>{{ adquisiciones.length }}</b><p>listas para comprar</p></div></article>
-          <article><i class="amber">RI</i><div><small>Requerimientos</small><b>{{ requerimientos.length }}</b><p>insumos solicitados</p></div></article>
-          <article><i class="green">SK</i><div><small>Productos</small><b>{{ inventario.length }}</b><p>en inventario</p></div></article>
-          <article><i class="red">!</i><div><small>Stock crítico</small><b>{{ stockCritico.length }}</b><p>requieren reposición</p></div></article>
+    <main class="main">
+
+      <!-- =================================================
+           ENCABEZADO
+      ================================================== -->
+      <header class="page-header">
+
+        <div v-if="esRutaRequerimientos">
+          <h1>
+            Requerimientos
+          </h1>
+
+          <p>
+            Verificación de existencia en almacén para
+            requerimientos de Mantenimiento.
+          </p>
         </div>
-        <div class="panels"><section class="panel"><div class="panel-head"><div><small>FLUJO OPERATIVO</small><h3>Acciones pendientes</h3></div></div>
-          <button class="task" @click="vista='adquisiciones'"><i class="blue">1</i><div><b>Compras autorizadas</b><small>Registrar compra, factura e ingreso a almacén</small></div><strong>›</strong></button>
-          <button class="task" @click="vista='requerimientos'"><i class="amber">2</i><div><b>Solicitudes de especialistas</b><small>Verificar existencia, despachar o reportar desabastecimiento</small></div><strong>›</strong></button>
-          <button class="task" @click="vista='inventario'"><i class="green">3</i><div><b>Mapeo de stock</b><small>Consultar cantidades y movimientos de bodega</small></div><strong>›</strong></button>
-        </section><section class="panel"><div class="panel-head"><div><small>CONTROL DE STOCK</small><h3>Alertas de reposición</h3></div></div><div v-if="stockCritico.length" class="alerts"><p v-for="p in stockCritico.slice(0,4)" :key="p.id"><b>{{ producto(p) }}</b><span>{{ cantidad(p) }} disponibles</span></p></div><div v-else class="mini-empty">Sin alertas de stock crítico.</div></section></div>
-      </section>
 
-      <section v-else-if="vista==='inventario'">
-        <div class="toolbar"><label>⌕ <input v-model="busqueda" placeholder="Buscar focos, tubos, cables, herramientas…"></label></div>
-        <div class="table"><div class="thead"><span>Producto</span><span>Categoría</span><span>Disponible</span><span>Unidad</span><span>Estado</span></div><div v-for="p in inventarioFiltrado" :key="p.id" class="row"><strong>{{ producto(p) }}</strong><span>{{ p.categoria_nombre||p.categoria||'Material' }}</span><b>{{ cantidad(p) }}</b><span>{{ p.unidad||'unidad' }}</span><em :class="{danger:cantidad(p)<=Number(p.stock_minimo||2)}">{{ cantidad(p)<=Number(p.stock_minimo||2)?'Stock crítico':'Disponible' }}</em></div><div v-if="!inventarioFiltrado.length" class="empty">El mapeo de stock por producto está fuera del alcance de los 3 flujos actuales del sistema.</div></div>
-      </section>
+        <div v-else>
+          <h1>
+            Compras
+          </h1>
 
-      <section v-else>
-        <div class="toolbar"><div class="tabs"><button class="active">Pendientes</button><button>Procesados</button></div><label>⌕ <input v-model="busqueda" placeholder="Buscar código, material o responsable"></label></div>
-        <div v-if="cargando" class="empty">Actualizando bandeja…</div>
-        <div v-else-if="listaFiltrada.length" class="cards"><article v-for="item in listaFiltrada" :key="item.id"><div class="top"><span>{{ codigo(item) }}</span><em>{{ estado(item) }}</em></div><h3>{{ asunto(item) }}</h3><p>{{ detalle(item) }}</p><div class="info"><span>Solicitado por<br><b>{{ solicitante(item) }}</b></span><span>Fecha<br><b>{{ fecha(item) }}</b></span></div>
-          <div v-if="vista==='adquisiciones'" class="steps"><span :class="{done:true}">1 Autorizado</span><span :class="{done:item.estado==='COMPRA_REGISTRADA'||item.estado==='COMPRADO_Y_ENTREGADO'}">2 Compra</span><span :class="{done:!!item.fecha_ingreso_almacen}">3 Ingreso</span><span :class="{done:!!item.fecha_despacho_almacen}">4 Despacho</span></div>
-          <div class="actions"><button @click="verDetalle(item)">Ver detalle</button><button class="primary" @click="ejecutar(item)">{{ accionTexto(item) }}</button></div>
-        </article></div>
-        <div v-else class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No existen registros pendientes.</p></div>
-      </section>
+          <p>
+            Adquisición, ingreso y despacho de compras
+            desembolsadas por Tesorería.
+          </p>
+        </div>
+
+        <div
+          v-if="!esRutaRequerimientos"
+          class="header-actions"
+        >
+
+          <select
+            v-model="filtroEstado"
+            class="filtro-estado"
+          >
+            <option value="">Todas las solicitudes</option>
+            <option value="APROBADA">Solicitudes aprobadas</option>
+            <option value="RECHAZADA">Solicitudes rechazadas</option>
+          </select>
+
+          <button
+            class="refresh-button"
+            type="button"
+            :disabled="cargando"
+            @click="cargarCompras"
+          >
+            {{
+              cargando
+                ? 'Actualizando...'
+                : 'Actualizar'
+            }}
+          </button>
+
+        </div>
+
+        <button
+          v-else
+          class="refresh-button"
+          type="button"
+          :disabled="cargandoRequerimientos"
+          @click="cargarRequerimientos"
+        >
+          {{
+            cargandoRequerimientos
+              ? 'Actualizando...'
+              : 'Actualizar'
+          }}
+        </button>
+
+      </header>
+
+
+      <!-- =================================================
+           COMPRAS
+      ================================================== -->
+
+      <template v-if="!esRutaRequerimientos">
+
+        <div
+          v-if="cargando"
+          class="loading"
+        >
+          Cargando solicitudes de compra...
+        </div>
+
+        <div
+          v-else-if="compras.length === 0"
+          class="empty"
+        >
+          No existen solicitudes de compra registradas.
+        </div>
+
+        <div
+          v-else-if="comprasFiltradas.length === 0"
+          class="empty"
+        >
+          No hay {{ etiquetaFiltroVacio(filtroEstado) }}.
+        </div>
+
+        <section
+          v-else
+          class="requests-card"
+        >
+
+          <div class="request-list">
+
+            <article
+              v-for="compra in comprasFiltradas"
+              :key="compra.id"
+              class="request"
+            >
+
+              <div class="request-main">
+
+                <div class="request-code">
+                  <strong>
+                    {{ compra.codigo }}
+                  </strong>
+
+                  <small>
+                    {{ compra.area_nombre || 'Área no indicada' }}
+                  </small>
+                </div>
+
+
+                <div class="request-info">
+
+                  <h3>
+                    {{
+                      compra.titulo
+                      || compra.descripcion
+                      || 'Solicitud de compra'
+                    }}
+                  </h3>
+
+                  <div class="meta">
+
+                    <span>
+                      {{
+                        compra.solicitante_nombre
+                        || compra.solicitante_email
+                        || 'Sin información'
+                      }}
+                    </span>
+
+                    <span>
+                      {{
+                        compra.via_nombre
+                        || 'Vía no indicada'
+                      }}
+                    </span>
+
+                    <span v-if="compra.creado_en">
+                      {{ formatearFecha(compra.creado_en) }}
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <div class="request-side">
+
+                <span
+                  :class="['status', claseBucket(bucketEstado(compra.estado))]"
+                >
+                  {{ etiquetaBucket(bucketEstado(compra.estado)) }}
+                </span>
+
+                <div class="row-actions">
+
+                  <button
+                    class="view"
+                    @click="verDetalle(compra)"
+                  >
+                    Ver detalle
+                  </button>
+
+                  <button
+                    v-if="etapaAccion(compra) === 'comprar'"
+                    class="row-aprobar"
+                    @click="verDetalle(compra)"
+                  >
+                    Registrar compra
+                  </button>
+
+                  <button
+                    v-if="etapaAccion(compra) === 'ingreso'"
+                    class="row-aprobar"
+                    @click="verDetalle(compra)"
+                  >
+                    Registrar ingreso
+                  </button>
+
+                  <button
+                    v-if="etapaAccion(compra) === 'despacho'"
+                    class="row-aprobar"
+                    @click="verDetalle(compra)"
+                  >
+                    Registrar despacho
+                  </button>
+
+                </div>
+
+              </div>
+
+            </article>
+
+          </div>
+
+        </section>
+
+      </template>
+
+
+      <!-- =================================================
+           REQUERIMIENTOS (MANTENIMIENTO)
+      ================================================== -->
+
+      <template v-else>
+
+        <div
+          v-if="cargandoRequerimientos"
+          class="loading"
+        >
+          Cargando requerimientos...
+        </div>
+
+        <div
+          v-else-if="requerimientos.length === 0"
+          class="empty"
+        >
+          No existen requerimientos de mantenimiento registrados.
+        </div>
+
+        <section
+          v-else
+          class="requests-card"
+        >
+
+          <div class="request-list">
+
+            <article
+              v-for="req in requerimientos"
+              :key="req.id"
+              class="request"
+            >
+
+              <div class="request-main">
+
+                <div class="request-code">
+                  <strong>
+                    {{ codigoRequerimiento(req) }}
+                  </strong>
+
+                  <small>
+                    {{ req.area_nombre || 'Área no indicada' }}
+                  </small>
+                </div>
+
+
+                <div class="request-info">
+
+                  <h3>
+                    {{
+                      req.titulo
+                      || req.asunto
+                      || req.descripcion_corta
+                      || 'Requerimiento de mantenimiento'
+                    }}
+                  </h3>
+
+                  <div class="meta">
+
+                    <span>
+                      {{
+                        req.solicitante_nombre
+                        || req.solicitante_email
+                        || 'Sin información'
+                      }}
+                    </span>
+
+                    <span v-if="req.created_at || req.fecha_solicitud">
+                      {{ formatearFecha(req.created_at || req.fecha_solicitud) }}
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <div class="request-side">
+
+                <span class="status working">
+                  {{ estadoRequerimiento(req) }}
+                </span>
+
+                <div class="row-actions">
+
+                  <button
+                    class="view"
+                    @click="verRequerimiento(req)"
+                  >
+                    Ver detalle
+                  </button>
+
+                  <button
+                    v-if="req.estado_codigo === 'REVISION_ALMACEN'"
+                    class="row-aprobar"
+                    @click="verRequerimiento(req)"
+                  >
+                    Reportar existencia
+                  </button>
+
+                </div>
+
+              </div>
+
+            </article>
+
+          </div>
+
+        </section>
+
+      </template>
+
     </main>
+
+
+    <!-- =================================================
+         DOCUMENTO DE DETALLE (COMPRAS)
+    ================================================== -->
+
+    <div
+      v-if="mostrarDetalle"
+      class="detalle-modal-backdrop"
+      @click.self="cerrarDetalle"
+    >
+      <div class="detalle-modal documento-modal">
+
+        <div class="detalle-modal-header">
+          <div class="documento-header-titulo">
+
+            <span class="documento-header-icono">📄</span>
+
+            <div>
+              <h3>{{ compraSeleccionada?.codigo }}</h3>
+              <small>{{ compraSeleccionada?.titulo }}</small>
+            </div>
+
+          </div>
+
+          <button
+            class="detalle-modal-close"
+            @click="cerrarDetalle"
+          >✕</button>
+        </div>
+
+        <div class="documento-body">
+
+          <div
+            :class="['estado-banner', claseBucket(bucketEstado(compraSeleccionada?.estado))]"
+          >
+            <span class="estado-banner-icono">
+              {{ iconoBucket(bucketEstado(compraSeleccionada?.estado)) }}
+            </span>
+
+            <div>
+              <strong>{{ etiquetaBucket(bucketEstado(compraSeleccionada?.estado)) }}</strong>
+              <span class="estado-banner-descripcion">
+                {{ descripcionBucket(bucketEstado(compraSeleccionada?.estado)) }}
+              </span>
+            </div>
+          </div>
+
+
+          <div class="documento-seccion">
+
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📦</span>
+              <span class="documento-titulo">
+                Producto o servicio a comprar
+              </span>
+            </div>
+
+            <h4>{{ compraSeleccionada?.titulo || 'Sin título' }}</h4>
+
+            <p>{{ compraSeleccionada?.descripcion || 'Sin descripción registrada.' }}</p>
+
+
+            <div class="documento-fila documento-fila-5">
+
+              <div>
+                <b>Tipo</b>
+                <span>{{ compraSeleccionada?.tipo_nombre || compraSeleccionada?.tipo || 'No indicado' }}</span>
+              </div>
+
+              <div>
+                <b>Cantidad</b>
+                <span>{{ compraSeleccionada?.cantidad || 1 }}</span>
+              </div>
+
+              <div>
+                <b>Monto estimado</b>
+                <span>
+                  {{
+                    compraSeleccionada?.monto_estimado
+                      ? `Bs ${Number(compraSeleccionada.monto_estimado).toFixed(2)}`
+                      : 'No indicado'
+                  }}
+                </span>
+              </div>
+
+              <div>
+                <b>Especificaciones</b>
+                <span>{{ compraSeleccionada?.especificaciones || 'No registradas.' }}</span>
+              </div>
+
+              <div>
+                <b>Justificación</b>
+                <span>{{ compraSeleccionada?.justificacion || 'No registrada.' }}</span>
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div class="documento-seccion">
+
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📁</span>
+              <span class="documento-titulo">
+                Datos del expediente
+              </span>
+            </div>
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Solicitante</b>
+                <span>
+                  {{
+                    compraSeleccionada?.solicitante_nombre
+                    || compraSeleccionada?.solicitante_email
+                    || 'Sin información'
+                  }}
+                </span>
+              </div>
+
+              <div>
+                <b>Área</b>
+                <span>{{ compraSeleccionada?.area_nombre || 'No indicada' }}</span>
+              </div>
+
+              <div>
+                <b>Monto desembolsado</b>
+                <span>
+                  {{
+                    compraSeleccionada?.monto_desembolsado
+                      ? `Bs ${Number(compraSeleccionada.monto_desembolsado).toFixed(2)}`
+                      : 'No indicado'
+                  }}
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div class="documento-seccion">
+
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📄</span>
+              <span class="documento-titulo">
+                Documentos del expediente
+              </span>
+            </div>
+
+            <div class="documento-lista">
+
+              <template
+                v-for="doc in documentosExpediente"
+                :key="doc.label"
+              >
+
+                <a
+                  v-if="doc.url"
+                  :href="doc.url"
+                  target="_blank"
+                  class="documento-item ok"
+                >
+                  <span class="documento-item-icono">📄</span>
+                  <span class="documento-item-label">{{ doc.label }}</span>
+                  <span class="documento-item-accion">
+                    Ver archivo
+                    <span class="documento-item-ojo">👁</span>
+                  </span>
+                </a>
+
+                <div
+                  v-else
+                  class="documento-item falta"
+                >
+                  <span class="documento-item-icono">📄</span>
+                  <span class="documento-item-label">{{ doc.label }}</span>
+                  <small>{{ doc.pendienteTexto || 'No adjuntado' }}</small>
+                </div>
+
+              </template>
+
+            </div>
+
+          </div>
+
+
+          <!-- ACCIONES -->
+
+          <div
+            v-if="etapaAccion(compraSeleccionada)"
+            class="documento-acciones"
+          >
+
+            <p
+              v-if="errorAccion"
+              class="accion-error"
+            >
+              {{ errorAccion }}
+            </p>
+
+
+            <!-- REGISTRAR COMPRA -->
+
+            <template v-if="etapaAccion(compraSeleccionada) === 'comprar'">
+
+              <p class="nota-tramite">
+                Registre el monto real cobrado por el
+                proveedor y confirme que el componente
+                recibido coincide con lo solicitado.
+              </p>
+
+              <label>
+                Monto real (Bs)
+                <span>*</span>
+              </label>
+
+              <input
+                v-model="montoReal"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+              />
+
+              <label>
+                Proveedor
+                <span>*</span>
+              </label>
+
+              <input
+                v-model="proveedor"
+                type="text"
+                placeholder="Nombre o razón social"
+              />
+
+              <div class="acciones-botones">
+
+                <button
+                  class="btn-aprobar"
+                  :disabled="procesando"
+                  @click="confirmarCompra"
+                >
+                  Confirmar compra
+                </button>
+
+              </div>
+
+            </template>
+
+
+            <!-- INGRESO A ALMACÉN -->
+
+            <template v-else-if="etapaAccion(compraSeleccionada) === 'ingreso'">
+
+              <p class="nota-tramite">
+                Confirme el ingreso físico del producto a
+                almacén.
+              </p>
+
+              <div class="acciones-botones">
+
+                <button
+                  class="btn-aprobar"
+                  :disabled="procesando"
+                  @click="confirmarIngreso"
+                >
+                  Confirmar ingreso
+                </button>
+
+              </div>
+
+            </template>
+
+
+            <!-- DESPACHO -->
+
+            <template v-else-if="etapaAccion(compraSeleccionada) === 'despacho'">
+
+              <p class="nota-tramite">
+                Confirme el despacho y entrega del producto
+                al solicitante.
+              </p>
+
+              <div class="acciones-botones">
+
+                <button
+                  class="btn-aprobar"
+                  :disabled="procesando"
+                  @click="confirmarDespacho"
+                >
+                  Confirmar despacho
+                </button>
+
+              </div>
+
+            </template>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- =================================================
+         DETALLE DE REQUERIMIENTO (MANTENIMIENTO)
+    ================================================== -->
+
+    <div
+      v-if="mostrarDetalleRequerimiento"
+      class="detalle-modal-backdrop"
+      @click.self="cerrarRequerimiento"
+    >
+      <div class="detalle-modal documento-modal">
+
+        <div class="detalle-modal-header">
+          <div class="documento-header-titulo">
+
+            <span class="documento-header-icono">🧰</span>
+
+            <div>
+              <h3>{{ codigoRequerimiento(requerimientoSeleccionado) }}</h3>
+              <small>
+                {{
+                  requerimientoSeleccionado?.titulo
+                  || requerimientoSeleccionado?.asunto
+                  || 'Requerimiento de mantenimiento'
+                }}
+              </small>
+            </div>
+
+          </div>
+
+          <button
+            class="detalle-modal-close"
+            @click="cerrarRequerimiento"
+          >✕</button>
+        </div>
+
+        <div class="documento-body">
+
+          <div class="documento-seccion">
+
+            <div class="documento-titulo-fila">
+              <span class="documento-icono">📝</span>
+              <span class="documento-titulo">
+                Detalle del requerimiento
+              </span>
+            </div>
+
+            <p>
+              {{
+                requerimientoSeleccionado?.descripcion
+                || requerimientoSeleccionado?.justificacion
+                || 'Sin descripción registrada.'
+              }}
+            </p>
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Solicitante</b>
+                <span>
+                  {{
+                    requerimientoSeleccionado?.solicitante_nombre
+                    || requerimientoSeleccionado?.solicitante_email
+                    || 'Sin información'
+                  }}
+                </span>
+              </div>
+
+              <div>
+                <b>Estado</b>
+                <span>{{ estadoRequerimiento(requerimientoSeleccionado) }}</span>
+              </div>
+
+              <div>
+                <b>Fecha</b>
+                <span>
+                  {{
+                    formatearFecha(
+                      requerimientoSeleccionado?.created_at
+                      || requerimientoSeleccionado?.fecha_solicitud
+                    )
+                  }}
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <!-- ACCIÓN: REPORTAR EXISTENCIA -->
+
+          <div
+            v-if="requerimientoSeleccionado?.estado_codigo === 'REVISION_ALMACEN'"
+            class="documento-acciones"
+          >
+
+            <p
+              v-if="errorAccion"
+              class="accion-error"
+            >
+              {{ errorAccion }}
+            </p>
+
+            <p class="nota-tramite">
+              Indique si existe stock disponible en almacén
+              para atender este requerimiento.
+            </p>
+
+            <label>
+              Observación de almacén (opcional)
+            </label>
+
+            <input
+              v-model="observacionAlmacen"
+              type="text"
+              placeholder="Detalle adicional..."
+            />
+
+            <div class="acciones-botones">
+
+              <button
+                class="btn-rechazar"
+                :disabled="procesando"
+                @click="reportarExistencia(false)"
+              >
+                No hay stock
+              </button>
+
+              <button
+                class="btn-aprobar"
+                :disabled="procesando"
+                @click="reportarExistencia(true)"
+              >
+                Hay stock disponible
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </template>
 
+
 <script setup>
-import{computed,onMounted,ref}from'vue';import{useRouter}from'vue-router'
-const router=useRouter(),usuario=ref(JSON.parse(localStorage.getItem('sigta_usuario')||'{}'));const vista=ref('resumen'),menuAbierto=ref(false),compras=ref([]),mantenimiento=ref([]),inventario=ref([]),busqueda=ref(''),cargando=ref(false)
-const nombre=computed(()=>usuario.value.nombre||usuario.value.nombre_completo||'Encargado de Almacén');const primerNombre=computed(()=>nombre.value.split(' ')[0]);const iniciales=computed(()=>nombre.value.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase());const saludo=computed(()=>new Date().getHours()<12?'Buenos días':new Date().getHours()<19?'Buenas tardes':'Buenas noches')
-const est=x=>String(x.estado_nombre||x.estado?.nombre||x.estado||'Pendiente');const adquisiciones=computed(()=>compras.value.filter(x=>['FONDOS_DESEMBOLSADOS','COMPRA_REGISTRADA'].includes(x.estado)));const requerimientos=computed(()=>mantenimiento.value.filter(x=>x.estado_codigo==='REVISION_ALMACEN'));const cantidad=x=>Number(x.stock_actual??x.cantidad_disponible??x.cantidad??0);const stockCritico=computed(()=>inventario.value.filter(x=>cantidad(x)<=Number(x.stock_minimo||2)))
-function accionTexto(item){
-  if(vista.value!=='adquisiciones')return 'Verificar existencia'
-  if(item.estado==='FONDOS_DESEMBOLSADOS')return 'Registrar compra realizada'
-  if(!item.fecha_ingreso_almacen)return 'Registrar ingreso a almacén'
-  return 'Registrar despacho a almacén'
+
+import {
+  computed,
+  onMounted,
+  ref
+} from 'vue'
+
+import {
+  useRoute,
+  useRouter
+} from 'vue-router'
+
+import AlmacenMenu
+  from '../components/AlmacenMenu.vue'
+
+
+const router =
+  useRouter()
+
+const route =
+  useRoute()
+
+const esRutaRequerimientos =
+  computed(() =>
+    route.path.endsWith('requerimientos')
+  )
+
+
+// ==========================================================
+// COMPRAS
+// ==========================================================
+
+const compras =
+  ref([])
+
+const cargando =
+  ref(true)
+
+const filtroEstado =
+  ref('')
+
+const comprasFiltradas =
+  computed(() => {
+
+    if (!filtroEstado.value) {
+      return compras.value
+    }
+
+    return compras.value.filter(
+      compra =>
+        bucketEstado(compra.estado)
+        === filtroEstado.value
+    )
+  })
+
+
+const mostrarDetalle =
+  ref(false)
+
+const compraSeleccionada =
+  ref(null)
+
+const documentosExpediente =
+  computed(() => {
+
+    const c =
+      compraSeleccionada.value
+
+    if (!c) {
+      return []
+    }
+
+    return [
+      { label: 'Informe', url: c.informe },
+      { label: 'POA', url: c.poa },
+      { label: 'Pedido', url: c.pedido },
+      { label: 'Proforma', url: c.proforma },
+      {
+        label: 'Certificación presupuestaria',
+        url: c.certificacion_presupuestaria,
+      },
+    ]
+  })
+
+const procesando =
+  ref(false)
+
+const montoReal =
+  ref('')
+
+const proveedor =
+  ref('')
+
+const errorAccion =
+  ref('')
+
+
+function resetearFormularios() {
+
+  montoReal.value =
+    ''
+
+  proveedor.value =
+    ''
+
+  observacionAlmacen.value =
+    ''
+
+  errorAccion.value =
+    ''
 }
-const menu=computed(()=>[{id:'resumen',icono:'⌂',nombre:'Resumen'},{id:'adquisiciones',icono:'CP',nombre:'Adquisiciones',total:adquisiciones.value.length},{id:'requerimientos',icono:'RI',nombre:'Requerimientos',total:requerimientos.value.length},{id:'inventario',icono:'SK',nombre:'Inventario',total:inventario.value.length}]);const titulo=computed(()=>({resumen:'Consola de Almacén e Inventarios',adquisiciones:'Adquisiciones pendientes',requerimientos:'Requerimientos de insumos',inventario:'Mapeo de stock'})[vista.value]);const lista=computed(()=>vista.value==='adquisiciones'?adquisiciones.value:requerimientos.value);const listaFiltrada=computed(()=>lista.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())));const inventarioFiltrado=computed(()=>inventario.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())))
-const codigo=x=>x.codigo||x.numero_solicitud||`#${x.id}`;const asunto=x=>x.titulo||x.asunto||x.descripcion_corta||'Solicitud de materiales';const detalle=x=>String(x.descripcion||x.justificacion||'Requerimiento operativo de almacén.').slice(0,130);const estado=x=>est(x);const solicitante=x=>x.solicitante_nombre||x.solicitante_email||'Personal institucional';const producto=x=>x.nombre||x.producto||x.descripcion||'Material sin nombre';const fecha=x=>{const f=x.created_at||x.fecha_solicitud||x.creado_en;if(!f)return'Sin fecha';return new Intl.DateTimeFormat('es-BO').format(new Date(f))}
-async function get(url,dest){const r=await fetch(url,{headers:{Authorization:`Token ${localStorage.getItem('sigta_token')}`}});if(!r.ok)throw 0;const d=await r.json();dest.value=Array.isArray(d)?d:(d.results||[])}async function cargar(){cargando.value=true;await Promise.allSettled([get('/api/compras/solicitudes/',compras),get('/api/mantenimiento/requerimientos/',mantenimiento),get('/api/compras/inventario/',inventario)]);cargando.value=false}function salir(){localStorage.removeItem('sigta_token');localStorage.removeItem('sigta_usuario');router.push('/login')}onMounted(cargar)
-async function postCompra(item,endpoint,body={}){const r=await fetch(`/api/compras/solicitudes/${item.id}/${endpoint}/`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Token ${localStorage.getItem('sigta_token')}`},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.detalle||'No fue posible completar la acción.');await cargar();return d}
-async function postMantenimiento(item,endpoint,body={}){const r=await fetch(`/api/mantenimiento/requerimientos/${item.id}/${endpoint}/`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Token ${localStorage.getItem('sigta_token')}`},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.detalle||'No fue posible completar la acción.');await cargar();return d}
-async function ejecutar(item){
-  try{
-    if(vista.value==='requerimientos'){
-      const disponible=confirm(`${producto(item)||item.producto_requerido}\n\n¿Hay stock disponible en almacén? Aceptar = Sí, Cancelar = No.`)
-      const observacion=prompt('Observación de almacén (opcional):','')||''
-      await postMantenimiento(item,'reportar-existencia',{producto_disponible:disponible,observacion_almacen:observacion})
-      alert(disponible?'Producto entregado al auxiliar. El mantenimiento puede continuar.':'Se generó el expediente de Compra Caja Chica por falta de stock.')
+
+
+function verDetalle(
+  compra
+) {
+
+  compraSeleccionada.value =
+    compra
+
+  mostrarDetalle.value =
+    true
+
+  resetearFormularios()
+
+  if (
+    compra.monto_desembolsado
+    &&
+    !montoReal.value
+  ) {
+
+    montoReal.value =
+      compra.monto_desembolsado
+  }
+}
+
+
+function cerrarDetalle() {
+
+  mostrarDetalle.value =
+    false
+
+  compraSeleccionada.value =
+    null
+
+  resetearFormularios()
+}
+
+
+// ==========================================================
+// ETAPA DE ALMACÉN (COMPRAS)
+// ==========================================================
+//
+// El Encargado de Compras y Almacén interviene en 3 pasos del
+// BPMN, una vez que Tesorería desembolsó los fondos: comprar
+// el pedido, registrar el ingreso físico a almacén y
+// registrar el despacho/entrega al solicitante.
+// ==========================================================
+
+function etapaAccion(
+  compra
+) {
+
+  const codigo =
+    String(
+      compra?.estado
+      || ''
+    )
+      .trim()
+      .toUpperCase()
+
+  if (
+    codigo === 'FONDOS_DESEMBOLSADOS'
+  ) {
+
+    return 'comprar'
+  }
+
+  if (
+    codigo === 'COMPRA_REGISTRADA'
+  ) {
+
+    return compra?.fecha_ingreso_almacen
+      ? 'despacho'
+      : 'ingreso'
+  }
+
+  return null
+}
+
+
+async function confirmarCompra() {
+
+  const monto =
+    String(
+      montoReal.value
+      || ''
+    ).trim()
+
+  const nombreProveedor =
+    proveedor.value.trim()
+
+  if (
+    !monto
+    ||
+    Number(monto) <= 0
+  ) {
+
+    errorAccion.value =
+      'Debe indicar el monto real de la compra.'
+
+    return
+  }
+
+  if (!nombreProveedor) {
+
+    errorAccion.value =
+      'Debe indicar el proveedor.'
+
+    return
+  }
+
+  if (
+    !window.confirm(
+      '¿Confirma que el componente recibido coincide con lo solicitado?'
+    )
+  ) {
+
+    return
+  }
+
+  await ejecutarAccionCompra(
+    'registrar-compra',
+    {
+      monto_real: monto,
+      proveedor: nombreProveedor,
+      componente_verificado: true,
+    }
+  )
+}
+
+
+async function confirmarIngreso() {
+
+  if (
+    !window.confirm(
+      '¿Confirma el ingreso físico del producto a almacén?'
+    )
+  ) {
+
+    return
+  }
+
+  await ejecutarAccionCompra(
+    'registrar-ingreso-almacen',
+    {}
+  )
+}
+
+
+async function confirmarDespacho() {
+
+  if (
+    !window.confirm(
+      '¿Confirma el despacho y entrega del producto al solicitante?'
+    )
+  ) {
+
+    return
+  }
+
+  await ejecutarAccionCompra(
+    'registrar-despacho-almacen',
+    {}
+  )
+}
+
+
+async function ejecutarAccionCompra(
+  endpoint,
+  body
+) {
+
+  procesando.value =
+    true
+
+  errorAccion.value =
+    ''
+
+  try {
+
+    const respuesta =
+      await fetch(
+        `/api/compras/solicitudes/${compraSeleccionada.value.id}/${endpoint}/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Token ${token()}`,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(body),
+        }
+      )
+
+    let datos = {}
+
+    try {
+      datos = await respuesta.json()
+    } catch {
+      datos = {}
+    }
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
       return
     }
-    if(item.estado==='FONDOS_DESEMBOLSADOS'){
-      const monto=prompt('Monto real cobrado por el proveedor (Bs):',item.monto_desembolsado||'');if(!monto)return
-      const proveedor=prompt('Nombre o razón social del proveedor:');if(!proveedor?.trim())return
-      if(!confirm('¿Confirma que el componente recibido coincide con lo solicitado (verificación de componentes)?'))return
-      await postCompra(item,'registrar-compra',{monto_real:monto,proveedor:proveedor.trim(),componente_verificado:true})
-      alert('Compra registrada y componente verificado. Ahora debe registrar el ingreso a almacén.')
-    }else if(!item.fecha_ingreso_almacen){
-      if(!confirm('¿Confirma el ingreso físico del producto a almacén?'))return
-      await postCompra(item,'registrar-ingreso-almacen')
-      alert('Ingreso a almacén registrado. Ahora debe registrar el despacho al solicitante.')
-    }else{
-      if(!confirm('¿Confirma el despacho y entrega del producto al solicitante?'))return
-      await postCompra(item,'registrar-despacho-almacen')
-      alert('Despacho registrado. El solicitante ya puede presentar su descargo.')
+
+    if (!respuesta.ok) {
+
+      errorAccion.value =
+        datos.detalle
+        || 'No fue posible registrar la acción.'
+
+      return
     }
-  }catch(e){alert(e.message)}
+
+    cerrarDetalle()
+
+    await cargarCompras()
+
+  } catch (error) {
+
+    console.error(
+      'Error ejecutando la acción:',
+      error
+    )
+
+    errorAccion.value =
+      'No fue posible comunicarse con el servidor.'
+
+  } finally {
+
+    procesando.value =
+      false
+  }
 }
-function verDetalle(item){alert(`${codigo(item)}\n${asunto(item)}\nEstado: ${estado(item)}\nMonto desembolsado: ${item.monto_desembolsado||'No registrado'}\nResponsable: ${item.responsable_adquisicion||'No registrado'}`)}
+
+
+// ==========================================================
+// CARGAR COMPRAS
+// ==========================================================
+
+function normalizarLista(
+  datos
+) {
+
+  if (
+    Array.isArray(datos)
+  ) {
+
+    return datos
+  }
+
+
+  if (
+    Array.isArray(
+      datos?.results
+    )
+  ) {
+
+    return datos.results
+  }
+
+
+  return []
+}
+
+
+async function cargarCompras() {
+
+  cargando.value =
+    true
+
+  try {
+
+    const respuesta =
+      await fetch(
+        '/api/compras/solicitudes/',
+        {
+          headers: {
+            Authorization: `Token ${token()}`,
+            Accept: 'application/json',
+          }
+        }
+      )
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
+      return
+    }
+
+    if (!respuesta.ok) {
+
+      compras.value = []
+
+      return
+    }
+
+    const datos =
+      await respuesta.json()
+
+    compras.value =
+      normalizarLista(datos)
+      .sort(
+        (a, b) => {
+
+          const fechaA =
+            new Date(a.creado_en || 0).getTime()
+
+          const fechaB =
+            new Date(b.creado_en || 0).getTime()
+
+          return fechaB - fechaA
+        }
+      )
+
+  } catch (error) {
+
+    console.error(
+      'Error cargando compras:',
+      error
+    )
+
+    compras.value = []
+
+  } finally {
+
+    cargando.value =
+      false
+  }
+}
+
+
+// ==========================================================
+// ESTADO (AGRUPACIÓN VISUAL SIMPLIFICADA PARA ALMACÉN)
+// ==========================================================
+
+function bucketEstado(
+  estado
+) {
+
+  const codigo =
+    String(
+      estado
+      || ''
+    )
+      .trim()
+      .toUpperCase()
+
+  if (
+    codigo === 'RECHAZADO'
+    ||
+    codigo === 'ANULADO'
+  ) {
+
+    return 'RECHAZADA'
+  }
+
+  if (
+    codigo === 'FONDOS_DESEMBOLSADOS'
+    ||
+    codigo === 'COMPRA_REGISTRADA'
+  ) {
+
+    return 'EN_ESPERA'
+  }
+
+  return 'APROBADA'
+}
+
+
+function etiquetaBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: 'Aprobación en espera',
+      APROBADA: 'Aprobada',
+      RECHAZADA: 'Rechazada',
+    }[bucket]
+    || bucket
+  )
+}
+
+
+function etiquetaFiltroVacio(
+  bucket
+) {
+
+  return (
+    {
+      APROBADA: 'solicitudes aprobadas',
+      RECHAZADA: 'solicitudes rechazadas',
+    }[bucket]
+    || 'solicitudes'
+  )
+}
+
+
+function claseBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: 'working',
+      APROBADA: 'closed',
+      RECHAZADA: 'cancelled',
+    }[bucket]
+    || 'working'
+  )
+}
+
+
+function iconoBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: '⏳',
+      APROBADA: '✅',
+      RECHAZADA: '❌',
+    }[bucket]
+    || '⏳'
+  )
+}
+
+
+function descripcionBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: 'La compra se encuentra pendiente de adquisición, ingreso o despacho.',
+      APROBADA: 'La compra ya avanzó fuera de la bandeja de Almacén.',
+      RECHAZADA: 'La solicitud fue rechazada.',
+    }[bucket]
+    || ''
+  )
+}
+
+
+// ==========================================================
+// REQUERIMIENTOS (MANTENIMIENTO)
+// ==========================================================
+
+const requerimientos =
+  ref([])
+
+const cargandoRequerimientos =
+  ref(true)
+
+const mostrarDetalleRequerimiento =
+  ref(false)
+
+const requerimientoSeleccionado =
+  ref(null)
+
+const observacionAlmacen =
+  ref('')
+
+
+function codigoRequerimiento(
+  req
+) {
+
+  return (
+    req?.codigo
+    || req?.numero_solicitud
+    || `#${req?.id ?? ''}`
+  )
+}
+
+
+function estadoRequerimiento(
+  req
+) {
+
+  return String(
+    req?.estado_nombre
+    || req?.estado?.nombre
+    || req?.estado
+    || 'Pendiente'
+  )
+}
+
+
+function verRequerimiento(
+  req
+) {
+
+  requerimientoSeleccionado.value =
+    req
+
+  mostrarDetalleRequerimiento.value =
+    true
+
+  observacionAlmacen.value =
+    ''
+
+  errorAccion.value =
+    ''
+}
+
+
+function cerrarRequerimiento() {
+
+  mostrarDetalleRequerimiento.value =
+    false
+
+  requerimientoSeleccionado.value =
+    null
+}
+
+
+async function cargarRequerimientos() {
+
+  cargandoRequerimientos.value =
+    true
+
+  try {
+
+    const respuesta =
+      await fetch(
+        '/api/mantenimiento/requerimientos/',
+        {
+          headers: {
+            Authorization: `Token ${token()}`,
+            Accept: 'application/json',
+          }
+        }
+      )
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
+      return
+    }
+
+    if (!respuesta.ok) {
+
+      requerimientos.value = []
+
+      return
+    }
+
+    const datos =
+      await respuesta.json()
+
+    requerimientos.value =
+      normalizarLista(datos)
+
+  } catch (error) {
+
+    console.error(
+      'Error cargando requerimientos:',
+      error
+    )
+
+    requerimientos.value = []
+
+  } finally {
+
+    cargandoRequerimientos.value =
+      false
+  }
+}
+
+
+async function reportarExistencia(
+  disponible
+) {
+
+  if (!requerimientoSeleccionado.value) {
+    return
+  }
+
+  procesando.value =
+    true
+
+  errorAccion.value =
+    ''
+
+  try {
+
+    const respuesta =
+      await fetch(
+        `/api/mantenimiento/requerimientos/${requerimientoSeleccionado.value.id}/reportar-existencia/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Token ${token()}`,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            producto_disponible: disponible,
+            observacion_almacen: observacionAlmacen.value || '',
+          }),
+        }
+      )
+
+    let datos = {}
+
+    try {
+      datos = await respuesta.json()
+    } catch {
+      datos = {}
+    }
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
+      return
+    }
+
+    if (!respuesta.ok) {
+
+      errorAccion.value =
+        datos.detalle
+        || 'No fue posible registrar la respuesta.'
+
+      return
+    }
+
+    cerrarRequerimiento()
+
+    await cargarRequerimientos()
+
+  } catch (error) {
+
+    console.error(
+      'Error reportando existencia:',
+      error
+    )
+
+    errorAccion.value =
+      'No fue posible comunicarse con el servidor.'
+
+  } finally {
+
+    procesando.value =
+      false
+  }
+}
+
+
+// ==========================================================
+// TOKEN / SESIÓN
+// ==========================================================
+
+function token() {
+
+  return localStorage.getItem(
+    'sigta_token'
+  )
+}
+
+
+function cerrarSesion() {
+
+  localStorage.removeItem(
+    'sigta_token'
+  )
+
+  localStorage.removeItem(
+    'sigta_usuario'
+  )
+
+  router.push(
+    '/login'
+  )
+}
+
+
+// ==========================================================
+// FECHA
+// ==========================================================
+
+function formatearFecha(
+  fecha
+) {
+
+  if (!fecha) {
+
+    return ''
+  }
+
+  try {
+
+    return new Date(
+      fecha
+    ).toLocaleString(
+      'es-BO',
+      {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }
+    )
+
+  } catch {
+
+    return ''
+  }
+}
+
+
+// ==========================================================
+// INICIO
+// ==========================================================
+
+onMounted(
+  async () => {
+
+    if (!token()) {
+
+      router.push(
+        '/login'
+      )
+
+      return
+    }
+
+    await Promise.all([
+      cargarCompras(),
+      cargarRequerimientos(),
+    ])
+  }
+)
+
 </script>
 
+
 <style scoped>
-*{box-sizing:border-box}.layout{min-height:100vh;background:#f3f7f6;color:#173d3a;font-family:Inter,Segoe UI,sans-serif}aside{position:fixed;inset:0 auto 0 0;width:276px;background:#123e3a;color:white;padding:22px 16px;display:flex;flex-direction:column}.brand,.person{display:flex;align-items:center;gap:12px}.brand{padding:0 10px 20px;border-bottom:1px solid #ffffff22}.brand>b{background:#f1c943;color:#173d39;padding:14px 10px;border-radius:9px}.brand strong,.brand small,.person b,.person small{display:block}.brand strong{font-size:23px}.brand small,.person small{color:#b9d5d0;margin-top:3px}.person{padding:22px 10px}.person>span{width:42px;height:42px;border-radius:50%;background:#f1c943;color:#153c38;display:grid;place-items:center;font-weight:900}aside>p{font-size:10px;color:#85b1aa;font-weight:800;letter-spacing:1.4px;margin:14px 10px 8px}aside button{border:0;background:transparent;color:#d8ebe8;border-radius:8px;padding:12px;display:flex;gap:11px;align-items:center;text-align:left;cursor:pointer;margin:2px 0}aside button i{font-style:normal;width:28px;font-size:10px;font-weight:900}aside button em{margin-left:auto;background:#ffffff1f;padding:2px 8px;border-radius:10px;font-style:normal}aside button.active,aside button:hover{background:#ffffff17;box-shadow:inset 3px 0 #f1c943}.bottom{margin-top:auto;border-top:1px solid #ffffff20;padding-top:10px}.bottom button{width:100%}main{margin-left:276px;padding:30px 38px 55px;max-width:1650px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:27px}header span{font-size:11px;color:#718c89}h1{font-size:29px;margin:6px 0}header p{margin:0;color:#718986}.refresh{border:1px solid #d5e3e0;background:white;color:#1b5a53;padding:10px 14px;border-radius:8px;cursor:pointer}.hero{background:linear-gradient(120deg,#15463f,#257469);color:white;border-radius:13px;padding:28px 30px;display:flex;justify-content:space-between;align-items:center}.hero small,.panel-head small{font-size:10px;font-weight:800;letter-spacing:1.4px;color:#f1c943}.hero h2{font-size:24px;margin:7px 0}.hero p{margin:0;color:#d2e8e4}.hero>span{width:68px;height:68px;border:1px solid #f1c94388;border-radius:14px;display:grid;place-items:center;font-weight:900}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0}.stats article{background:white;border:1px solid #dce8e6;border-radius:10px;padding:19px;display:flex;gap:13px}.stats i,.task i{font-style:normal;width:37px;height:37px;border-radius:8px;display:grid;place-items:center;color:white;font-size:10px;font-weight:900}.blue{background:#2783a7}.amber{background:#dda82f}.green{background:#29966f}.red{background:#d95a56}.stats small,.stats b,.stats p{display:block}.stats b{font-size:25px;margin:3px 0}.stats p{font-size:11px;color:#819591;margin:0}.panels{display:grid;grid-template-columns:2fr 1fr;gap:18px}.panel{background:white;border:1px solid #dce8e6;border-radius:11px;padding:22px}.panel-head h3{margin:5px 0 14px}.task{width:100%;display:flex;align-items:center;gap:13px;border:0;border-top:1px solid #e7efed;background:white;padding:15px 2px;text-align:left;cursor:pointer}.task div{flex:1}.task b,.task small{display:block}.task small{color:#7a908c;margin-top:4px}.task>strong{font-size:21px}.alerts p{border-top:1px solid #e7efed;padding:13px 0;margin:0;display:flex;justify-content:space-between}.alerts span{font-size:11px;color:#b64e49}.mini-empty,.empty{text-align:center;color:#748d89;padding:35px}.toolbar{display:flex;justify-content:space-between;margin-bottom:17px}.toolbar label{width:360px;background:white;border:1px solid #d4e2df;padding:9px 12px;border-radius:8px}.toolbar input{border:0;outline:0;margin-left:7px;width:88%}.toolbar>button,.primary{background:#176158!important;color:white!important;border-color:#176158!important}.tabs{background:#e3ecea;padding:4px;border-radius:8px}.tabs button{border:0;background:transparent;padding:9px 14px}.tabs .active{background:white;border-radius:6px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.cards article{background:white;border:1px solid #dce7e5;border-radius:10px;padding:19px}.top{display:flex;justify-content:space-between}.top span{font-size:12px;font-weight:800;color:#24766d}.top em{font-size:10px;background:#edf3f2;padding:4px 8px;border-radius:10px;font-style:normal}.cards h3{font-size:17px;margin:15px 0 7px}.cards article>p{font-size:12px;color:#738985;min-height:42px}.info{display:grid;grid-template-columns:1fr 1fr;border-block:1px solid #e8efee;padding:12px 0;font-size:10px;color:#81928f}.info b{color:#345b56}.steps{display:flex;gap:5px;margin:12px 0}.steps span{font-size:9px;background:#eef3f2;padding:5px;border-radius:5px}.steps .done{background:#dff2ec;color:#23755e}.actions,.secondary-actions{display:flex;gap:8px;margin-top:13px}.actions button,.secondary-actions button,.toolbar button,.row button{flex:1;padding:9px;border-radius:7px;border:1px solid #c8d8d5;background:white;color:#315e58;font-weight:700;cursor:pointer}.danger-btn{color:#ad4541!important;border-color:#e5b8b5!important}.table{background:white;border:1px solid #dce7e5;border-radius:10px;overflow:hidden}.thead,.row{display:grid;grid-template-columns:2fr 1fr .7fr .8fr 1fr 1fr;gap:10px;align-items:center;padding:14px 18px}.thead{background:#eef4f2;color:#6b827e;font-size:10px;font-weight:800}.row{border-top:1px solid #e7efed;font-size:12px}.row em{font-style:normal;color:#258062}.row em.danger{color:#c34e49}.row button{padding:7px}.empty{background:white;border:1px dashed #c7d8d5;border-radius:10px;padding:65px}.empty>span{font-size:31px;color:#29966f}@media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.panels{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}@media(max-width:720px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}.toolbar,header{align-items:flex-start;flex-direction:column;gap:12px}.toolbar label{width:100%}.table{overflow:auto}.thead,.row{min-width:750px}}
+
+* {
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   LAYOUT
+========================================================= */
+
+.layout {
+  min-height: 100vh;
+  display: flex;
+  background: #f2f5f9;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 27px;
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+
+.page-header h1 {
+  margin: 0;
+  color: #17324a;
+  font-size: 33px;
+}
+
+
+.page-header p {
+  margin: 5px 0 0;
+  color: #718294;
+  font-size: 17px;
+}
+
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+.filtro-estado {
+  min-height: 41px;
+  padding: 0 12px;
+  border: 1px solid #d0dae2;
+  border-radius: 7px;
+  background: white;
+  color: #17324a;
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+
+.refresh-button {
+  min-height: 41px;
+  padding: 0 15px;
+  border: 1px solid #073b6f;
+  border-radius: 7px;
+  background: white;
+  color: #073b6f;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+
+.refresh-button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   LISTADO
+========================================================= */
+
+.requests-card {
+  overflow: hidden;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 4px 14px rgba(0,0,0,.05);
+}
+
+
+.request-list {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.request {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 17px 20px;
+  border-bottom: 1px solid #edf0f2;
+}
+
+
+.request:last-child {
+  border-bottom: none;
+}
+
+
+.request-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 155px 1fr;
+  gap: 15px;
+}
+
+
+.request-code strong {
+  display: block;
+  color: #07518d;
+  font-size: 15px;
+}
+
+
+.request-code small {
+  display: block;
+  margin-top: 4px;
+  color: #81909c;
+  font-size: 13px;
+}
+
+
+.request-info h3 {
+  margin: 0 0 5px;
+  color: #29475e;
+  font-size: 18px;
+}
+
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+
+.meta span {
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: #f3f6f8;
+  color: #687986;
+  font-size: 13px;
+}
+
+
+.request-side {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 9px;
+}
+
+
+/* =========================================================
+   ESTADO
+========================================================= */
+
+.status {
+  display: inline-block;
+  padding: 5px 8px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+
+.status.working {
+  background: #fff6d9;
+  color: #866400;
+}
+
+
+.status.closed {
+  background: #e8f6ee;
+  color: #237345;
+}
+
+
+.status.cancelled {
+  background: #fdeaea;
+  color: #a53232;
+}
+
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+
+.view,
+.row-aprobar,
+.row-rechazar {
+  padding: 6px 8px;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+
+.view {
+  background: #edf3f8;
+  color: #435a6e;
+}
+
+
+.row-aprobar {
+  background: #e5f3ea;
+  color: #237345;
+}
+
+
+.row-rechazar {
+  background: #fdecec;
+  color: #a53232;
+}
+
+
+/* =========================================================
+   VACÍOS
+========================================================= */
+
+.loading,
+.empty {
+  padding: 45px 20px;
+  text-align: center;
+  color: #798793;
+  font-size: 16px;
+}
+
+
+.empty {
+  border-radius: 10px;
+  background: white;
+}
+
+
+/* =========================================================
+   DOCUMENTO DE DETALLE
+========================================================= */
+
+.documento-modal {
+  max-width: 700px;
+}
+
+
+.documento-modal .detalle-modal-header h3 {
+  font-size: 20px;
+}
+
+
+.documento-modal .detalle-modal-header small {
+  font-size: 13px;
+}
+
+
+.documento-body {
+  padding: 18px 22px 22px;
+}
+
+
+.estado-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: 8px;
+}
+
+
+.estado-banner-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.6);
+  font-size: 19px;
+}
+
+
+.estado-banner strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+
+.estado-banner-descripcion {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  opacity: .85;
+}
+
+
+.estado-banner.working {
+  background: #fff6d9;
+  color: #866400;
+}
+
+
+.estado-banner.closed {
+  background: #e8f6ee;
+  color: #237345;
+}
+
+
+.estado-banner.cancelled {
+  background: #fdeaea;
+  color: #a53232;
+}
+
+
+.documento-seccion {
+  padding: 16px 0;
+  border-top: 1px solid #edf0f2;
+}
+
+
+.documento-seccion:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+
+.documento-header-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+
+.documento-header-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fdf3d9;
+  font-size: 17px;
+}
+
+
+.documento-titulo-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+
+.documento-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #eef1f8;
+  font-size: 13px;
+}
+
+
+.documento-titulo {
+  display: block;
+  margin-bottom: 8px;
+  color: #8592a0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+
+.documento-titulo-fila .documento-titulo {
+  margin-bottom: 0;
+}
+
+
+.documento-seccion h4 {
+  margin: 0 0 6px;
+  color: #17324a;
+  font-size: 20px;
+}
+
+
+.documento-seccion > p {
+  margin: 0 0 10px;
+  color: #354d60;
+  font-size: 16px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+
+.documento-seccion b {
+  display: block;
+  margin-bottom: 4px;
+  color: #8592a0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+
+.documento-fila {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+
+.documento-fila-5 {
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+}
+
+
+.documento-fila > div span {
+  display: block;
+  color: #26333f;
+  font-size: 16px;
+}
+
+
+.documento-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+.documento-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 7px;
+  font-family: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+
+.documento-item-icono {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+
+.documento-item-label {
+  flex: 1;
+  color: #26333f;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+.documento-item small {
+  font-size: 13px;
+}
+
+
+.documento-item-accion {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+
+.documento-item-ojo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.6);
+  font-size: 11px;
+}
+
+
+.documento-item.ok {
+  background: #e8f6ee;
+}
+
+
+.documento-item.ok .documento-item-accion {
+  color: #237345;
+  font-weight: 700;
+}
+
+
+.documento-item.falta {
+  background: #f3f6f8;
+}
+
+
+.documento-item.falta small {
+  color: #8a97a2;
+}
+
+
+/* =========================================================
+   ACCIONES DE DECISIÓN
+========================================================= */
+
+.documento-acciones {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #edf0f2;
+}
+
+
+.nota-tramite {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 7px;
+  background: #eef3f8;
+  color: #536575;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+.accion-error {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #fdecec;
+  color: #a53232;
+  font-size: 14px;
+}
+
+
+.acciones-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+
+.btn-aprobar,
+.btn-rechazar,
+.btn-cancelar {
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+
+.btn-aprobar {
+  background: #237345;
+  color: white;
+}
+
+
+.btn-rechazar {
+  background: #a53232;
+  color: white;
+}
+
+
+.btn-aprobar:disabled,
+.btn-rechazar:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+
+.documento-acciones > label {
+  display: block;
+  margin-bottom: 6px;
+  color: #344a5d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+.documento-acciones > label span {
+  color: #a53232;
+}
+
+
+.documento-acciones > input {
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: 12px;
+  padding: 0 12px;
+  border: 1px solid #d0dae2;
+  border-radius: 7px;
+  background: white;
+  color: #26333f;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 760px) {
+
+  .layout {
+    display: block;
+  }
+
+
+  .main {
+    padding: 16px;
+  }
+
+
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+
+  .header-actions {
+    width: 100%;
+  }
+
+
+  .filtro-estado {
+    flex: 1;
+  }
+
+
+  .request {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+
+  .request-main {
+    grid-template-columns: 1fr;
+  }
+
+
+  .request-side {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+
+  .documento-fila {
+    grid-template-columns: 1fr;
+  }
+
+}
+
 </style>

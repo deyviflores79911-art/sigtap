@@ -11,10 +11,6 @@
 
         <div>
 
-          <span class="breadcrumb">
-            SIGTA / Administración / Consulta global
-          </span>
-
           <h1>
             Consulta de requerimientos
           </h1>

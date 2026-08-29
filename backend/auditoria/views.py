@@ -46,7 +46,7 @@ def es_admin(usuario):
 
     return UsuarioRol.objects.filter(
         usuario=usuario,
-        rol__codigo="ADMIN",
+        rol__codigo__in=["ADMIN", "SUPERUSER"],
         rol__activo=True,
         activo=True,
     ).exists()
