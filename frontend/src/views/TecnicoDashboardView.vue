@@ -1,16 +1,19 @@
 <template>
   <div class="workbench sigta-role-layout">
-    <aside class="sidebar">
-      <div class="brand"><span>EMI</span><div><b>SIGTA</b><small>Gestión técnica</small></div></div>
+    <aside class="sidebar" :class="{ abierto: menuAbierto }">
+      <div class="brand-row">
+        <div class="brand"><span><img src="/img/emi.jpg" alt="EMI"></span><div><b>SIGTA</b><small>Gestión técnica</small></div></div>
+        <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
+      </div>
       <div class="profile">
         <div class="avatar">{{ iniciales }}</div>
         <div><strong>{{ nombre }}</strong><span>{{ etiquetaRol }}</span></div>
       </div>
       <p class="nav-label">CENTRO DE TRABAJO</p>
-      <button :class="{ active: modulo === 'resumen' }" @click="modulo = 'resumen'"><i>⌂</i> Resumen</button>
-      <button :class="{ active: modulo === 'soporte' }" @click="modulo = 'soporte'"><i>ST</i> Soporte técnico <em>{{ conteos.soporte }}</em></button>
-      <button :class="{ active: modulo === 'mantenimiento' }" @click="modulo = 'mantenimiento'"><i>MT</i> Mantenimiento <em>{{ conteos.mantenimiento }}</em></button>
-      <button :class="{ active: modulo === 'compras' }" @click="modulo = 'compras'"><i>CP</i> Compras técnicas</button>
+      <button :class="{ active: modulo === 'resumen' }" @click="modulo = 'resumen'; menuAbierto = false"><i>⌂</i> Resumen</button>
+      <button :class="{ active: modulo === 'soporte' }" @click="modulo = 'soporte'; menuAbierto = false"><i>ST</i> Soporte técnico <em>{{ conteos.soporte }}</em></button>
+      <button :class="{ active: modulo === 'mantenimiento' }" @click="modulo = 'mantenimiento'; menuAbierto = false"><i>MT</i> Mantenimiento <em>{{ conteos.mantenimiento }}</em></button>
+      <button :class="{ active: modulo === 'compras' }" @click="modulo = 'compras'; menuAbierto = false"><i>CP</i> Compras técnicas</button>
       <div class="sidebar-foot"><button @click="cerrarSesion"><i>↪</i> Cerrar sesión</button></div>
     </aside>
 
@@ -76,7 +79,7 @@ const router = useRouter()
 const usuario = ref(JSON.parse(localStorage.getItem('sigta_usuario') || '{}'))
 const roles = computed(() => (usuario.value.roles || []).map(r => String(r.codigo || '').toUpperCase()))
 const esJefe = computed(() => roles.value.includes('JEFE_UTIC'))
-const modulo = ref('resumen'); const filtro = ref('Todos'); const busqueda = ref('')
+const modulo = ref('resumen'); const filtro = ref('Todos'); const busqueda = ref(''); const menuAbierto = ref(false)
 const soporte = ref([]); const mantenimiento = ref([]); const cargando = ref(false); const error = ref('')
 const filtros = ['Todos', 'Nuevos', 'En proceso', 'Críticos']
 const nombre = computed(() => usuario.value.nombre || usuario.value.nombre_completo || etiquetaRol.value)

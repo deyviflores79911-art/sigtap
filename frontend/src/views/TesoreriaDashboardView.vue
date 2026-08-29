@@ -1,10 +1,13 @@
 <template>
   <div class="layout sigta-role-layout">
-    <aside>
-      <div class="brand"><b>EMI</b><div><strong>SIGTA</strong><small>Caja Chica</small></div></div>
+    <aside :class="{ abierto: menuAbierto }">
+      <div class="brand-row">
+        <div class="brand"><b><img src="/img/emi.jpg" alt="EMI"></b><div><strong>SIGTA</strong><small>Caja Chica</small></div></div>
+        <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
+      </div>
       <div class="person"><span>{{ iniciales }}</span><div><b>{{ nombre }}</b><small>Tesorería</small></div></div>
       <p>GESTIÓN FINANCIERA</p>
-      <button v-for="item in menu" :key="item.id" :class="{active:vista===item.id}" @click="vista=item.id"><i>{{ item.icono }}</i>{{ item.nombre }}<em v-if="item.total !== undefined">{{ item.total }}</em></button>
+      <button v-for="item in menu" :key="item.id" :class="{active:vista===item.id}" @click="vista=item.id; menuAbierto=false"><i>{{ item.icono }}</i>{{ item.nombre }}<em v-if="item.total !== undefined">{{ item.total }}</em></button>
       <div class="bottom"><button @click="cerrarSesion"><i>↪</i>Cerrar sesión</button></div>
     </aside>
 
@@ -26,6 +29,10 @@
         </section><section class="panel rules"><div class="panel-title"><div><small>REGLAS DE CONTROL</small><h3>Responsabilidad</h3></div></div><p><b>Filtro preventivo</b><br>Solo los expedientes completos avanzan al Director.</p><p><b>Custodia de efectivo</b><br>Todo desembolso registra monto y responsable.</p><p><b>Cierre inmutable</b><br>El expediente se archiva después del cuadre documental.</p></section></div>
       </section>
 
+      <section v-else-if="vista==='delegar'">
+        <DelegacionesPanel rol-codigo="TESORERIA" rol-nombre="Tesorería" />
+      </section>
+
       <section v-else>
         <div class="toolbar"><div class="tabs"><button class="active">Pendientes</button><button>Procesados</button></div><label>⌕ <input v-model="busqueda" placeholder="Buscar expediente o solicitante"></label></div>
         <div v-if="cargando" class="empty">Consultando expedientes…</div>
@@ -44,8 +51,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import DelegacionesPanel from '../components/DelegacionesPanel.vue'
 const router=useRouter(); const usuario=ref(JSON.parse(localStorage.getItem('sigta_usuario')||'{}'))
-const vista=ref('resumen'), compras=ref([]), cargando=ref(false), busqueda=ref('')
+const vista=ref('resumen'), menuAbierto=ref(false), compras=ref([]), cargando=ref(false), busqueda=ref('')
 const nombre=computed(()=>usuario.value.nombre||usuario.value.nombre_completo||'Responsable de Tesorería')
 const primerNombre=computed(()=>nombre.value.split(' ')[0]); const iniciales=computed(()=>nombre.value.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase())
 const estadoTexto=x=>String(x?.estado_nombre||x?.estado?.nombre||x?.estado||'Pendiente')
@@ -53,8 +61,8 @@ const porVerificar=computed(()=>compras.value.filter(x=>x.estado==='CERTIFICADO_
 const porDesembolsar=computed(()=>compras.value.filter(x=>x.estado==='APROBADO_PARA_DESEMBOLSO'))
 const porCerrar=computed(()=>compras.value.filter(x=>x.estado==='DESCARGO_PENDIENTE_LIQUIDACION'))
 const totalFondos=computed(()=>compras.value.reduce((s,x)=>s+Number(x.monto||x.monto_total||x.presupuesto||0),0))
-const menu=computed(()=>[{id:'resumen',icono:'⌂',nombre:'Resumen'},{id:'verificacion',icono:'✓',nombre:'Verificar expedientes',total:porVerificar.value.length},{id:'desembolsos',icono:'Bs',nombre:'Desembolsos',total:porDesembolsar.value.length},{id:'descargos',icono:'▣',nombre:'Descargos y cierre',total:porCerrar.value.length}])
-const tituloVista=computed(()=>({resumen:'Panel de Tesorería',verificacion:'Verificación preventiva',desembolsos:'Registro de desembolsos',descargos:'Descargos y cierre'})[vista.value])
+const menu=computed(()=>[{id:'resumen',icono:'⌂',nombre:'Resumen'},{id:'verificacion',icono:'✓',nombre:'Verificar expedientes',total:porVerificar.value.length},{id:'desembolsos',icono:'Bs',nombre:'Desembolsos',total:porDesembolsar.value.length},{id:'descargos',icono:'▣',nombre:'Descargos y cierre',total:porCerrar.value.length},{id:'delegar',icono:'DL',nombre:'Delegar aprobación'}])
+const tituloVista=computed(()=>({resumen:'Panel de Tesorería',verificacion:'Verificación preventiva',desembolsos:'Registro de desembolsos',descargos:'Descargos y cierre',delegar:'Delegar aprobación temporal'})[vista.value])
 const lista=computed(()=>vista.value==='verificacion'?porVerificar.value:vista.value==='desembolsos'?porDesembolsar.value:porCerrar.value)
 const filtrados=computed(()=>lista.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())))
 const accion=computed(()=>vista.value==='verificacion'?'Habilitar para Director':vista.value==='desembolsos'?'Registrar desembolso':'Cerrar Caja Chica')

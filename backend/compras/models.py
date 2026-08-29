@@ -1,11 +1,18 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from usuarios.models import Area
 
 
 class SolicitudCompra(models.Model):
 
+    # Estados vigentes del flujo real de Caja Chica (único
+    # flujo implementado hoy). Los estados de un diseño
+    # "Finanzas" anterior (NUEVO, EN_COTIZACION, EN_APROBACION,
+    # APROBADO, ORDEN_EMITIDA, EN_TRANSITO, RECIBIDO,
+    # EN_VERIFICACION, CERRADO) fueron retirados por no usarse
+    # en ninguna transición de backend ni frontend.
     ESTADOS = [
         ("CREADO_PENDIENTE_DAF", "Creado - pendiente DAF"),
         ("EVALUADO_PENDIENTE_CERTIFICACION", "Evaluado - pendiente de certificación"),
@@ -17,15 +24,6 @@ class SolicitudCompra(models.Model):
         ("COMPRADO_Y_ENTREGADO", "Comprado y entregado"),
         ("DESCARGO_PENDIENTE_LIQUIDACION", "Descargo pendiente de liquidación"),
         ("CERRADO_ARCHIVADO", "Cerrado y archivado"),
-        ("NUEVO", "Nuevo"),
-        ("EN_COTIZACION", "En cotización"),
-        ("EN_APROBACION", "En aprobación"),
-        ("APROBADO", "Aprobado"),
-        ("ORDEN_EMITIDA", "Orden emitida"),
-        ("EN_TRANSITO", "En tránsito"),
-        ("RECIBIDO", "Recibido"),
-        ("EN_VERIFICACION", "En verificación"),
-        ("CERRADO", "Cerrado"),
         ("RECHAZADO", "Rechazado"),
         ("ANULADO", "Anulado"),
     ]
@@ -41,6 +39,12 @@ class SolicitudCompra(models.Model):
         ("PENDIENTE", "Pendiente de evaluación"),
         ("CAJA_CHICA", "Caja Chica"),
         ("FINANZAS", "Finanzas"),
+    ]
+
+    ORIGENES = [
+        ("DIRECTA", "Solicitud directa"),
+        ("MANTENIMIENTO", "Derivada de Mantenimiento"),
+        ("SOPORTE", "Derivada de Soporte Técnico"),
     ]
 
     codigo = models.CharField(
@@ -103,6 +107,42 @@ class SolicitudCompra(models.Model):
         default="CREADO_PENDIENTE_DAF"
     )
 
+    # ======================================================
+    # ORIGEN DEL EXPEDIENTE
+    # ======================================================
+    #
+    # El subproceso "Compra de Caja Chica" es compartido por
+    # 3 flujos (BPMN): solicitud directa, derivación desde
+    # Mantenimiento (no hay producto en almacén) y derivación
+    # desde Soporte Técnico (ticket requiere componente).
+    #
+    # ======================================================
+
+    origen_modulo = models.CharField(
+        max_length=20,
+        choices=ORIGENES,
+        default="DIRECTA"
+    )
+
+    ticket_soporte = models.ForeignKey(
+        "soporte.Ticket",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="compras_generadas"
+    )
+
+    requerimiento_mantenimiento = models.ForeignKey(
+        "mantenimiento.RequerimientoMantenimiento",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="compras_generadas"
+    )
+
+    # Campo heredado: antes de existir ticket_soporte (FK real),
+    # el vínculo con un ticket se escribía aquí como texto libre
+    # sin validar. Se conserva solo para no perder historial.
     ticket_soporte_vinculado = models.CharField(
         max_length=30,
         blank=True
@@ -126,6 +166,21 @@ class SolicitudCompra(models.Model):
     responsable_adquisicion = models.CharField(max_length=150, blank=True)
     monto_real = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     proveedor = models.CharField(max_length=180, blank=True)
+
+    # Caso de uso "Registrar verificación de componentes"
+    # (Encargado de Compras y Almacén): se confirma junto con
+    # el registro de la compra, antes de habilitar el ingreso
+    # a almacén.
+    componente_verificado = models.BooleanField(default=False)
+    observacion_verificacion = models.TextField(blank=True)
+
+    # "Registrar ingreso al almacén" y "Registrar despacho desde
+    # almacén" son dos confirmaciones separadas en la UI (dos
+    # casos de uso distintos) aunque compartan el mismo estado
+    # COMPRA_REGISTRADA -> COMPRADO_Y_ENTREGADO del BPMN.
+    fecha_ingreso_almacen = models.DateTimeField(null=True, blank=True)
+    fecha_despacho_almacen = models.DateTimeField(null=True, blank=True)
+
     cerrado_inmutable = models.BooleanField(default=False)
 
     activo = models.BooleanField(
@@ -155,3 +210,29 @@ class SolicitudCompra(models.Model):
 
     def __str__(self):
         return f"{self.codigo} - {self.titulo}"
+
+    @classmethod
+    def generar_codigo(cls):
+        """Código correlativo CMP-<año>-NNNN, compartido por el
+        serializer (creación directa) y por los disparadores
+        internos desde Mantenimiento/Soporte."""
+
+        anio = timezone.now().year
+        prefijo = f"CMP-{anio}-"
+
+        ultimo = (
+            cls.objects
+            .filter(codigo__startswith=prefijo)
+            .order_by("-codigo")
+            .first()
+        )
+
+        numero = 1
+
+        if ultimo:
+            try:
+                numero = int(ultimo.codigo.split("-")[-1]) + 1
+            except ValueError:
+                numero = cls.objects.count() + 1
+
+        return f"{prefijo}{numero:04d}"

@@ -1,10 +1,13 @@
 <template>
   <div class="layout sigta-role-layout">
-    <aside>
-      <div class="brand"><b>EMI</b><div><strong>SIGTA</strong><small>Almacén e Inventarios</small></div></div>
+    <aside :class="{ abierto: menuAbierto }">
+      <div class="brand-row">
+        <div class="brand"><b><img src="/img/emi.jpg" alt="EMI"></b><div><strong>SIGTA</strong><small>Almacén e Inventarios</small></div></div>
+        <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
+      </div>
       <div class="person"><span>{{ iniciales }}</span><div><b>{{ nombre }}</b><small>Compras y Almacén</small></div></div>
       <p>OPERACIÓN DE BODEGA</p>
-      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id"><i>{{ m.icono }}</i>{{ m.nombre }}<em v-if="m.total!==undefined">{{ m.total }}</em></button>
+      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id; menuAbierto=false"><i>{{ m.icono }}</i>{{ m.nombre }}<em v-if="m.total!==undefined">{{ m.total }}</em></button>
       <div class="bottom"><button @click="salir"><i>↪</i>Cerrar sesión</button></div>
     </aside>
 
@@ -27,17 +30,16 @@
       </section>
 
       <section v-else-if="vista==='inventario'">
-        <div class="toolbar"><label>⌕ <input v-model="busqueda" placeholder="Buscar focos, tubos, cables, herramientas…"></label><button class="primary">+ Registrar producto</button></div>
-        <div class="table"><div class="thead"><span>Producto</span><span>Categoría</span><span>Disponible</span><span>Unidad</span><span>Estado</span><span>Acción</span></div><div v-for="p in inventarioFiltrado" :key="p.id" class="row"><strong>{{ producto(p) }}</strong><span>{{ p.categoria_nombre||p.categoria||'Material' }}</span><b>{{ cantidad(p) }}</b><span>{{ p.unidad||'unidad' }}</span><em :class="{danger:cantidad(p)<=Number(p.stock_minimo||2)}">{{ cantidad(p)<=Number(p.stock_minimo||2)?'Stock crítico':'Disponible' }}</em><button>Ver movimientos</button></div><div v-if="!inventarioFiltrado.length" class="empty">No hay productos registrados o coincidentes.</div></div>
+        <div class="toolbar"><label>⌕ <input v-model="busqueda" placeholder="Buscar focos, tubos, cables, herramientas…"></label></div>
+        <div class="table"><div class="thead"><span>Producto</span><span>Categoría</span><span>Disponible</span><span>Unidad</span><span>Estado</span></div><div v-for="p in inventarioFiltrado" :key="p.id" class="row"><strong>{{ producto(p) }}</strong><span>{{ p.categoria_nombre||p.categoria||'Material' }}</span><b>{{ cantidad(p) }}</b><span>{{ p.unidad||'unidad' }}</span><em :class="{danger:cantidad(p)<=Number(p.stock_minimo||2)}">{{ cantidad(p)<=Number(p.stock_minimo||2)?'Stock crítico':'Disponible' }}</em></div><div v-if="!inventarioFiltrado.length" class="empty">El mapeo de stock por producto está fuera del alcance de los 3 flujos actuales del sistema.</div></div>
       </section>
 
       <section v-else>
         <div class="toolbar"><div class="tabs"><button class="active">Pendientes</button><button>Procesados</button></div><label>⌕ <input v-model="busqueda" placeholder="Buscar código, material o responsable"></label></div>
         <div v-if="cargando" class="empty">Actualizando bandeja…</div>
         <div v-else-if="listaFiltrada.length" class="cards"><article v-for="item in listaFiltrada" :key="item.id"><div class="top"><span>{{ codigo(item) }}</span><em>{{ estado(item) }}</em></div><h3>{{ asunto(item) }}</h3><p>{{ detalle(item) }}</p><div class="info"><span>Solicitado por<br><b>{{ solicitante(item) }}</b></span><span>Fecha<br><b>{{ fecha(item) }}</b></span></div>
-          <div v-if="vista==='adquisiciones'" class="steps"><span class="done">1 Autorizado</span><span>2 Compra</span><span>3 Ingreso</span><span>4 Despacho</span></div>
-          <div class="actions"><button @click="verDetalle(item)">Ver detalle</button><button class="primary" @click="ejecutar(item)">{{ vista==='adquisiciones'?(item.estado==='FONDOS_DESEMBOLSADOS'?'Registrar compra realizada':'Registrar entrada y salida'):'Verificar stock' }}</button></div>
-          <div v-if="vista==='requerimientos'" class="secondary-actions"><button>Registrar despacho</button><button class="danger-btn">Reportar no existencia</button></div>
+          <div v-if="vista==='adquisiciones'" class="steps"><span :class="{done:true}">1 Autorizado</span><span :class="{done:item.estado==='COMPRA_REGISTRADA'||item.estado==='COMPRADO_Y_ENTREGADO'}">2 Compra</span><span :class="{done:!!item.fecha_ingreso_almacen}">3 Ingreso</span><span :class="{done:!!item.fecha_despacho_almacen}">4 Despacho</span></div>
+          <div class="actions"><button @click="verDetalle(item)">Ver detalle</button><button class="primary" @click="ejecutar(item)">{{ accionTexto(item) }}</button></div>
         </article></div>
         <div v-else class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No existen registros pendientes.</p></div>
       </section>
@@ -47,14 +49,46 @@
 
 <script setup>
 import{computed,onMounted,ref}from'vue';import{useRouter}from'vue-router'
-const router=useRouter(),usuario=ref(JSON.parse(localStorage.getItem('sigta_usuario')||'{}'));const vista=ref('resumen'),compras=ref([]),mantenimiento=ref([]),inventario=ref([]),busqueda=ref(''),cargando=ref(false)
+const router=useRouter(),usuario=ref(JSON.parse(localStorage.getItem('sigta_usuario')||'{}'));const vista=ref('resumen'),menuAbierto=ref(false),compras=ref([]),mantenimiento=ref([]),inventario=ref([]),busqueda=ref(''),cargando=ref(false)
 const nombre=computed(()=>usuario.value.nombre||usuario.value.nombre_completo||'Encargado de Almacén');const primerNombre=computed(()=>nombre.value.split(' ')[0]);const iniciales=computed(()=>nombre.value.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase());const saludo=computed(()=>new Date().getHours()<12?'Buenos días':new Date().getHours()<19?'Buenas tardes':'Buenas noches')
-const est=x=>String(x.estado_nombre||x.estado?.nombre||x.estado||'Pendiente');const adquisiciones=computed(()=>compras.value.filter(x=>['FONDOS_DESEMBOLSADOS','COMPRA_REGISTRADA'].includes(x.estado)));const requerimientos=computed(()=>mantenimiento.value.filter(x=>/insumo|material|stock|desabastec|pendiente/i.test(`${est(x)} ${x.descripcion||''}`)));const cantidad=x=>Number(x.stock_actual??x.cantidad_disponible??x.cantidad??0);const stockCritico=computed(()=>inventario.value.filter(x=>cantidad(x)<=Number(x.stock_minimo||2)))
+const est=x=>String(x.estado_nombre||x.estado?.nombre||x.estado||'Pendiente');const adquisiciones=computed(()=>compras.value.filter(x=>['FONDOS_DESEMBOLSADOS','COMPRA_REGISTRADA'].includes(x.estado)));const requerimientos=computed(()=>mantenimiento.value.filter(x=>x.estado_codigo==='REVISION_ALMACEN'));const cantidad=x=>Number(x.stock_actual??x.cantidad_disponible??x.cantidad??0);const stockCritico=computed(()=>inventario.value.filter(x=>cantidad(x)<=Number(x.stock_minimo||2)))
+function accionTexto(item){
+  if(vista.value!=='adquisiciones')return 'Verificar existencia'
+  if(item.estado==='FONDOS_DESEMBOLSADOS')return 'Registrar compra realizada'
+  if(!item.fecha_ingreso_almacen)return 'Registrar ingreso a almacén'
+  return 'Registrar despacho a almacén'
+}
 const menu=computed(()=>[{id:'resumen',icono:'⌂',nombre:'Resumen'},{id:'adquisiciones',icono:'CP',nombre:'Adquisiciones',total:adquisiciones.value.length},{id:'requerimientos',icono:'RI',nombre:'Requerimientos',total:requerimientos.value.length},{id:'inventario',icono:'SK',nombre:'Inventario',total:inventario.value.length}]);const titulo=computed(()=>({resumen:'Consola de Almacén e Inventarios',adquisiciones:'Adquisiciones pendientes',requerimientos:'Requerimientos de insumos',inventario:'Mapeo de stock'})[vista.value]);const lista=computed(()=>vista.value==='adquisiciones'?adquisiciones.value:requerimientos.value);const listaFiltrada=computed(()=>lista.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())));const inventarioFiltrado=computed(()=>inventario.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())))
-const codigo=x=>x.codigo||x.numero_solicitud||`#${x.id}`;const asunto=x=>x.titulo||x.asunto||x.descripcion_corta||'Solicitud de materiales';const detalle=x=>String(x.descripcion||x.justificacion||'Requerimiento operativo de almacén.').slice(0,130);const estado=x=>est(x);const solicitante=x=>x.solicitante_nombre||x.solicitante_email||'Personal institucional';const producto=x=>x.nombre||x.producto||x.descripcion||'Material sin nombre';const fecha=x=>{const f=x.created_at||x.fecha_solicitud;if(!f)return'Sin fecha';return new Intl.DateTimeFormat('es-BO').format(new Date(f))}
+const codigo=x=>x.codigo||x.numero_solicitud||`#${x.id}`;const asunto=x=>x.titulo||x.asunto||x.descripcion_corta||'Solicitud de materiales';const detalle=x=>String(x.descripcion||x.justificacion||'Requerimiento operativo de almacén.').slice(0,130);const estado=x=>est(x);const solicitante=x=>x.solicitante_nombre||x.solicitante_email||'Personal institucional';const producto=x=>x.nombre||x.producto||x.descripcion||'Material sin nombre';const fecha=x=>{const f=x.created_at||x.fecha_solicitud||x.creado_en;if(!f)return'Sin fecha';return new Intl.DateTimeFormat('es-BO').format(new Date(f))}
 async function get(url,dest){const r=await fetch(url,{headers:{Authorization:`Token ${localStorage.getItem('sigta_token')}`}});if(!r.ok)throw 0;const d=await r.json();dest.value=Array.isArray(d)?d:(d.results||[])}async function cargar(){cargando.value=true;await Promise.allSettled([get('/api/compras/solicitudes/',compras),get('/api/mantenimiento/requerimientos/',mantenimiento),get('/api/compras/inventario/',inventario)]);cargando.value=false}function salir(){localStorage.removeItem('sigta_token');localStorage.removeItem('sigta_usuario');router.push('/login')}onMounted(cargar)
-async function post(item,endpoint,body={}){const r=await fetch(`/api/compras/solicitudes/${item.id}/${endpoint}/`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Token ${localStorage.getItem('sigta_token')}`},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.detalle||'No fue posible completar la acción.');await cargar();return d}
-async function ejecutar(item){if(vista.value!=='adquisiciones')return alert('La verificación de stock de mantenimiento se conectará al módulo de inventario cuando existan productos registrados.');try{if(item.estado==='FONDOS_DESEMBOLSADOS'){const monto=prompt('Monto real cobrado por el proveedor (Bs):',item.monto_desembolsado||'');if(!monto)return;const proveedor=prompt('Nombre o razón social del proveedor:');if(!proveedor?.trim())return;await post(item,'registrar-compra',{monto_real:monto,proveedor:proveedor.trim()});alert('Compra registrada. Ahora debe registrar el movimiento de almacén.')}else{if(!confirm('¿Confirma el ingreso físico y la entrega inmediata del producto al solicitante?'))return;await post(item,'registrar-entrega');alert('Entrada y salida registradas. El solicitante ya puede presentar su descargo.')}}catch(e){alert(e.message)}}
+async function postCompra(item,endpoint,body={}){const r=await fetch(`/api/compras/solicitudes/${item.id}/${endpoint}/`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Token ${localStorage.getItem('sigta_token')}`},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.detalle||'No fue posible completar la acción.');await cargar();return d}
+async function postMantenimiento(item,endpoint,body={}){const r=await fetch(`/api/mantenimiento/requerimientos/${item.id}/${endpoint}/`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Token ${localStorage.getItem('sigta_token')}`},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.detalle||'No fue posible completar la acción.');await cargar();return d}
+async function ejecutar(item){
+  try{
+    if(vista.value==='requerimientos'){
+      const disponible=confirm(`${producto(item)||item.producto_requerido}\n\n¿Hay stock disponible en almacén? Aceptar = Sí, Cancelar = No.`)
+      const observacion=prompt('Observación de almacén (opcional):','')||''
+      await postMantenimiento(item,'reportar-existencia',{producto_disponible:disponible,observacion_almacen:observacion})
+      alert(disponible?'Producto entregado al auxiliar. El mantenimiento puede continuar.':'Se generó el expediente de Compra Caja Chica por falta de stock.')
+      return
+    }
+    if(item.estado==='FONDOS_DESEMBOLSADOS'){
+      const monto=prompt('Monto real cobrado por el proveedor (Bs):',item.monto_desembolsado||'');if(!monto)return
+      const proveedor=prompt('Nombre o razón social del proveedor:');if(!proveedor?.trim())return
+      if(!confirm('¿Confirma que el componente recibido coincide con lo solicitado (verificación de componentes)?'))return
+      await postCompra(item,'registrar-compra',{monto_real:monto,proveedor:proveedor.trim(),componente_verificado:true})
+      alert('Compra registrada y componente verificado. Ahora debe registrar el ingreso a almacén.')
+    }else if(!item.fecha_ingreso_almacen){
+      if(!confirm('¿Confirma el ingreso físico del producto a almacén?'))return
+      await postCompra(item,'registrar-ingreso-almacen')
+      alert('Ingreso a almacén registrado. Ahora debe registrar el despacho al solicitante.')
+    }else{
+      if(!confirm('¿Confirma el despacho y entrega del producto al solicitante?'))return
+      await postCompra(item,'registrar-despacho-almacen')
+      alert('Despacho registrado. El solicitante ya puede presentar su descargo.')
+    }
+  }catch(e){alert(e.message)}
+}
 function verDetalle(item){alert(`${codigo(item)}\n${asunto(item)}\nEstado: ${estado(item)}\nMonto desembolsado: ${item.monto_desembolsado||'No registrado'}\nResponsable: ${item.responsable_adquisicion||'No registrado'}`)}
 </script>
 

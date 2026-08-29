@@ -14,8 +14,11 @@ from .views import (
     UsuarioRolViewSet,
     PermisoViewSet,
     RolPermisoViewSet,
+    DelegacionAprobacionViewSet,
     login_view,
     mi_contexto,
+    usuarios_por_rol,
+    buscar_usuario_por_email,
     cambiar_password_obligatorio,
 )
 
@@ -94,6 +97,17 @@ router.register(
 
 
 # ==========================================================
+# DELEGACIÓN TEMPORAL DE APROBACIÓN
+# ==========================================================
+
+router.register(
+    r"delegaciones",
+    DelegacionAprobacionViewSet,
+    basename="delegacion-aprobacion"
+)
+
+
+# ==========================================================
 # URLS ESPECIALES
 # ==========================================================
 
@@ -129,6 +143,23 @@ urlpatterns = [
         "mi-contexto/",
         mi_contexto,
         name="mi-contexto"
+    ),
+
+
+    # ------------------------------------------------------
+    # USUARIOS POR ROL (SELECTORES OPERATIVOS)
+    # ------------------------------------------------------
+
+    path(
+        "usuarios-por-rol/",
+        usuarios_por_rol,
+        name="usuarios-por-rol"
+    ),
+
+    path(
+        "buscar-usuario/",
+        buscar_usuario_por_email,
+        name="buscar-usuario"
     ),
 
 

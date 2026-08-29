@@ -1,10 +1,13 @@
 <template>
   <div class="layout sigta-role-layout">
-    <aside>
-      <div class="brand"><b>EMI</b><div><strong>SIGTA</strong><small>Gestión Financiera</small></div></div>
+    <aside :class="{ abierto: menuAbierto }">
+      <div class="brand-row">
+        <div class="brand"><b><img src="/img/emi.jpg" alt="EMI"></b><div><strong>SIGTA</strong><small>Gestión Financiera</small></div></div>
+        <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
+      </div>
       <div class="profile"><i>{{ iniciales }}</i><div><b>{{ nombre }}</b><small>Dirección Administrativa Financiera</small></div></div>
       <p>CONTROL PRESUPUESTARIO</p>
-      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id"><span>{{ m.icono }}</span>{{ m.nombre }}<em v-if="m.total!==undefined">{{ m.total }}</em></button>
+      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id; menuAbierto=false"><span>{{ m.icono }}</span>{{ m.nombre }}<em v-if="m.total!==undefined">{{ m.total }}</em></button>
       <div class="bottom"><button @click="salir"><span>↪</span>Cerrar sesión</button></div>
     </aside>
 
@@ -27,8 +30,12 @@
       </section>
 
       <section v-else-if="vista==='activos'">
-        <div class="toolbar"><label>⌕ <input v-model="busqueda" placeholder="Buscar activo, marca o número de inventario"></label><button class="primary">+ Registrar activo fijo</button></div>
-        <div class="table"><div class="thead"><span>N.º inventario</span><span>Activo</span><span>Marca / Modelo</span><span>Garantía</span><span>Estado</span><span>Acción</span></div><div v-for="a in activosFiltrados" :key="a.id" class="row"><b>{{ a.numero_inventario||`AF-${a.id}` }}</b><span>{{ a.nombre||a.descripcion||'Activo institucional' }}</span><span>{{ a.marca||'—' }} / {{ a.modelo||'—' }}</span><span>{{ a.garantia_hasta||'Sin registrar' }}</span><em>Activo</em><button>Editar</button></div><div v-if="!activosFiltrados.length" class="empty">Aún no existen activos registrados.</div></div>
+        <div class="toolbar"><label>⌕ <input v-model="busqueda" placeholder="Buscar activo, marca o número de inventario"></label></div>
+        <div class="table"><div class="thead"><span>N.º inventario</span><span>Activo</span><span>Marca / Modelo</span><span>Garantía</span><span>Estado</span></div><div v-for="a in activosFiltrados" :key="a.id" class="row"><b>{{ a.numero_inventario||`AF-${a.id}` }}</b><span>{{ a.nombre||a.descripcion||'Activo institucional' }}</span><span>{{ a.marca||'—' }} / {{ a.modelo||'—' }}</span><span>{{ a.garantia_hasta||'Sin registrar' }}</span><em>Activo</em></div><div v-if="!activosFiltrados.length" class="empty">El módulo de activos fijos está fuera del alcance de los 3 flujos actuales del sistema.</div></div>
+      </section>
+
+      <section v-else-if="vista==='delegar'">
+        <DelegacionesPanel rol-codigo="DAF" rol-nombre="DAF" />
       </section>
 
       <section v-else>
@@ -48,10 +55,11 @@
 
 <script setup>
 import{computed,onMounted,ref}from'vue';import{useRouter}from'vue-router'
-const router=useRouter(),usuario=ref(JSON.parse(localStorage.getItem('sigta_usuario')||'{}'));const vista=ref('resumen'),compras=ref([]),activos=ref([]),cargando=ref(false),busqueda=ref('')
+import DelegacionesPanel from '../components/DelegacionesPanel.vue'
+const router=useRouter(),usuario=ref(JSON.parse(localStorage.getItem('sigta_usuario')||'{}'));const vista=ref('resumen'),menuAbierto=ref(false),compras=ref([]),activos=ref([]),cargando=ref(false),busqueda=ref('')
 const nombre=computed(()=>usuario.value.nombre||usuario.value.nombre_completo||'Responsable DAF');const primerNombre=computed(()=>nombre.value.split(' ')[0]);const iniciales=computed(()=>nombre.value.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase());const saludo=computed(()=>new Date().getHours()<12?'Buenos días':new Date().getHours()<19?'Buenas tardes':'Buenas noches');const est=x=>String(x.estado_nombre||x.estado?.nombre||x.estado||'Pendiente')
 const porEvaluar=computed(()=>compras.value.filter(x=>x.estado==='CREADO_PENDIENTE_DAF'));const porCertificar=computed(()=>compras.value.filter(x=>x.estado==='EVALUADO_PENDIENTE_CERTIFICACION'));const porDerivar=computed(()=>compras.value.filter(x=>x.estado==='CERTIFICADO_PENDIENTE_VERIFICACION'));const totalCompras=computed(()=>compras.value.reduce((s,x)=>s+Number(x.monto_estimado||x.monto||0),0))
-const menu=computed(()=>[{id:'resumen',icono:'⌂',nombre:'Resumen'},{id:'evaluacion',icono:'EV',nombre:'Evaluar expedientes',total:porEvaluar.value.length},{id:'certificacion',icono:'CE',nombre:'Certificaciones',total:porCertificar.value.length},{id:'derivacion',icono:'TE',nombre:'Derivar a Tesorería',total:porDerivar.value.length},{id:'activos',icono:'AF',nombre:'Activos y garantías',total:activos.value.length}]);const titulo=computed(()=>({resumen:'Panel de la DAF',evaluacion:'Evaluación presupuestaria',certificacion:'Certificación presupuestaria',derivacion:'Derivación a Tesorería',activos:'Activos fijos y garantías'})[vista.value]);const instruccion=computed(()=>({evaluacion:{titulo:'Compuerta de decisión',texto:'Audite el legajo y el saldo de la unidad. Determine si la solicitud califica.',accion:'Sí califica'},certificacion:{titulo:'Documento obligatorio',texto:'Genere, firme y adjunte la Certificación Presupuestaria oficial en PDF.',accion:'Emitir certificación'},derivacion:{titulo:'Expediente completo',texto:'Confirme que el legajo certificado está completo antes de enviarlo a Tesorería.',accion:'Derivar a Tesorería'}})[vista.value]||{});const lista=computed(()=>vista.value==='evaluacion'?porEvaluar.value:vista.value==='certificacion'?porCertificar.value:porDerivar.value);const filtrados=computed(()=>lista.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())));const activosFiltrados=computed(()=>activos.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())));const docs=['Informe','POA','Pedido','Proforma']
+const menu=computed(()=>[{id:'resumen',icono:'⌂',nombre:'Resumen'},{id:'evaluacion',icono:'EV',nombre:'Evaluar expedientes',total:porEvaluar.value.length},{id:'certificacion',icono:'CE',nombre:'Certificaciones',total:porCertificar.value.length},{id:'derivacion',icono:'TE',nombre:'Derivar a Tesorería',total:porDerivar.value.length},{id:'activos',icono:'AF',nombre:'Activos y garantías',total:activos.value.length},{id:'delegar',icono:'DL',nombre:'Delegar aprobación'}]);const titulo=computed(()=>({resumen:'Panel de la DAF',evaluacion:'Evaluación presupuestaria',certificacion:'Certificación presupuestaria',derivacion:'Derivación a Tesorería',activos:'Activos fijos y garantías',delegar:'Delegar aprobación temporal'})[vista.value]);const instruccion=computed(()=>({evaluacion:{titulo:'Compuerta de decisión',texto:'Audite el legajo y el saldo de la unidad. Determine si la solicitud califica.',accion:'Sí califica'},certificacion:{titulo:'Documento obligatorio',texto:'Genere, firme y adjunte la Certificación Presupuestaria oficial en PDF.',accion:'Emitir certificación'},derivacion:{titulo:'Expediente completo',texto:'Confirme que el legajo certificado está completo antes de enviarlo a Tesorería.',accion:'Derivar a Tesorería'}})[vista.value]||{});const lista=computed(()=>vista.value==='evaluacion'?porEvaluar.value:vista.value==='certificacion'?porCertificar.value:porDerivar.value);const filtrados=computed(()=>lista.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())));const activosFiltrados=computed(()=>activos.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())));const docs=['Informe','POA','Pedido','Proforma']
 const codigo=x=>x.codigo||x.numero_solicitud||`CP-${x.id}`;const asunto=x=>x.titulo||x.objeto||x.descripcion_corta||'Solicitud de adquisición';const detalle=x=>String(x.descripcion||x.justificacion||'Expediente de compra institucional.').slice(0,130);const estado=x=>est(x);const monto=x=>x.monto||x.monto_total||x.presupuesto||0;const moneda=n=>new Intl.NumberFormat('es-BO',{style:'currency',currency:'BOB'}).format(Number(n)||0)
 async function get(url,dest){const r=await fetch(url,{headers:{Authorization:`Token ${localStorage.getItem('sigta_token')}`}});if(!r.ok)throw 0;const d=await r.json();dest.value=Array.isArray(d)?d:(d.results||[])}async function cargar(){cargando.value=true;await Promise.allSettled([get('/api/compras/solicitudes/',compras),get('/api/compras/activos/',activos)]);cargando.value=false}function salir(){localStorage.removeItem('sigta_token');localStorage.removeItem('sigta_usuario');router.push('/login')}onMounted(cargar)
 

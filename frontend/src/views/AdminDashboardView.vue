@@ -24,10 +24,6 @@
 
         <div>
 
-          <span class="breadcrumb">
-            SIGTA / Administración / Dashboard
-          </span>
-
           <h1>
             Panel de Administración
           </h1>
@@ -82,7 +78,10 @@
 
         <!-- USUARIOS -->
 
-        <article class="stat-card">
+        <article
+          class="stat-card"
+          @click="abrirStatModal('usuarios')"
+        >
 
           <span>
             Usuarios
@@ -101,7 +100,10 @@
 
         <!-- TICKETS -->
 
-        <article class="stat-card">
+        <article
+          class="stat-card"
+          @click="abrirStatModal('tickets')"
+        >
 
           <span>
             Requerimientos de soporte
@@ -120,7 +122,10 @@
 
         <!-- NUEVOS -->
 
-        <article class="stat-card">
+        <article
+          class="stat-card"
+          @click="abrirStatModal('nuevos')"
+        >
 
           <span>
             Requerimientos nuevos
@@ -139,7 +144,10 @@
 
         <!-- COMPRAS -->
 
-        <article class="stat-card">
+        <article
+          class="stat-card"
+          @click="abrirStatModal('compras')"
+        >
 
           <span>
             Solicitudes de compra
@@ -151,25 +159,6 @@
 
           <small>
             Registradas en el proceso de Compras
-          </small>
-
-        </article>
-
-
-        <!-- ÁREAS -->
-
-        <article class="stat-card">
-
-          <span>
-            Áreas
-          </span>
-
-          <strong>
-            {{ resumen.areas }}
-          </strong>
-
-          <small>
-            Áreas institucionales activas
           </small>
 
         </article>
@@ -190,606 +179,77 @@
 
 
       <!-- =================================================
-           PROCESOS OPERATIVOS
+           DETALLE DEL PANEL (aparece al hacer clic
+           en una de las tarjetas de arriba)
       ================================================== -->
 
-      <section class="content-card">
+      <section
+        v-if="statCategoria"
+        class="content-card"
+      >
 
         <div class="section-header">
 
           <div>
 
             <span class="section-kicker">
-              OPERACIÓN
+              DETALLE
             </span>
 
             <h2>
-              Procesos institucionales
+              {{ statTitulo }}
             </h2>
 
             <p>
-              Acceda a los procesos de Soporte Técnico,
-              Mantenimiento y Compras.
+              {{ statItems.length }} de {{ statItemsBase.length }} registro(s)
             </p>
 
           </div>
 
-        </div>
-
-
-        <div class="operation-grid">
-
-
-          <!-- =================================================
-               SOPORTE TÉCNICO
-          ================================================== -->
-
           <button
-            class="operation-card"
-            @click="
-              router.push(
-                '/admin/soporte'
-              )
-            "
-          >
-
-            <div class="operation-icon">
-              ST
-            </div>
-
-
-            <div class="operation-content">
-
-              <div class="operation-top">
-
-                <strong>
-                  Soporte Técnico
-                </strong>
-
-                <span class="module-status">
-                  Activo
-                </span>
-
-              </div>
-
-
-              <p>
-                Supervise los requerimientos desde el registro de la solicitud de soporte,
-                la clasificación de prioridad, la asignación del especialista,
-                la revisión del equipo, la reparación técnica y la conformidad del servicio.
-              </p>
-
-
-              <div class="process-actions">
-
-                <span>
-                  Registrar solicitud de soporte
-                </span>
-
-                <span>
-                  Registrar revisión del equipo
-                </span>
-
-                <span>
-                  Clasificar prioridad
-                </span>
-
-              </div>
-
-
-              <div class="operation-footer">
-
-                <span>
-                  {{ resumen.tickets }} requerimiento(s)
-                </span>
-
-                <strong>
-                  {{ resumen.nuevos }} nuevo(s)
-                </strong>
-
-              </div>
-
-            </div>
-
-          </button>
-
-
-          <!-- =================================================
-               MANTENIMIENTO
-          ================================================== -->
-
-          <button
-            class="operation-card"
-            @click="
-              router.push(
-                '/admin/mantenimiento'
-              )
-            "
-          >
-
-            <div class="operation-icon">
-              MT
-            </div>
-
-
-            <div class="operation-content">
-
-              <div class="operation-top">
-
-                <strong>
-                  Mantenimiento
-                </strong>
-
-                <span class="module-status development">
-                  En integración
-                </span>
-
-              </div>
-
-
-              <p>
-                Supervise los requerimientos de mantenimiento,
-                su derivación al auxiliar, la reposición de almacén,
-                la ejecución del mantenimiento y el informe del trabajo realizado.
-              </p>
-
-
-              <div class="process-actions">
-
-                <span>
-                  Derivar a su auxiliar
-                </span>
-
-                <span>
-                  ¿Requiere reposición de almacén?
-                </span>
-
-                <span>
-                  Realizar informe y fotografía del trabajo realizado
-                </span>
-
-              </div>
-
-
-              <div class="operation-footer">
-
-                <span>
-                  Servicios Generales
-                </span>
-
-                <strong>
-                  Proceso independiente
-                </strong>
-
-              </div>
-
-            </div>
-
-          </button>
-
-
-          <!-- =================================================
-               COMPRAS
-          ================================================== -->
-
-          <button
-            class="operation-card"
-            @click="
-              router.push(
-                '/admin/compras'
-              )
-            "
-          >
-
-            <div class="operation-icon">
-              CP
-            </div>
-
-
-            <div class="operation-content">
-
-              <div class="operation-top">
-
-                <strong>
-                  Compras
-                </strong>
-
-                <span class="module-status">
-                  Activo
-                </span>
-
-              </div>
-
-
-              <p>
-                Consulte las solicitudes de compra y el avance del trámite desde la carga del expediente,
-                la autorización del gasto, la certificación del presupuesto disponible,
-                el desembolso, el ingreso y el despacho desde almacén.
-              </p>
-
-
-              <div class="process-actions">
-
-                <span>
-                  Cargar expediente de compra
-                </span>
-
-                <span>
-                  Certificar presupuesto disponible
-                </span>
-
-                <span>
-                  Registrar desembolso de dinero
-                </span>
-
-              </div>
-
-
-              <div class="operation-footer">
-
-                <span>
-                  {{ resumen.compras }} solicitud(es)
-                </span>
-
-                <strong>
-                  Caja Chica
-                </strong>
-
-              </div>
-
-            </div>
-
-          </button>
-
-
-          <!-- =================================================
-               PORTAL SOLICITANTE
-          ================================================== -->
-
-          <button
-            class="operation-card"
-            @click="
-              router.push(
-                '/admin/portal-solicitante'
-              )
-            "
-          >
-
-            <div class="operation-icon">
-              PS
-            </div>
-
-
-            <div class="operation-content">
-
-              <div class="operation-top">
-
-                <strong>
-                  Portal Solicitante
-                </strong>
-
-                <span class="module-status">
-                  Activo
-                </span>
-
-              </div>
-
-
-              <p>
-                Consulte cómo los usuarios registran
-                y realizan seguimiento a sus
-                requerimientos institucionales.
-              </p>
-
-
-              <div class="process-actions">
-
-                <span>
-                  Soporte Técnico
-                </span>
-
-                <span>
-                  Mantenimiento
-                </span>
-
-                <span>
-                  Compras
-                </span>
-
-              </div>
-
-
-              <div class="operation-footer">
-
-                <span>
-                  Portal de autoservicio
-                </span>
-
-                <strong>
-                  3 procesos
-                </strong>
-
-              </div>
-
-            </div>
-
-          </button>
-
-        </div>
-
-      </section>
-
-
-      <!-- =================================================
-           ADMINISTRACIÓN DEL SISTEMA
-      ================================================== -->
-
-      <section class="content-card">
-
-        <div class="section-header">
-
-          <div>
-
-            <span class="section-kicker">
-              ADMINISTRACIÓN
-            </span>
-
-            <h2>
-              Administración del sistema
-            </h2>
-
-            <p>
-              Gestione identidad, permisos,
-              auditoría y configuración de SIGTA.
-            </p>
-
-          </div>
+            class="close-panel"
+            type="button"
+            @click="cerrarStatModal"
+          >✕</button>
 
         </div>
 
 
-        <div class="quick-grid">
-
-
-          <!-- =================================================
-               USUARIOS
-          ================================================== -->
-
-          <button
-            @click="
-              router.push(
-                '/admin/usuarios'
-              )
-            "
-          >
-
-            <div class="quick-icon">
-              U
-            </div>
-
-            <div>
-
-              <strong>
-                Gestión de usuarios
-              </strong>
-
-              <span>
-                Crear, modificar, activar e inactivar
-                cuentas institucionales.
-              </span>
-
-            </div>
-
-          </button>
-
-
-          <!-- =================================================
-               ROLES / PERMISOS / ÁREAS
-          ================================================== -->
-
-          <button
-            @click="
-              router.push(
-                '/admin/roles-areas'
-              )
-            "
-          >
-
-            <div class="quick-icon">
-              RP
-            </div>
-
-            <div>
-
-              <strong>
-                Roles, permisos y áreas
-              </strong>
-
-              <span>
-                Definir qué puede visualizar y ejecutar
-                cada rol dentro de SIGTA.
-              </span>
-
-            </div>
-
-          </button>
-
-
-          <!-- =================================================
-               CONSULTA DE TICKETS
-          ================================================== -->
-
-          <button
-            @click="
-              router.push(
-                '/admin/tickets'
-              )
-            "
-          >
-
-            <div class="quick-icon">
-              T
-            </div>
-
-            <div>
-
-              <strong>
-                Consulta de requerimientos de soporte
-              </strong>
-
-              <span>
-                Consulte el listado administrativo
-                de requerimientos de Soporte Técnico.
-              </span>
-
-            </div>
-
-          </button>
-
-
-          <!-- =================================================
-               BITÁCORA
-          ================================================== -->
-
-          <button
-            @click="
-              router.push(
-                '/admin/bitacora'
-              )
-            "
-          >
-
-            <div class="quick-icon">
-              B
-            </div>
-
-            <div>
-
-              <strong>
-                Bitácora
-              </strong>
-
-              <span>
-                Consultar accesos, acciones
-                y trazabilidad de los procesos.
-              </span>
-
-            </div>
-
-          </button>
-
-
-          <!-- =================================================
-               SMTP
-          ================================================== -->
-
-          <button
-            @click="
-              router.push(
-                '/admin/smtp'
-              )
-            "
-          >
-
-            <div class="quick-icon">
-              @
-            </div>
-
-            <div>
-
-              <strong>
-                Correo SMTP
-              </strong>
-
-              <span>
-                Configurar el canal de correo
-                para recuperación y notificaciones.
-              </span>
-
-            </div>
-
-          </button>
-
-
-          <!-- =================================================
-               PREFERENCIAS
-          ================================================== -->
-
-          <button
-            @click="
-              router.push(
-                '/admin/preferencias'
-              )
-            "
-          >
-
-            <div class="quick-icon">
-              P
-            </div>
-
-            <div>
-
-              <strong>
-                Preferencias
-              </strong>
-
-              <span>
-                Configurar parámetros generales
-                del funcionamiento de SIGTA.
-              </span>
-
-            </div>
-
-          </button>
-
-        </div>
-
-      </section>
-
-
-      <!-- =================================================
-           CONTROL DE ACCESO
-      ================================================== -->
-
-      <section class="security-card">
-
-        <div class="security-icon">
-          AC
-        </div>
-
-
-        <div class="security-content">
-
-          <span>
-            CONTROL DE ACCESO
-          </span>
-
-          <h2>
-            Roles y permisos
-          </h2>
-
-          <p>
-            SIGTA utilizará los roles y permisos para
-            determinar qué módulos puede visualizar cada
-            usuario y qué acciones puede ejecutar dentro
-            de cada proceso.
-          </p>
-
-        </div>
-
-
-        <button
-          type="button"
-          @click="
-            router.push(
-              '/admin/roles-areas'
-            )
-          "
+        <input
+          v-model="statBusqueda"
+          type="text"
+          class="stat-search"
+          :placeholder="statPlaceholder"
+        />
+
+
+        <p
+          v-if="statItems.length === 0"
+          class="detalle-vacio"
         >
-          Administrar
-        </button>
+          No se encontraron registros.
+        </p>
+
+        <div
+          v-else
+          class="stat-list"
+        >
+          <div
+            v-for="item in statItems"
+            :key="item.id"
+            class="stat-item"
+          >
+            <div class="stat-item-main">
+              <strong>{{ item.titulo }}</strong>
+              <span v-if="item.subtitulo">{{ item.subtitulo }}</span>
+            </div>
+
+            <small v-if="item.meta">{{ item.meta }}</small>
+          </div>
+        </div>
 
       </section>
+
 
     </main>
 
@@ -846,9 +306,21 @@ const resumen =
     nuevos: 0,
 
     compras: 0,
-
-    areas: 0,
   })
+
+
+/* =========================================================
+   REGISTROS COMPLETOS (PARA LOS MODALES DE DETALLE)
+========================================================= */
+
+const usuariosLista =
+  ref([])
+
+const ticketsLista =
+  ref([])
+
+const comprasLista =
+  ref([])
 
 
 /* =========================================================
@@ -1016,7 +488,6 @@ async function cargarResumen() {
     const [
       usuariosRes,
       ticketsRes,
-      areasRes,
       comprasRes
     ] =
       await Promise.all([
@@ -1037,17 +508,6 @@ async function cargarResumen() {
 
         fetch(
           '/api/soporte/tickets/',
-          {
-            headers:
-              headersAuth()
-          }
-        ),
-
-
-        /* ÁREAS */
-
-        fetch(
-          '/api/usuarios/areas/',
           {
             headers:
               headersAuth()
@@ -1077,8 +537,6 @@ async function cargarResumen() {
       usuariosRes,
 
       ticketsRes,
-
-      areasRes,
 
       comprasRes
     ]
@@ -1119,12 +577,6 @@ async function cargarResumen() {
         : []
 
 
-    const areasDatos =
-      areasRes.ok
-        ? await areasRes.json()
-        : []
-
-
     const comprasDatos =
       comprasRes.ok
         ? await comprasRes.json()
@@ -1147,16 +599,27 @@ async function cargarResumen() {
       )
 
 
-    const areas =
-      convertirLista(
-        areasDatos
-      )
-
-
     const compras =
       convertirLista(
         comprasDatos
       )
+
+
+    /* =====================================================
+       GUARDAR REGISTROS COMPLETOS
+       (para los modales de detalle de cada panel)
+    ====================================================== */
+
+    usuariosLista.value =
+      usuarios
+
+
+    ticketsLista.value =
+      tickets
+
+
+    comprasLista.value =
+      compras
 
 
     /* =====================================================
@@ -1173,15 +636,6 @@ async function cargarResumen() {
 
     resumen.compras =
       compras.length
-
-
-    resumen.areas =
-      areas.filter(
-        area =>
-          area.activo === undefined
-          ||
-          area.activo === true
-      ).length
 
 
     resumen.nuevos =
@@ -1226,11 +680,6 @@ async function cargarResumen() {
     }
 
 
-    if (!areasRes.ok) {
-      errores.push('áreas')
-    }
-
-
     if (!comprasRes.ok) {
       errores.push('compras')
     }
@@ -1259,12 +708,6 @@ async function cargarResumen() {
     console.log(
       'Dashboard tickets:',
       tickets
-    )
-
-
-    console.log(
-      'Dashboard áreas:',
-      areas
     )
 
 
@@ -1304,6 +747,178 @@ function normalizarEstado(
     .trim()
     .toUpperCase()
     .replace(/\s+/g, '_')
+}
+
+
+/* =========================================================
+   MODAL DE DETALLE POR PANEL
+========================================================= */
+
+const statCategoria =
+  ref('')
+
+const statBusqueda =
+  ref('')
+
+
+const statConfig = {
+
+  usuarios: {
+    titulo: 'Usuarios',
+    placeholder: 'Buscar por nombre o correo...',
+  },
+
+  tickets: {
+    titulo: 'Requerimientos de soporte',
+    placeholder: 'Buscar por código o título...',
+  },
+
+  nuevos: {
+    titulo: 'Requerimientos nuevos',
+    placeholder: 'Buscar por código o título...',
+  },
+
+  compras: {
+    titulo: 'Solicitudes de compra',
+    placeholder: 'Buscar por código o título...',
+  },
+}
+
+
+const statTitulo =
+  computed(() =>
+    statConfig[statCategoria.value]?.titulo
+    || ''
+  )
+
+
+const statPlaceholder =
+  computed(() =>
+    statConfig[statCategoria.value]?.placeholder
+    || 'Buscar...'
+  )
+
+
+const statItemsBase =
+  computed(() => {
+
+    if (statCategoria.value === 'usuarios') {
+
+      return usuariosLista.value.map(
+        u => ({
+          id: u.id,
+          titulo: u.nombre_completo || u.username || u.email || 'Usuario',
+          subtitulo: u.email || '',
+          meta: u.roles?.[0]?.nombre || u.roles?.[0]?.rol_nombre || 'Sin rol',
+        })
+      )
+    }
+
+
+    if (statCategoria.value === 'tickets') {
+
+      return ticketsLista.value.map(
+        t => ({
+          id: t.id,
+          titulo: `${t.codigo || 'S/C'} · ${t.titulo || 'Sin título'}`,
+          subtitulo: t.estado_nombre || t.estado_codigo || t.estado || '',
+          meta: t.area_nombre || '',
+        })
+      )
+    }
+
+
+    if (statCategoria.value === 'nuevos') {
+
+      return ticketsLista.value
+        .filter(
+          t => {
+
+            const codigo =
+              normalizarEstado(t.estado_codigo)
+
+            const nombre =
+              normalizarEstado(t.estado_nombre)
+
+            return (
+              codigo === 'NUEVO'
+              ||
+              nombre === 'NUEVO'
+            )
+          }
+        )
+        .map(
+          t => ({
+            id: t.id,
+            titulo: `${t.codigo || 'S/C'} · ${t.titulo || 'Sin título'}`,
+            subtitulo: t.estado_nombre || t.estado_codigo || t.estado || '',
+            meta: t.area_nombre || '',
+          })
+        )
+    }
+
+
+    if (statCategoria.value === 'compras') {
+
+      return comprasLista.value.map(
+        c => ({
+          id: c.id,
+          titulo: `${c.codigo || 'S/C'} · ${c.titulo || 'Sin título'}`,
+          subtitulo: c.estado_nombre || c.estado || '',
+          meta: c.area_nombre || '',
+        })
+      )
+    }
+
+
+    return []
+  })
+
+
+const statItems =
+  computed(() => {
+
+    const texto =
+      statBusqueda.value
+        .trim()
+        .toLowerCase()
+
+
+    if (!texto) {
+      return statItemsBase.value
+    }
+
+
+    return statItemsBase.value.filter(
+      item =>
+        [item.titulo, item.subtitulo, item.meta]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(texto)
+    )
+  })
+
+
+function abrirStatModal(
+  categoria
+) {
+
+  statCategoria.value =
+    categoria
+
+  statBusqueda.value =
+    ''
+}
+
+
+function cerrarStatModal() {
+
+  statCategoria.value =
+    ''
+
+  statBusqueda.value =
+    ''
 }
 
 
@@ -1388,25 +1003,13 @@ function cerrarSesion() {
 }
 
 
-.breadcrumb {
-
-  display: block;
-
-  margin-bottom: 7px;
-
-  color: #8493a0;
-
-  font-size: 9px;
-}
-
-
 .topbar h1 {
 
   margin: 0;
 
   color: #17324a;
 
-  font-size: 28px;
+  font-size: 34px;
 }
 
 
@@ -1419,7 +1022,7 @@ function cerrarSesion() {
 
   color: #758391;
 
-  font-size: 12px;
+  font-size: 18px;
 }
 
 
@@ -1475,7 +1078,7 @@ function cerrarSesion() {
 
   color: #073b6f;
 
-  font-size: 9px;
+  font-size: 15px;
 
   font-weight: 900;
 }
@@ -1492,7 +1095,7 @@ function cerrarSesion() {
 
   color: #1c3449;
 
-  font-size: 11px;
+  font-size: 17px;
 }
 
 
@@ -1502,7 +1105,7 @@ function cerrarSesion() {
 
   color: #788693;
 
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -1515,7 +1118,7 @@ function cerrarSesion() {
   display: grid;
 
   grid-template-columns:
-    repeat(5,1fr);
+    repeat(4,1fr);
 
   gap: 14px;
 
@@ -1543,6 +1146,24 @@ function cerrarSesion() {
     4px
     14px
     rgba(0,0,0,.05);
+
+  cursor: pointer;
+
+  transition:
+    transform .15s ease,
+    box-shadow .15s ease;
+}
+
+
+.stat-card:hover {
+
+  transform: scale(1.04);
+
+  box-shadow:
+    0
+    8px
+    20px
+    rgba(0,0,0,.1);
 }
 
 
@@ -1554,7 +1175,7 @@ function cerrarSesion() {
 
   color: #647484;
 
-  font-size: 9px;
+  font-size: 15px;
 
   font-weight: 800;
 
@@ -1570,7 +1191,7 @@ function cerrarSesion() {
 
   color: #073b6f;
 
-  font-size: 28px;
+  font-size: 34px;
 }
 
 
@@ -1578,7 +1199,7 @@ function cerrarSesion() {
 
   color: #8995a0;
 
-  font-size: 8px;
+  font-size: 14px;
 
   line-height: 1.35;
 }
@@ -1602,7 +1223,7 @@ function cerrarSesion() {
 
   color: #775600;
 
-  font-size: 10px;
+  font-size: 16px;
 }
 
 
@@ -1636,11 +1257,23 @@ function cerrarSesion() {
 
   color: #0b5795;
 
-  font-size: 8px;
+  font-size: 14px;
 
   font-weight: 900;
 
   letter-spacing: .8px;
+}
+
+
+.section-header {
+
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: space-between;
+
+  gap: 14px;
 }
 
 
@@ -1650,7 +1283,7 @@ function cerrarSesion() {
 
   color: #1b3449;
 
-  font-size: 18px;
+  font-size: 24px;
 }
 
 
@@ -1663,472 +1296,157 @@ function cerrarSesion() {
 
   color: #778590;
 
-  font-size: 10px;
+  font-size: 16px;
 }
 
 
-/* =========================================================
-   PROCESOS
-========================================================= */
-
-.operation-grid {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(2,1fr);
-
-  gap: 14px;
-}
-
-
-.operation-card {
-
-  min-width: 0;
-
-  min-height: 210px;
-
-  display: flex;
-
-  align-items: flex-start;
-
-  gap: 14px;
-
-  padding: 18px;
-
-  border:
-    1px solid #dce3e9;
-
-  border-radius: 9px;
-
-  background: #fbfcfd;
-
-  text-align: left;
-
-  cursor: pointer;
-
-  transition:
-    border-color .2s,
-    background .2s,
-    box-shadow .2s,
-    transform .1s;
-}
-
-
-.operation-card:hover {
-
-  border-color: #0a5794;
-
-  background: #f7fafc;
-
-  box-shadow:
-    0
-    5px
-    14px
-    rgba(0,0,0,.07);
-}
-
-
-.operation-card:active {
-
-  transform: scale(.995);
-}
-
-
-.operation-icon {
-
-  width: 46px;
-
-  height: 46px;
+.close-panel {
 
   flex-shrink: 0;
 
-  display: flex;
+  width: 32px;
 
-  align-items: center;
-
-  justify-content: center;
-
-  border-radius: 8px;
-
-  background: #073b6f;
-
-  color: #ffffff;
-
-  font-size: 9px;
-
-  font-weight: 900;
-}
-
-
-.operation-content {
-
-  flex: 1;
-
-  min-width: 0;
-}
-
-
-.operation-top {
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content:
-    space-between;
-
-  gap: 10px;
-}
-
-
-.operation-top strong {
-
-  color: #084577;
-
-  font-size: 14px;
-}
-
-
-.module-status {
-
-  flex-shrink: 0;
-
-  padding:
-    4px
-    7px;
-
-  border-radius: 12px;
-
-  background: #e7f6ed;
-
-  color: #257144;
-
-  font-size: 7px;
-
-  font-weight: 800;
-}
-
-
-.module-status.development {
-
-  background: #fff4d5;
-
-  color: #806000;
-}
-
-
-.operation-content > p {
-
-  margin:
-    7px
-    0
-    12px;
-
-  color: #6f7e8b;
-
-  font-size: 9px;
-
-  line-height: 1.5;
-}
-
-
-/* =========================================================
-   ACCIONES DEL PROCESO
-========================================================= */
-
-.process-actions {
-
-  display: flex;
-
-  flex-wrap: wrap;
-
-  gap: 5px;
-
-  margin-bottom: 13px;
-}
-
-
-.process-actions span {
-
-  padding:
-    5px
-    7px;
-
-  border-radius: 5px;
-
-  background: #edf2f6;
-
-  color: #607789;
-
-  font-size: 7px;
-}
-
-
-.operation-footer {
-
-  display: flex;
-
-  flex-wrap: wrap;
-
-  align-items: center;
-
-  justify-content:
-    space-between;
-
-  gap: 8px;
-
-  padding-top: 11px;
-
-  border-top:
-    1px solid #e8edf1;
-}
-
-
-.operation-footer span {
-
-  color: #718393;
-
-  font-size: 8px;
-}
-
-
-.operation-footer strong {
-
-  color: #07518d;
-
-  font-size: 8px;
-}
-
-
-/* =========================================================
-   ADMINISTRACIÓN
-========================================================= */
-
-.quick-grid {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(2,1fr);
-
-  gap: 13px;
-}
-
-
-.quick-grid button {
-
-  min-height: 105px;
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 13px;
-
-  padding: 15px;
-
-  border:
-    1px solid #dce3e9;
-
-  border-radius: 9px;
-
-  background: #fbfcfd;
-
-  text-align: left;
-
-  cursor: pointer;
-
-  transition:
-    border-color .2s,
-    box-shadow .2s;
-}
-
-
-.quick-grid button:hover {
-
-  border-color: #0a5794;
-
-  box-shadow:
-    0
-    5px
-    14px
-    rgba(0,0,0,.07);
-}
-
-
-.quick-icon {
-
-  width: 41px;
-
-  height: 41px;
-
-  flex-shrink: 0;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  border-radius: 7px;
-
-  background: #e8f1f8;
-
-  color: #07518d;
-
-  font-size: 9px;
-
-  font-weight: 900;
-}
-
-
-.quick-grid strong,
-.quick-grid span {
-
-  display: block;
-}
-
-
-.quick-grid strong {
-
-  margin-bottom: 6px;
-
-  color: #084577;
-
-  font-size: 12px;
-}
-
-
-.quick-grid span {
-
-  color: #6f7e8b;
-
-  font-size: 9px;
-
-  line-height: 1.45;
-}
-
-
-/* =========================================================
-   SEGURIDAD / PERMISOS
-========================================================= */
-
-.security-card {
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 15px;
-
-  margin-bottom: 20px;
-
-  padding: 19px;
-
-  border-left:
-    4px solid #f2c400;
-
-  border-radius: 9px;
-
-  background: #ffffff;
-
-  box-shadow:
-    0
-    4px
-    14px
-    rgba(0,0,0,.05);
-}
-
-
-.security-icon {
-
-  width: 45px;
-
-  height: 45px;
-
-  flex-shrink: 0;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  border-radius: 8px;
-
-  background: #073b6f;
-
-  color: white;
-
-  font-size: 9px;
-
-  font-weight: 900;
-}
-
-
-.security-content {
-
-  flex: 1;
-}
-
-
-.security-content > span {
-
-  color: #0b5795;
-
-  font-size: 7px;
-
-  font-weight: 900;
-}
-
-
-.security-content h2 {
-
-  margin:
-    3px
-    0
-    5px;
-
-  color: #17324a;
-
-  font-size: 14px;
-}
-
-
-.security-content p {
-
-  margin: 0;
-
-  color: #71818f;
-
-  font-size: 9px;
-
-  line-height: 1.5;
-}
-
-
-.security-card button {
-
-  min-height: 38px;
-
-  padding:
-    0
-    13px;
+  height: 32px;
 
   border: none;
 
-  border-radius: 6px;
+  border-radius: 50%;
 
-  background: #073b6f;
+  background: #f1f3f6;
 
-  color: white;
+  color: #4a5a6a;
 
-  font-size: 8px;
+  font-size: 15px;
 
-  font-weight: 700;
+  line-height: 1;
 
   cursor: pointer;
+}
+
+
+.close-panel:hover {
+
+  background: #e5e8ee;
+}
+
+
+/* =========================================================
+   DETALLE DEL PANEL
+========================================================= */
+
+.stat-search {
+
+  width: 100%;
+
+  padding:
+    12px
+    14px;
+
+  border:
+    1px solid #d0dae2;
+
+  border-radius: 8px;
+
+  background: white;
+
+  color: #17324a;
+
+  font-family: inherit;
+
+  font-size: 15px;
+
+  outline: none;
+}
+
+
+.stat-search:focus {
+
+  border-color: #0a5794;
+}
+
+
+.stat-list {
+
+  margin-top: 14px;
+
+  display: flex;
+
+  flex-direction: column;
+}
+
+
+.content-card > .detalle-vacio {
+
+  display: block;
+
+  margin-top: 14px;
+}
+
+
+.stat-item {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 12px;
+
+  padding: 12px 4px;
+
+  border-bottom: 1px solid #edf0f2;
+}
+
+
+.stat-item:last-child {
+
+  border-bottom: none;
+}
+
+
+.stat-item-main {
+
+  min-width: 0;
+}
+
+
+.stat-item-main strong {
+
+  display: block;
+
+  color: #17324a;
+
+  font-size: 15px;
+}
+
+
+.stat-item-main span {
+
+  display: block;
+
+  margin-top: 2px;
+
+  color: #71818f;
+
+  font-size: 13px;
+}
+
+
+.stat-item > small {
+
+  flex-shrink: 0;
+
+  padding: 4px 8px;
+
+  border-radius: 12px;
+
+  background: #edf3f7;
+
+  color: #557185;
+
+  font-size: 12px;
+  font-weight: 700;
 }
 
 
@@ -2157,14 +1475,6 @@ function cerrarSesion() {
 
     grid-template-columns:
       repeat(2,1fr);
-  }
-
-
-  .operation-grid,
-  .quick-grid {
-
-    grid-template-columns:
-      1fr;
   }
 
 }
@@ -2200,16 +1510,6 @@ function cerrarSesion() {
       flex-start;
   }
 
-
-  .security-card {
-
-    align-items:
-      flex-start;
-
-    flex-direction:
-      column;
-  }
-
 }
 
 
@@ -2221,12 +1521,6 @@ function cerrarSesion() {
 
     grid-template-columns:
       1fr;
-  }
-
-
-  .operation-card {
-
-    flex-direction: column;
   }
 
 }

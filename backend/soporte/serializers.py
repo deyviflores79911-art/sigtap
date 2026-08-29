@@ -2,6 +2,7 @@ from django.utils import timezone
 
 from rest_framework import serializers
 
+from usuarios.models import Area
 
 from .models import (
     CategoriaTicket,
@@ -109,6 +110,37 @@ class TicketSerializer(
 
 
     # ======================================================
+    # CAMPOS QUE EL PORTAL SOLICITANTE YA NO PIDE
+    # ======================================================
+    #
+    # El formulario simplificado del solicitante solo
+    # captura título, descripción y foto. Estos campos
+    # se completan con un valor por defecto en la vista
+    # (TicketViewSet.create) cuando no llegan en el payload.
+    # ======================================================
+
+    area = serializers.PrimaryKeyRelatedField(
+        queryset=Area.objects.all(),
+        required=False
+    )
+
+    ubicacion = serializers.CharField(
+        required=False,
+        allow_blank=True
+    )
+
+    equipo_afectado = serializers.CharField(
+        required=False,
+        allow_blank=True
+    )
+
+    categoria = serializers.PrimaryKeyRelatedField(
+        queryset=CategoriaTicket.objects.all(),
+        required=False
+    )
+
+
+    # ======================================================
     # EVIDENCIA
     # ======================================================
 
@@ -131,6 +163,10 @@ class TicketSerializer(
     )
 
     sla_restante_minutos = (
+        serializers.SerializerMethodField()
+    )
+
+    compra_vinculada = (
         serializers.SerializerMethodField()
     )
 
@@ -273,6 +309,8 @@ class TicketSerializer(
             "costo_estimado",
 
             "codigo_compra_vinculada",
+
+            "compra_vinculada",
 
 
             # ------------------------------------------------
@@ -460,6 +498,30 @@ class TicketSerializer(
             for usuario
             in obj.especialistas_apoyo.all()
         ]
+
+
+    # ======================================================
+    # COMPRA VINCULADA (RESUMEN)
+    # ======================================================
+
+    def get_compra_vinculada(
+        self,
+        obj
+    ):
+
+        solicitud = (
+            obj.compras_generadas
+            .filter(activo=True)
+            .order_by("-creado_en")
+            .first()
+        )
+
+        if not solicitud:
+            return None
+
+        from compras.serializers import SolicitudCompraResumenSerializer
+
+        return SolicitudCompraResumenSerializer(solicitud).data
 
 
     # ======================================================
@@ -818,26 +880,38 @@ class TicketSerializer(
             )
 
 
-        if not ubicacion:
+        # --------------------------------------------------
+        # UBICACIÓN Y EQUIPO AFECTADO
+        #
+        # El formulario simplificado del portal solicitante
+        # ya no pide estos campos: TicketViewSet.create()
+        # les asigna un valor por defecto cuando faltan.
+        # Solo se exigen aquí en edición (self.instance ya
+        # existe), donde el equipo interno sí los completa.
+        # --------------------------------------------------
 
-            raise serializers.ValidationError(
-                {
-                    "ubicacion":
-                        "La ubicación es obligatoria."
-                }
-            )
+        if self.instance is not None:
+
+            if not ubicacion:
+
+                raise serializers.ValidationError(
+                    {
+                        "ubicacion":
+                            "La ubicación es obligatoria."
+                    }
+                )
 
 
-        if not equipo:
+            if not equipo:
 
-            raise serializers.ValidationError(
-                {
-                    "equipo_afectado": (
-                        "Debe indicar el equipo "
-                        "afectado."
-                    )
-                }
-            )
+                raise serializers.ValidationError(
+                    {
+                        "equipo_afectado": (
+                            "Debe indicar el equipo "
+                            "afectado."
+                        )
+                    }
+                )
 
 
         return attrs

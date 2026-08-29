@@ -10,10 +10,6 @@
 
         <div>
 
-          <span class="breadcrumb">
-            SIGTA / Portal Solicitante / Mantenimiento
-          </span>
-
           <h1>
             Registrar requerimiento de mantenimiento
           </h1>
@@ -1180,36 +1176,30 @@ function cerrarSesion() {
 
 
 .topbar {
-  max-width: 930px;
+  max-width: 1040px;
   margin: 0 auto 18px;
 }
 
 
-.breadcrumb {
-  display: block;
-  margin-bottom: 8px;
-  color: #71869b;
-  font-size: 9px;
-}
 
 
 .topbar h1 {
   margin: 0;
   color: #17344f;
-  font-size: 25px;
+  font-size: 31px;
 }
 
 
 .topbar p {
   margin: 6px 0 0;
   color: #718294;
-  font-size: 11px;
+  font-size: 17px;
 }
 
 
 .form-card {
   width: 100%;
-  max-width: 930px;
+  max-width: 1040px;
   margin: auto;
   overflow: hidden;
   border-top: 4px solid #f2c400;
@@ -1234,8 +1224,8 @@ function cerrarSesion() {
 
 
 .number {
-  width: 25px;
-  height: 25px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1243,7 +1233,7 @@ function cerrarSesion() {
   border-radius: 50%;
   background: #153f73;
   color: #ffffff;
-  font-size: 9px;
+  font-size: 15px;
   font-weight: 800;
 }
 
@@ -1251,14 +1241,14 @@ function cerrarSesion() {
 .section-heading h2 {
   margin: 0;
   color: #253f57;
-  font-size: 14px;
+  font-size: 20px;
 }
 
 
 .section-heading p {
   margin: 4px 0 0;
   color: #83919e;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -1284,7 +1274,7 @@ function cerrarSesion() {
 
 .field label {
   color: #344d63;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -1297,7 +1287,7 @@ function cerrarSesion() {
 .field label .optional {
   margin-left: 4px;
   color: #8c99a5;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 400;
 }
 
@@ -1306,25 +1296,25 @@ function cerrarSesion() {
 .field select,
 .field textarea {
   width: 100%;
-  padding: 11px 12px;
+  padding: 14px 15px;
   border: 1px solid #ccd7e1;
   border-radius: 7px;
   background: #ffffff;
   color: #263d50;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 17px;
   outline: none;
 }
 
 
 .field select {
-  min-height: 41px;
+  min-height: 48px;
   cursor: pointer;
 }
 
 
 .field textarea {
-  min-height: 125px;
+  min-height: 145px;
   resize: vertical;
   line-height: 1.5;
 }
@@ -1345,7 +1335,7 @@ function cerrarSesion() {
 
 .field small {
   color: #8c99a5;
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -1400,26 +1390,26 @@ function cerrarSesion() {
   border-radius: 50%;
   background: #e6eef6;
   color: #153f73;
-  font-size: 19px;
+  font-size: 25px;
   font-weight: 700;
 }
 
 
 .upload-box strong {
   color: #29475f;
-  font-size: 11px;
+  font-size: 17px;
 }
 
 
 .upload-box span {
   color: #728596;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
 .upload-box small {
   color: #9aa6af;
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -1461,7 +1451,7 @@ function cerrarSesion() {
   border-radius: 7px;
   background: #f8e9e9;
   color: #a53636;
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 900;
 }
 
@@ -1482,14 +1472,14 @@ function cerrarSesion() {
 .file-information span {
   margin-bottom: 3px;
   color: #81909d;
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
 .file-information strong {
   overflow: hidden;
   color: #29475f;
-  font-size: 10px;
+  font-size: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1498,7 +1488,7 @@ function cerrarSesion() {
 .file-information small {
   margin-top: 4px;
   color: #8b99a4;
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -1509,7 +1499,7 @@ function cerrarSesion() {
   border-radius: 6px;
   background: #fdecec;
   color: #a83232;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -1536,21 +1526,21 @@ function cerrarSesion() {
   border-radius: 50%;
   background: #153f73;
   color: white;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 
 .process-notice strong {
   color: #334e65;
-  font-size: 10px;
+  font-size: 16px;
 }
 
 
 .process-notice p {
   margin: 3px 0 0;
   color: #758796;
-  font-size: 9px;
+  font-size: 15px;
   line-height: 1.4;
 }
 
@@ -1559,7 +1549,7 @@ function cerrarSesion() {
   margin: 16px 26px 0;
   padding: 11px 13px;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 16px;
 }
 
 
@@ -1585,10 +1575,10 @@ function cerrarSesion() {
 
 
 .actions button {
-  min-height: 40px;
-  padding: 0 17px;
+  min-height: 48px;
+  padding: 0 22px;
   border-radius: 7px;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
 }

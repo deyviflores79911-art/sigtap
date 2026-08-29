@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 
 # ==========================================================
@@ -369,3 +371,115 @@ class UsuarioRol(models.Model):
             f"{self.rol.codigo} - "
             f"{area}"
         )
+
+
+# ==========================================================
+# DELEGACIÓN TEMPORAL DE APROBACIÓN
+# ==========================================================
+#
+# Caso de uso "Delegar aprobación temporal" (Módulo 1
+# Identidad): permite a un actor que aprueba/autoriza algo
+# en el sistema (DIRECTOR, DAF, TESORERIA, JEFE_UTIC) ceder
+# temporalmente su rol a otro usuario mientras está ausente,
+# sin necesidad de que ADMIN intervenga.
+#
+# ==========================================================
+
+class DelegacionAprobacion(models.Model):
+
+    ROLES_DELEGABLES = [
+        "DIRECTOR",
+        "DAF",
+        "TESORERIA",
+        "JEFE_UTIC",
+    ]
+
+    delegante = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="delegaciones_otorgadas"
+    )
+
+    delegado = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="delegaciones_recibidas"
+    )
+
+    rol = models.ForeignKey(
+        Rol,
+        on_delete=models.PROTECT,
+        related_name="delegaciones"
+    )
+
+    vigencia_desde = models.DateTimeField()
+
+    vigencia_hasta = models.DateTimeField()
+
+    motivo = models.CharField(
+        max_length=255,
+        blank=True
+    )
+
+    activo = models.BooleanField(
+        default=True
+    )
+
+    creado_en = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def esta_vigente(self):
+
+        ahora = timezone.now()
+
+        return (
+            self.activo
+            and self.vigencia_desde <= ahora <= self.vigencia_hasta
+        )
+
+    def __str__(self):
+
+        return (
+            f"{self.delegante.email} -> "
+            f"{self.delegado.email} ({self.rol.codigo})"
+        )
+
+
+# ==========================================================
+# ROLES EFECTIVOS (DIRECTOS + DELEGADOS)
+# ==========================================================
+#
+# Punto único usado por todas las apps (usuarios, compras,
+# mantenimiento, soporte) para calcular qué roles puede
+# ejercer un usuario en este momento: los suyos propios más
+# los que le hayan delegado temporalmente y sigan vigentes.
+#
+# ==========================================================
+
+def obtener_codigos_rol_efectivos(usuario):
+
+    if not usuario or not usuario.is_authenticated:
+        return []
+
+    directos = set(
+        UsuarioRol.objects
+        .filter(usuario=usuario, activo=True, rol__activo=True)
+        .values_list("rol__codigo", flat=True)
+    )
+
+    ahora = timezone.now()
+
+    delegados = set(
+        DelegacionAprobacion.objects
+        .filter(
+            delegado=usuario,
+            activo=True,
+            vigencia_desde__lte=ahora,
+            vigencia_hasta__gte=ahora,
+            rol__activo=True,
+        )
+        .values_list("rol__codigo", flat=True)
+    )
+
+    return list(directos | delegados)

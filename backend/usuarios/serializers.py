@@ -1,3 +1,7 @@
+from datetime import timedelta
+
+from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 
 from rest_framework import serializers
@@ -9,6 +13,7 @@ from .models import (
     UsuarioRol,
     Permiso,
     RolPermiso,
+    DelegacionAprobacion,
 )
 
 
@@ -798,6 +803,27 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
 
     # ======================================================
+    # VALIDAR CONTRASEÑA TEMPORAL
+    # ======================================================
+    #
+    # El correo del solicitante (ADMIN) le fija esta contraseña
+    # a un tercero, así que debe cumplir la misma política de
+    # complejidad (AUTH_PASSWORD_VALIDATORS) que cualquier otra
+    # contraseña del sistema — de lo contrario un ADMIN podría
+    # crear cuentas con contraseñas triviales.
+    # ======================================================
+
+    def validate_password(self, value):
+
+        try:
+            password_validation.validate_password(value, user=self.instance)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(list(error.messages))
+
+        return value
+
+
+    # ======================================================
     # VALIDAR NOMBRE
     # ======================================================
 
@@ -1212,6 +1238,107 @@ class UsuarioSerializer(serializers.ModelSerializer):
                     area=area,
                     activo=True
                 )
+
+
+# ==========================================================
+# DELEGACIÓN TEMPORAL DE APROBACIÓN
+# ==========================================================
+
+class DelegacionAprobacionSerializer(serializers.ModelSerializer):
+
+    delegante_nombre = serializers.CharField(
+        source="delegante.nombre_completo",
+        read_only=True
+    )
+
+    delegado_nombre = serializers.CharField(
+        source="delegado.nombre_completo",
+        read_only=True
+    )
+
+    rol_codigo = serializers.CharField(
+        source="rol.codigo",
+        read_only=True
+    )
+
+    rol_nombre = serializers.CharField(
+        source="rol.nombre",
+        read_only=True
+    )
+
+    vigente = serializers.SerializerMethodField()
+
+
+    class Meta:
+
+        model = DelegacionAprobacion
+
+        fields = [
+            "id",
+            "delegante",
+            "delegante_nombre",
+            "delegado",
+            "delegado_nombre",
+            "rol",
+            "rol_codigo",
+            "rol_nombre",
+            "vigencia_desde",
+            "vigencia_hasta",
+            "motivo",
+            "activo",
+            "vigente",
+            "creado_en",
+        ]
+
+        read_only_fields = [
+            "delegante",
+            "activo",
+            "creado_en",
+        ]
+
+    def get_vigente(self, obj):
+        return obj.esta_vigente()
+
+    def validate(self, attrs):
+
+        rol = attrs.get("rol") or getattr(self.instance, "rol", None)
+
+        if rol and rol.codigo not in DelegacionAprobacion.ROLES_DELEGABLES:
+            raise serializers.ValidationError({
+                "rol": (
+                    "Solo se puede delegar temporalmente un rol de "
+                    "aprobación (Director, DAF, Tesorería o Jefe de UTIC)."
+                )
+            })
+
+        desde = attrs.get("vigencia_desde")
+        hasta = attrs.get("vigencia_hasta")
+
+        if desde and hasta and desde >= hasta:
+            raise serializers.ValidationError({
+                "vigencia_hasta": "Debe ser posterior a la fecha de inicio."
+            })
+
+        # "Temporal" tiene un límite: sin tope, una delegación
+        # podría usarse como una puerta trasera permanente
+        # disfrazada de ausencia corta.
+        if desde and hasta and (hasta - desde) > timedelta(days=90):
+            raise serializers.ValidationError({
+                "vigencia_hasta": (
+                    "Una delegación temporal no puede superar los 90 días. "
+                    "Si necesita más tiempo, cree una nueva delegación al vencer."
+                )
+            })
+
+        delegado = attrs.get("delegado")
+        request = self.context.get("request")
+
+        if request and delegado and delegado.id == request.user.id:
+            raise serializers.ValidationError({
+                "delegado": "No puede delegarse su propio rol a sí mismo."
+            })
+
+        return attrs
 
 
         return instance

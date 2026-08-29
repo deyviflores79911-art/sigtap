@@ -305,6 +305,33 @@ class Ticket(models.Model):
     )
 
 
+    # ------------------------------------------------------
+    # BPMN: "Requiere compra?" -> Especialista solicita con
+    # cotización -> Jefe UTIC evalúa viabilidad -> si es
+    # viable, se genera el expediente (que luego sigue el
+    # subproceso normal de Compra Caja Chica, con su propio
+    # visto bueno del Director ya existente en ese módulo).
+    # Este campo rastrea esa evaluación previa de viabilidad,
+    # separada del estado principal del ticket.
+    # ------------------------------------------------------
+
+    ESTADOS_COMPRA_COMPONENTE = [
+        ("SOLICITADA", "Solicitada"),
+        ("NO_VIABLE", "No viable"),
+        ("VIABLE", "Viable"),
+    ]
+
+    estado_compra_componente = models.CharField(
+        max_length=20,
+        choices=ESTADOS_COMPRA_COMPONENTE,
+        blank=True
+    )
+
+    motivo_no_viable = models.TextField(
+        blank=True
+    )
+
+
     # ======================================================
     # RESULTADOS
     # ======================================================

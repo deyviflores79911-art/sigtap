@@ -1,4 +1,5 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from rest_framework.test import APITestCase
 
 from usuarios.models import Area, Rol, Usuario, UsuarioRol
@@ -6,10 +7,15 @@ from usuarios.models import Area, Rol, Usuario, UsuarioRol
 
 class FlujoCajaChicaTests(APITestCase):
     def setUp(self):
+        # Carga el catálogo real de roles/permisos (Permiso +
+        # RolPermiso) para que las pruebas verifiquen la misma
+        # autorización que corre en producción (tiene_permiso).
+        call_command("cargar_permisos_sigta")
+
         self.area = Area.objects.create(codigo="TEST", nombre="Área de prueba")
         self.usuarios = {}
         for codigo in ("SOLICITANTE", "DAF", "TESORERIA", "DIRECTOR", "ENCARGADO_COMPRAS_ALMACEN"):
-            rol = Rol.objects.create(codigo=codigo, nombre=codigo, activo=True)
+            rol = Rol.objects.get(codigo=codigo)
             usuario = Usuario.objects.create_user(
                 username=codigo.lower(), email=f"{codigo.lower()}@emi.edu.bo",
                 nombre_completo=codigo, password="Prueba#2026",
@@ -56,10 +62,12 @@ class FlujoCajaChicaTests(APITestCase):
         self.assertEqual(r.data["estado"], "FONDOS_DESEMBOLSADOS")
 
         self.autenticar("ENCARGADO_COMPRAS_ALMACEN")
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-compra/", {"monto_real": "100.00", "proveedor": "Proveedor"}, format="json")
-        self.assertEqual(r.data["estado"], "COMPRA_REGISTRADA")
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-entrega/", {}, format="json")
-        self.assertEqual(r.data["estado"], "COMPRADO_Y_ENTREGADO")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-compra/", {"monto_real": "100.00", "proveedor": "Proveedor", "componente_verificado": True}, format="json")
+        self.assertEqual(r.data["estado"], "COMPRA_REGISTRADA", r.data)
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-ingreso-almacen/", {}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-despacho-almacen/", {}, format="json")
+        self.assertEqual(r.data["estado"], "COMPRADO_Y_ENTREGADO", r.data)
 
         self.autenticar("SOLICITANTE")
         r = self.client.post(f"/api/compras/solicitudes/{pk}/presentar-descargo/", {
@@ -73,3 +81,140 @@ class FlujoCajaChicaTests(APITestCase):
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(r.data["estado"], "CERRADO_ARCHIVADO")
         self.assertTrue(r.data["cerrado_inmutable"])
+
+
+class SeguridadFlujoComprasTests(APITestCase):
+    """'Modo Teniente': intenta romper el flujo de Caja Chica
+    saltando estados, actuando fuera de rol y alterando el
+    monto estimado una vez que el expediente ya está en
+    evaluación/aprobación."""
+
+    def setUp(self):
+        call_command("cargar_permisos_sigta")
+
+        self.area = Area.objects.create(codigo="TEST2", nombre="Área de prueba 2")
+        self.usuarios = {}
+        for codigo in ("ADMIN", "SOLICITANTE", "DAF", "TESORERIA", "DIRECTOR", "ENCARGADO_COMPRAS_ALMACEN"):
+            rol = Rol.objects.get(codigo=codigo)
+            usuario = Usuario.objects.create_user(
+                username=f"{codigo.lower()}2", email=f"{codigo.lower()}2@emi.edu.bo",
+                nombre_completo=codigo, password="Prueba#2026",
+            )
+            UsuarioRol.objects.create(usuario=usuario, rol=rol, activo=True)
+            self.usuarios[codigo] = usuario
+
+    def archivo(self, nombre="archivo.pdf"):
+        return SimpleUploadedFile(nombre, b"contenido de prueba", content_type="application/pdf")
+
+    def autenticar(self, rol):
+        self.client.force_authenticate(self.usuarios[rol])
+
+    def crear_solicitud(self):
+        self.autenticar("SOLICITANTE")
+        r = self.client.post("/api/compras/solicitudes/", {
+            "titulo": "Compra de prueba", "descripcion": "Prueba de seguridad",
+            "area": self.area.id, "tipo": "BIEN", "cantidad": 1,
+            "especificaciones": "Especificaciones", "justificacion": "Necesario",
+            "monto_estimado": "100.00", "informe": self.archivo("informe.pdf"),
+            "poa": self.archivo("poa.pdf"), "pedido": self.archivo("pedido.pdf"),
+            "proforma": self.archivo("proforma.pdf"),
+        }, format="multipart")
+        self.assertEqual(r.status_code, 201, r.data)
+        return r.data["id"]
+
+    def test_no_se_puede_saltar_directo_a_desembolsar(self):
+        pk = self.crear_solicitud()
+        self.autenticar("TESORERIA")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/desembolsar/", {
+            "monto_desembolsado": "100.00", "responsable_adquisicion": "Almacén",
+        }, format="json")
+        self.assertEqual(r.status_code, 409, r.data)
+
+    def test_no_se_puede_saltar_certificacion_e_ir_directo_a_verificar(self):
+        pk = self.crear_solicitud()
+        self.autenticar("DAF")
+        self.client.post(f"/api/compras/solicitudes/{pk}/evaluar-daf/", {"califica": True}, format="json")
+
+        self.autenticar("TESORERIA")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/verificar-tesoreria/", {}, format="json")
+        # Puede rechazar por documentos incompletos (400) o por
+        # estado (409): lo que importa es que NO avanza el flujo.
+        self.assertIn(r.status_code, (400, 409), r.data)
+
+        r = self.client.get(f"/api/compras/solicitudes/{pk}/")
+        self.assertEqual(r.data["estado"], "EVALUADO_PENDIENTE_CERTIFICACION")
+
+    def test_tesoreria_no_puede_ejecutar_accion_de_daf(self):
+        pk = self.crear_solicitud()
+        self.autenticar("TESORERIA")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/evaluar-daf/", {"califica": True}, format="json")
+        self.assertEqual(r.status_code, 403, r.data)
+
+    def test_encargado_almacen_no_puede_dar_visto_bueno_director(self):
+        pk = self.crear_solicitud()
+        self.autenticar("ENCARGADO_COMPRAS_ALMACEN")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/visto-bueno-director/", {}, format="json")
+        self.assertEqual(r.status_code, 403, r.data)
+
+    def test_solicitante_no_puede_ver_ni_editar_solicitud_ajena(self):
+        pk = self.crear_solicitud()
+
+        otro_solicitante = Usuario.objects.create_user(
+            username="intruso", email="intruso@emi.edu.bo",
+            nombre_completo="Intruso", password="Prueba#2026",
+        )
+        UsuarioRol.objects.create(usuario=otro_solicitante, rol=Rol.objects.get(codigo="SOLICITANTE"), activo=True)
+        self.client.force_authenticate(otro_solicitante)
+
+        # No aparece en su bandeja (get_queryset filtra por dueño).
+        r = self.client.get("/api/compras/solicitudes/")
+        self.assertNotIn(pk, [item["id"] for item in r.data])
+
+        # Tampoco puede modificarla directamente por id.
+        r = self.client.patch(f"/api/compras/solicitudes/{pk}/", {"titulo": "Hackeado"}, format="json")
+        self.assertIn(r.status_code, (403, 404))
+
+    def test_nadie_puede_modificar_monto_estimado_en_evaluacion(self):
+        pk = self.crear_solicitud()
+
+        self.autenticar("DAF")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/evaluar-daf/", {"califica": True}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+
+        # Ni siquiera ADMIN puede reescribir el monto una vez
+        # que el expediente entró al flujo de aprobación.
+        self.autenticar("ADMIN")
+        r = self.client.patch(f"/api/compras/solicitudes/{pk}/", {"monto_estimado": "999999.00"}, format="json")
+        self.assertEqual(r.status_code, 403, r.data)
+
+        r = self.client.get(f"/api/compras/solicitudes/{pk}/")
+        self.assertEqual(r.data["monto_estimado"], "100.00")
+
+    def test_expediente_cerrado_es_inmutable_incluso_para_admin(self):
+        # Ciclo feliz completo hasta el cierre.
+        pk = self.crear_solicitud()
+        self.autenticar("DAF")
+        self.client.post(f"/api/compras/solicitudes/{pk}/evaluar-daf/", {"califica": True}, format="json")
+        self.client.post(f"/api/compras/solicitudes/{pk}/certificar-daf/", {"certificacion_presupuestaria": self.archivo("cert.pdf")}, format="multipart")
+        self.autenticar("TESORERIA")
+        self.client.post(f"/api/compras/solicitudes/{pk}/verificar-tesoreria/", {}, format="json")
+        self.autenticar("DIRECTOR")
+        self.client.post(f"/api/compras/solicitudes/{pk}/visto-bueno-director/", {}, format="json")
+        self.autenticar("TESORERIA")
+        self.client.post(f"/api/compras/solicitudes/{pk}/desembolsar/", {"monto_desembolsado": "100.00", "responsable_adquisicion": "Almacén"}, format="json")
+        self.autenticar("ENCARGADO_COMPRAS_ALMACEN")
+        self.client.post(f"/api/compras/solicitudes/{pk}/registrar-compra/", {"monto_real": "100.00", "proveedor": "Proveedor", "componente_verificado": True}, format="json")
+        self.client.post(f"/api/compras/solicitudes/{pk}/registrar-ingreso-almacen/", {}, format="json")
+        self.client.post(f"/api/compras/solicitudes/{pk}/registrar-despacho-almacen/", {}, format="json")
+        self.autenticar("SOLICITANTE")
+        self.client.post(f"/api/compras/solicitudes/{pk}/presentar-descargo/", {
+            "factura": self.archivo("f.pdf"), "acta_conformidad": self.archivo("a.pdf"), "fotograma": self.archivo("g.pdf"),
+        }, format="multipart")
+        self.autenticar("TESORERIA")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/cerrar-archivar/", {}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+
+        # Ya cerrado: ninguna transición vuelve a aplicarse,
+        # ni con el rol correcto.
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/desembolsar/", {"monto_desembolsado": "1.00", "responsable_adquisicion": "X"}, format="json")
+        self.assertEqual(r.status_code, 409, r.data)

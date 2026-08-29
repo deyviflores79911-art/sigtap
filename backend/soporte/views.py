@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 
 from django.utils import timezone
 
@@ -7,8 +8,8 @@ from rest_framework import (
     viewsets,
 )
 
-from rest_framework.authentication import (
-    TokenAuthentication,
+from usuarios.authentication import (
+    ExpiringTokenAuthentication as TokenAuthentication,
 )
 
 from rest_framework.decorators import (
@@ -23,9 +24,11 @@ from rest_framework.response import Response
 
 
 from usuarios.models import (
+    Area,
     Usuario,
     UsuarioRol,
     RolPermiso,
+    obtener_codigos_rol_efectivos,
 )
 
 from auditoria.utils import (
@@ -57,6 +60,40 @@ ROLES_ADMIN = {
 
 
 # ==========================================================
+# VALORES POR DEFECTO DEL FORMULARIO SIMPLIFICADO
+# ==========================================================
+#
+# El portal solicitante ya no pide área ni categoría: solo
+# título, descripción, tipo (Soporte/Mantenimiento) y foto.
+# Estos helpers completan los campos que el modelo Ticket
+# sigue requiriendo.
+# ==========================================================
+
+def _area_por_defecto():
+
+    return (
+        Area.objects
+        .filter(activo=True)
+        .order_by("id")
+        .first()
+    )
+
+
+def _categoria_por_defecto():
+
+    return (
+        CategoriaTicket.objects
+        .filter(codigo="OTRO", activo=True)
+        .first()
+        or
+        CategoriaTicket.objects
+        .filter(activo=True)
+        .order_by("id")
+        .first()
+    )
+
+
+# ==========================================================
 # SLA POR PRIORIDAD
 # ==========================================================
 #
@@ -79,26 +116,9 @@ SLA_POR_PRIORIDAD = {
 
 def obtener_roles(usuario):
 
-    if (
-        not usuario
-        or
-        not usuario.is_authenticated
-    ):
-        return []
-
-
-    return list(
-        UsuarioRol.objects
-        .filter(
-            usuario=usuario,
-            activo=True,
-            rol__activo=True
-        )
-        .values_list(
-            "rol__codigo",
-            flat=True
-        )
-    )
+    # Incluye roles delegados temporalmente (Delegar aprobación
+    # temporal) además de los roles propios.
+    return obtener_codigos_rol_efectivos(usuario)
 
 
 # ==========================================================
@@ -150,12 +170,13 @@ def tiene_permiso(
         return True
 
 
+    codigos_rol = obtener_roles(usuario)
+
+
     return (
         RolPermiso.objects
         .filter(
-            rol__usuarios_asignados__usuario=usuario,
-            rol__usuarios_asignados__activo=True,
-
+            rol__codigo__in=codigos_rol,
             rol__activo=True,
 
             permiso__codigo=codigo_permiso,
@@ -476,7 +497,48 @@ class TicketViewSet(
         )
 
 
-        ticket = serializer.save()
+        if not serializer.validated_data.get("evidencia_archivo"):
+
+            return Response(
+                {"detalle": "Debe adjuntar una foto como evidencia."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        extra = {}
+
+        if not serializer.validated_data.get("area"):
+
+            area_defecto = _area_por_defecto()
+
+            if area_defecto is None:
+                return Response(
+                    {"detalle": "No hay áreas registradas en el sistema."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            extra["area"] = area_defecto
+
+        if not serializer.validated_data.get("ubicacion"):
+            extra["ubicacion"] = "No especificado"
+
+        if not serializer.validated_data.get("equipo_afectado"):
+            extra["equipo_afectado"] = ""
+
+        if not serializer.validated_data.get("categoria"):
+
+            categoria_defecto = _categoria_por_defecto()
+
+            if categoria_defecto is None:
+                return Response(
+                    {"detalle": "No hay categorías de ticket registradas en el sistema."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            extra["categoria"] = categoria_defecto
+
+
+        ticket = serializer.save(**extra)
 
 
         registrar_bitacora(
@@ -746,6 +808,61 @@ class TicketViewSet(
                 },
                 status=
                     status.HTTP_400_BAD_REQUEST
+            )
+
+
+        # --------------------------------------------------
+        # BPMN: "¿Es válido el ticket?" -> rama NO
+        # --------------------------------------------------
+
+        es_valido = request.data.get("es_valido", True)
+
+        if es_valido is False:
+
+            motivo = str(request.data.get("motivo_rechazo", "")).strip()
+
+            if not motivo:
+
+                return Response(
+                    {"motivo_rechazo": "Debe indicar el motivo del rechazo."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            estado_rechazado = obtener_estado("RECHAZADO")
+
+            if not estado_rechazado:
+
+                return Response(
+                    {"detalle": "No existe el estado RECHAZADO."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            ticket.estado = estado_rechazado
+            ticket.criterio_tecnico = motivo
+            ticket.validado_en = timezone.now()
+            ticket.activo = False
+
+            ticket.save(
+                update_fields=[
+                    "estado",
+                    "criterio_tecnico",
+                    "validado_en",
+                    "activo",
+                    "actualizado_en",
+                ]
+            )
+
+            registrar_bitacora(
+                request=request,
+                accion="RECHAZAR_TICKET",
+                modulo="Soporte Técnico",
+                detalle=f"Se rechazó el ticket {ticket.codigo}: {motivo}.",
+                nivel="WARNING",
+            )
+
+            return respuesta_ticket(
+                ticket,
+                "Ticket rechazado y devuelto al solicitante."
             )
 
 
@@ -1369,6 +1486,347 @@ class TicketViewSet(
 
 
     # ======================================================
+    # 4.b SOLICITAR REQUERIMIENTO DE COMPONENTE (Especialista)
+    # ======================================================
+    #
+    # BPMN: "¿Requiere compra?" -> SÍ -> "Realizar
+    # requerimiento" (Especialistas), con las características
+    # del componente y su cotización. Este paso solo levanta
+    # el pedido; todavía no genera ningún expediente de
+    # compra — eso depende de que Jefe UTIC lo evalúe como
+    # viable en el siguiente paso.
+    #
+    # ======================================================
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="solicitar-requerimiento-componente"
+    )
+    def solicitar_requerimiento_componente(
+        self,
+        request,
+        pk=None
+    ):
+
+        if not tiene_permiso(
+            request.user,
+            "SOLICITAR_REQUERIMIENTO_COMPONENTE"
+        ):
+
+            return respuesta_sin_permiso(
+                "SOLICITAR_REQUERIMIENTO_COMPONENTE"
+            )
+
+
+        ticket = self.get_object()
+
+
+        if not validar_estado_ticket(
+            ticket,
+            ["EN_EJECUCION"]
+        ):
+
+            return Response(
+                {
+                    "detalle": (
+                        "El ticket debe encontrarse "
+                        "EN_EJECUCION."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        if not (
+            es_admin(request.user)
+            or
+            ticket.tecnico_asignado_id == request.user.id
+        ):
+
+            return Response(
+                {
+                    "detalle": (
+                        "Solo el especialista asignado "
+                        "puede solicitar el componente."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+
+        if ticket.estado_compra_componente:
+
+            return Response(
+                {
+                    "detalle": (
+                        "Este ticket ya tiene un "
+                        "requerimiento de componente "
+                        "en curso."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+
+
+        componente = str(request.data.get("componente_requerido", "")).strip()
+        especificaciones = str(request.data.get("especificaciones_tecnicas", "")).strip()
+
+        if not componente:
+
+            return Response(
+                {"componente_requerido": "Debe indicar el componente requerido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        costo_estimado = request.data.get("costo_estimado")
+
+        try:
+            costo_estimado = (
+                Decimal(str(costo_estimado))
+                if costo_estimado not in (None, "")
+                else None
+            )
+
+        except InvalidOperation:
+
+            return Response(
+                {"costo_estimado": "Monto estimado inválido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        ticket.requiere_compra = True
+        ticket.componente_requerido = componente
+        ticket.especificaciones_tecnicas = especificaciones
+        ticket.costo_estimado = costo_estimado
+        ticket.estado_compra_componente = "SOLICITADA"
+
+        ticket.save(
+            update_fields=[
+                "requiere_compra",
+                "componente_requerido",
+                "especificaciones_tecnicas",
+                "costo_estimado",
+                "estado_compra_componente",
+                "actualizado_en",
+            ]
+        )
+
+
+        registrar_bitacora(
+            request=request,
+            accion="SOLICITAR_REQUERIMIENTO_COMPONENTE",
+            modulo="Soporte Técnico",
+            detalle=(
+                f"Se solicitó el componente '{componente}' "
+                f"con cotización para el ticket "
+                f"{ticket.codigo}. Pendiente de evaluación "
+                f"de viabilidad por Jefe UTIC."
+            ),
+            nivel="INFO",
+        )
+
+
+        return respuesta_ticket(
+            ticket,
+            "Requerimiento de componente enviado a Jefe UTIC para evaluar viabilidad."
+        )
+
+
+    # ======================================================
+    # 4.c EVALUAR VIABILIDAD DE COMPRA (Jefe UTIC)
+    # ======================================================
+    #
+    # BPMN: "Recibir requerimiento y cotización" ->
+    # "¿Es viable la compra?" -> NO: "Comunicar no
+    # viabilidad" / "Cerrado sin compra". SÍ: "Elevar el
+    # informe" y generar el expediente, que a partir de ahí
+    # sigue el subproceso normal de Compra Caja Chica —
+    # incluido el visto bueno del Director ya implementado
+    # en ese módulo (no se duplica acá).
+    #
+    # ======================================================
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="evaluar-viabilidad-compra"
+    )
+    def evaluar_viabilidad_compra(
+        self,
+        request,
+        pk=None
+    ):
+
+        if not tiene_permiso(
+            request.user,
+            "AUTORIZAR_SOLICITUD_COMPRA_TI"
+        ):
+
+            return respuesta_sin_permiso(
+                "AUTORIZAR_SOLICITUD_COMPRA_TI"
+            )
+
+
+        ticket = self.get_object()
+
+
+        if ticket.estado_compra_componente != "SOLICITADA":
+
+            return Response(
+                {
+                    "detalle": (
+                        "Este ticket no tiene un "
+                        "requerimiento de componente "
+                        "pendiente de evaluación."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        viable = request.data.get("viable")
+
+        if viable not in [True, False]:
+
+            return Response(
+                {"viable": "Debe indicar True o False."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        # --------------------------------------------------
+        # NO ES VIABLE -> cerrado sin compra
+        # --------------------------------------------------
+
+        if viable is False:
+
+            motivo = str(request.data.get("motivo_no_viable", "")).strip()
+
+            if not motivo:
+
+                return Response(
+                    {
+                        "motivo_no_viable": (
+                            "Debe indicar el motivo de "
+                            "no viabilidad."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+
+            estado_cerrado_sin_compra = obtener_estado(
+                "CERRADO_SIN_COMPRA"
+            )
+
+            if not estado_cerrado_sin_compra:
+
+                return Response(
+                    {
+                        "detalle": (
+                            "No existe el estado "
+                            "CERRADO_SIN_COMPRA."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+
+            ticket.estado_compra_componente = "NO_VIABLE"
+            ticket.motivo_no_viable = motivo
+            ticket.estado = estado_cerrado_sin_compra
+            ticket.activo = False
+
+            ticket.save(
+                update_fields=[
+                    "estado_compra_componente",
+                    "motivo_no_viable",
+                    "estado",
+                    "activo",
+                    "actualizado_en",
+                ]
+            )
+
+
+            registrar_bitacora(
+                request=request,
+                accion="EVALUAR_VIABILIDAD_COMPRA",
+                modulo="Soporte Técnico",
+                detalle=(
+                    f"Se determinó que la compra para el "
+                    f"ticket {ticket.codigo} no es viable: "
+                    f"{motivo}"
+                ),
+                nivel="WARNING",
+            )
+
+
+            return respuesta_ticket(
+                ticket,
+                "Compra no viable. El ticket se cerró sin compra."
+            )
+
+
+        # --------------------------------------------------
+        # ES VIABLE -> generar expediente de compra
+        # --------------------------------------------------
+
+        # Import local para evitar dependencia circular a nivel
+        # de módulo entre soporte y compras.
+        from compras.models import SolicitudCompra
+
+        solicitud = SolicitudCompra.objects.create(
+            codigo=SolicitudCompra.generar_codigo(),
+            titulo=f"Componente para ticket {ticket.codigo}",
+            descripcion=ticket.especificaciones_tecnicas or ticket.componente_requerido,
+            solicitante=ticket.tecnico_asignado or ticket.solicitante,
+            area=ticket.area,
+            tipo="COMPONENTE",
+            cantidad=1,
+            especificaciones=ticket.especificaciones_tecnicas or ticket.componente_requerido,
+            justificacion=f"Requerido para atender el ticket de soporte {ticket.codigo}.",
+            monto_estimado=ticket.costo_estimado,
+            estado="CREADO_PENDIENTE_DAF",
+            origen_modulo="SOPORTE",
+            ticket_soporte=ticket,
+        )
+
+        ticket.estado_compra_componente = "VIABLE"
+        ticket.codigo_compra_vinculada = solicitud.codigo
+
+        ticket.save(
+            update_fields=[
+                "estado_compra_componente",
+                "codigo_compra_vinculada",
+                "actualizado_en",
+            ]
+        )
+
+
+        registrar_bitacora(
+            request=request,
+            accion="AUTORIZAR_SOLICITUD_COMPRA_TI",
+            modulo="Soporte Técnico",
+            detalle=(
+                f"Se autorizó la compra de "
+                f"'{ticket.componente_requerido}' "
+                f"para el ticket {ticket.codigo}. "
+                f"Expediente vinculado: {solicitud.codigo}."
+            ),
+            nivel="INFO",
+        )
+
+
+        return respuesta_ticket(
+            ticket,
+            f"Solicitud de compra {solicitud.codigo} generada y vinculada al ticket."
+        )
+
+
+    # ======================================================
     # 5. REALIZAR REPARACIÓN O INSTALACIÓN Y REGISTRAR
     # ======================================================
 
@@ -1432,6 +1890,21 @@ class TicketViewSet(
                 },
                 status=
                     status.HTTP_403_FORBIDDEN
+            )
+
+
+        if ticket.estado_compra_componente in ("SOLICITADA",):
+
+            return Response(
+                {
+                    "detalle": (
+                        "El ticket tiene un requerimiento "
+                        "de componente pendiente de "
+                        "evaluación de viabilidad por "
+                        "Jefe UTIC."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT
             )
 
 
@@ -2090,4 +2563,85 @@ class TicketViewSet(
         return respuesta_ticket(
             ticket,
             "Conformidad registrada. Ticket cerrado."
+        )
+
+
+    # ======================================================
+    # 9. ELABORAR Y VALIDAR INFORME FINAL
+    # ======================================================
+    #
+    # BPMN: "Elaborar y enviar informe final" (Líder de TI),
+    # último paso antes de archivar el expediente del ticket.
+    #
+    # ======================================================
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="elaborar-informe-final"
+    )
+    def elaborar_informe_final(
+        self,
+        request,
+        pk=None
+    ):
+
+        if not tiene_permiso(
+            request.user,
+            "ELABORAR_VALIDAR_INFORME_FINAL"
+        ):
+
+            return respuesta_sin_permiso(
+                "ELABORAR_VALIDAR_INFORME_FINAL"
+            )
+
+
+        ticket = self.get_object()
+
+
+        if not validar_estado_ticket(
+            ticket,
+            ["CERRADO"]
+        ):
+
+            return Response(
+                {
+                    "detalle": (
+                        "El ticket debe estar CERRADO "
+                        "(con conformidad del solicitante) "
+                        "antes de elaborar el informe final."
+                    )
+                },
+                status=
+                    status.HTTP_400_BAD_REQUEST
+            )
+
+
+        informe = str(request.data.get("informe_final", "")).strip()
+
+        if not informe:
+
+            return Response(
+                {"informe_final": "Debe elaborar el informe final."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        ticket.informe_final = informe
+
+        ticket.save(update_fields=["informe_final", "actualizado_en"])
+
+
+        registrar_bitacora(
+            request=request,
+            accion="ELABORAR_VALIDAR_INFORME_FINAL",
+            modulo="Soporte Técnico",
+            detalle=f"Se elaboró y validó el informe final del ticket {ticket.codigo}.",
+            nivel="INFO",
+        )
+
+
+        return respuesta_ticket(
+            ticket,
+            "Informe final elaborado y validado correctamente."
         )

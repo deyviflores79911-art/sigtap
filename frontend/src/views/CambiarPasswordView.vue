@@ -3,7 +3,7 @@
     <section class="password-card">
 
       <div class="brand">
-        <div class="logo-placeholder">EMI</div>
+        <div class="logo-placeholder"><img src="/img/emi.jpg" alt="EMI" class="logo-img"></div>
 
         <div class="brand-text">
           <h1>SIGTA</h1>
@@ -263,6 +263,16 @@ function redirigirSegunRol() {
     return
   }
 
+  if (roles.includes('SERVICIOS_GENERALES')) {
+    router.push('/servicios-generales/dashboard')
+    return
+  }
+
+  if (roles.includes('AUXILIAR_SERVICIOS_GENERALES')) {
+    router.push('/auxiliar-servicios-generales/dashboard')
+    return
+  }
+
   if (roles.includes('TESORERIA')) {
     router.push('/tesoreria/dashboard')
     return
@@ -336,7 +346,7 @@ function redirigirSegunRol() {
 
   padding: 24px 30px 20px;
 
-  border-top: 4px solid #f2c400;
+  border-top: 4px solid #FFFF00;
 
   box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.24);
@@ -358,16 +368,19 @@ function redirigirSegunRol() {
 
   flex-shrink: 0;
 
-  background: #0a437c;
+  background: #6576B4;
 
-  border: 3px solid #f2c400;
+  border: 3px solid #FFFF00;
 
   border-radius: 12px;
 
-  color: white;
+  overflow: hidden;
+}
 
-  font-size: 18px;
-  font-weight: 800;
+.logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .brand h1 {
@@ -398,7 +411,7 @@ function redirigirSegunRol() {
 
   margin: 16px 0;
 
-  background: #f2c400;
+  background: #FFFF00;
 
   border-radius: 10px;
 }
@@ -491,7 +504,7 @@ function redirigirSegunRol() {
 
   border-radius: 8px;
 
-  border-left: 3px solid #f2c400;
+  border-left: 3px solid #FFFF00;
 }
 
 .requirements p {
@@ -543,7 +556,7 @@ function redirigirSegunRol() {
 
   border-radius: 8px;
 
-  background: #0a437c;
+  background: #6576B4;
 
   color: white;
 

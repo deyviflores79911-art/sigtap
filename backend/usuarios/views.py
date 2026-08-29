@@ -1,10 +1,11 @@
-import re
-
 from datetime import timedelta
 
 
-from django.contrib.auth import authenticate
+from django.conf import settings
+from django.contrib.auth import authenticate, password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -13,8 +14,8 @@ from rest_framework import (
     viewsets,
 )
 
-from rest_framework.authentication import (
-    TokenAuthentication,
+from .authentication import (
+    ExpiringTokenAuthentication as TokenAuthentication,
 )
 
 from rest_framework.authtoken.models import (
@@ -47,6 +48,8 @@ from .models import (
     UsuarioRol,
     Permiso,
     RolPermiso,
+    DelegacionAprobacion,
+    obtener_codigos_rol_efectivos,
 )
 
 from .serializers import (
@@ -56,6 +59,7 @@ from .serializers import (
     UsuarioRolSerializer,
     PermisoSerializer,
     RolPermisoSerializer,
+    DelegacionAprobacionSerializer,
 )
 
 
@@ -154,25 +158,16 @@ def obtener_permisos_usuario(usuario):
 
     else:
 
-        roles_ids = (
-            UsuarioRol.objects
-            .filter(
-                usuario=usuario,
-                activo=True,
-                rol__activo=True
-            )
-            .values_list(
-                "rol_id",
-                flat=True
-            )
-        )
-
+        # Incluye tanto los roles propios como los roles
+        # delegados temporalmente que sigan vigentes.
+        codigos_rol = obtener_codigos_rol_efectivos(usuario)
 
         permisos = (
             Permiso.objects
             .filter(
                 activo=True,
-                roles_asignados__rol_id__in=roles_ids,
+                roles_asignados__rol__codigo__in=codigos_rol,
+                roles_asignados__rol__activo=True,
                 roles_asignados__activo=True
             )
             .distinct()
@@ -208,6 +203,18 @@ def obtener_permisos_usuario(usuario):
     ]
 
 
+def usuario_tiene_algun_rol(usuario, *codigos):
+
+    if not usuario or not usuario.is_authenticated:
+        return False
+
+    codigos = {normalizar_codigo(c) for c in codigos}
+
+    return bool(
+        set(obtener_codigos_rol_efectivos(usuario)).intersection(codigos)
+    )
+
+
 def usuario_tiene_permiso(
     usuario,
     codigo_permiso
@@ -222,12 +229,12 @@ def usuario_tiene_permiso(
         codigo_permiso
     )
 
+    codigos_rol = obtener_codigos_rol_efectivos(usuario)
 
     return (
         RolPermiso.objects
         .filter(
-            rol__usuarios_asignados__usuario=usuario,
-            rol__usuarios_asignados__activo=True,
+            rol__codigo__in=codigos_rol,
             rol__activo=True,
 
             permiso__codigo=codigo_permiso,
@@ -1082,6 +1089,147 @@ class UsuarioRolViewSet(
 
 
 # ==========================================================
+# DELEGACIÓN TEMPORAL DE APROBACIÓN
+# ==========================================================
+#
+# Caso de uso "Delegar aprobación temporal": solo lo usan
+# los actores que aprueban/autorizan algo en el sistema
+# (DIRECTOR, DAF, TESORERIA, JEFE_UTIC). No requiere ADMIN
+# para operarse día a día; ADMIN solo puede supervisar/revocar
+# cualquier delegación.
+#
+# ==========================================================
+
+class DelegacionAprobacionViewSet(
+    viewsets.ModelViewSet
+):
+
+    serializer_class = DelegacionAprobacionSerializer
+
+    authentication_classes = [
+        TokenAuthentication
+    ]
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+
+    def get_queryset(self):
+
+        usuario = self.request.user
+
+        queryset = (
+            DelegacionAprobacion.objects
+            .select_related("delegante", "delegado", "rol")
+            .order_by("-creado_en")
+        )
+
+        if usuario_es_admin(usuario):
+            return queryset
+
+        # Cada actor solo ve las delegaciones que otorgó o
+        # que recibió: nunca las de otros.
+        return queryset.filter(
+            Q(delegante=usuario) | Q(delegado=usuario)
+        )
+
+
+    def create(self, request, *args, **kwargs):
+
+        usuario = request.user
+
+        # El formulario de delegación no tiene acceso al CRUD de
+        # Roles (reservado a ADMIN), así que también acepta el
+        # código de rol en texto (p. ej. "DIRECTOR").
+        rol_id = request.data.get("rol")
+        rol_codigo = normalizar_codigo(request.data.get("rol_codigo", ""))
+
+        try:
+            if rol_codigo:
+                rol = Rol.objects.get(codigo=rol_codigo)
+            else:
+                rol = Rol.objects.get(pk=rol_id)
+        except (Rol.DoesNotExist, TypeError, ValueError):
+            return Response(
+                {"rol": "Debe seleccionar un rol válido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        puede_delegar_este_rol = (
+            usuario_es_admin(usuario)
+            or UsuarioRol.objects.filter(
+                usuario=usuario, rol=rol, activo=True
+            ).exists()
+        )
+
+        if not puede_delegar_este_rol:
+            return Response(
+                {"detalle": "Solo puede delegar un rol que usted mismo posea."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        datos = request.data.copy() if hasattr(request.data, "copy") else dict(request.data)
+        datos["rol"] = rol.id
+
+        serializer = self.get_serializer(
+            data=datos,
+            context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        delegacion = serializer.save(delegante=usuario, activo=True)
+
+        registrar_bitacora(
+            request=request,
+            accion="DELEGAR_APROBACION",
+            modulo="Identidad",
+            detalle=(
+                f"{usuario.email} delegó el rol {rol.codigo} a "
+                f"{delegacion.delegado.email} hasta {delegacion.vigencia_hasta}."
+            ),
+            nivel="INFO",
+        )
+
+        return Response(
+            self.get_serializer(delegacion).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+    @action(detail=True, methods=["post"], url_path="revocar")
+    def revocar(self, request, pk=None):
+
+        delegacion = self.get_object()
+
+        usuario = request.user
+
+        if (
+            delegacion.delegante_id != usuario.id
+            and not usuario_es_admin(usuario)
+        ):
+            return Response(
+                {"detalle": "Solo quien otorgó la delegación puede revocarla."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        delegacion.activo = False
+        delegacion.save(update_fields=["activo"])
+
+        registrar_bitacora(
+            request=request,
+            accion="REVOCAR_DELEGACION_APROBACION",
+            modulo="Identidad",
+            detalle=(
+                f"Se revocó la delegación de {delegacion.rol.codigo} "
+                f"de {delegacion.delegante.email} a {delegacion.delegado.email}."
+            ),
+            nivel="WARNING",
+        )
+
+        return Response(self.get_serializer(delegacion).data)
+
+
+# ==========================================================
 # LOGIN
 # ==========================================================
 
@@ -1272,14 +1420,14 @@ def login_view(
 
         if (
             usuario.failed_attempts
-            >= 5
+            >= settings.LOGIN_MAX_INTENTOS_FALLIDOS
         ):
 
             usuario.locked_until = (
                 timezone.now()
                 +
                 timedelta(
-                    minutes=15
+                    minutes=settings.LOGIN_MINUTOS_BLOQUEO
                 )
             )
 
@@ -1519,6 +1667,100 @@ def login_view(
 
 
 # ==========================================================
+# USUARIOS POR ROL (SELECTORES OPERATIVOS)
+# ==========================================================
+#
+# Permite poblar selectores como "elegir auxiliar" (Servicios
+# Generales) o "elegir especialista" (Jefe de UTIC) SIN abrir
+# el directorio completo de usuarios (reservado a ADMIN).
+# Cada rol consultable solo es visible para quien tiene una
+# relación operativa real con él.
+#
+# GET /api/usuarios/usuarios-por-rol/?rol=AUXILIAR_SERVICIOS_GENERALES
+#
+# ==========================================================
+
+MAPA_ROLES_CONSULTABLES = {
+    "AUXILIAR_SERVICIOS_GENERALES": ["SERVICIOS_GENERALES"],
+    "ESPECIALISTA": ["JEFE_UTIC"],
+    "AGENTE": ["JEFE_UTIC"],
+}
+
+
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def buscar_usuario_por_email(request):
+    """Búsqueda exacta por correo (no un listado/búsqueda parcial),
+    usada solo para elegir a quién delegar una aprobación temporal.
+    Evita exponer el directorio completo de usuarios."""
+
+    email = str(request.query_params.get("email", "")).strip().lower()
+
+    if not email:
+        return Response({"detalle": "Debe indicar un correo."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        usuario = Usuario.objects.get(email__iexact=email, is_active=True)
+    except Usuario.DoesNotExist:
+        return Response({"detalle": "No existe un usuario activo con ese correo."}, status=status.HTTP_404_NOT_FOUND)
+
+    if usuario.id == request.user.id:
+        return Response({"detalle": "No puede delegarse su propio rol a sí mismo."}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response({
+        "id": usuario.id,
+        "nombre_completo": usuario.nombre_completo,
+        "email": usuario.email,
+    })
+
+
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def usuarios_por_rol(request):
+
+    codigo_rol = normalizar_codigo(request.query_params.get("rol", ""))
+
+    roles_autorizados = MAPA_ROLES_CONSULTABLES.get(codigo_rol)
+
+    if not usuario_es_admin(request.user):
+
+        if not roles_autorizados:
+            return Response(
+                {"detalle": "Consulta no permitida."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not usuario_tiene_algun_rol(request.user, *roles_autorizados):
+            return Response(
+                {"detalle": "No tiene permiso para consultar este listado."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+    usuarios = (
+        Usuario.objects
+        .filter(
+            roles_asignados__rol__codigo=codigo_rol,
+            roles_asignados__activo=True,
+            roles_asignados__rol__activo=True,
+            is_active=True,
+        )
+        .distinct()
+        .order_by("nombre_completo")
+    )
+
+    return Response([
+        {
+            "id": usuario.id,
+            "nombre_completo": usuario.nombre_completo,
+            "email": usuario.email,
+        }
+        for usuario in usuarios
+    ])
+
+
+# ==========================================================
 # CONTEXTO DEL USUARIO AUTENTICADO
 # ==========================================================
 #
@@ -1593,6 +1835,9 @@ def mi_contexto(
                 "es_global":
                     asignacion.rol.es_global,
 
+                "delegado":
+                    False,
+
                 "area_id": (
                     asignacion.area.id
                     if asignacion.area
@@ -1616,6 +1861,45 @@ def mi_contexto(
                     if asignacion.area
                     else None
                 ),
+            }
+        )
+
+
+    # Roles recibidos por delegación temporal y todavía vigentes:
+    # el frontend debe verlos como propios (mismo menú/dashboard),
+    # marcados con "delegado": True para poder avisar al usuario.
+    ahora = timezone.now()
+
+    delegaciones_vigentes = (
+        DelegacionAprobacion.objects
+        .filter(
+            delegado=usuario,
+            activo=True,
+            vigencia_desde__lte=ahora,
+            vigencia_hasta__gte=ahora,
+            rol__activo=True,
+        )
+        .select_related("rol", "delegante")
+    )
+
+    for delegacion in delegaciones_vigentes:
+
+        roles.append(
+            {
+                "id": f"delegacion-{delegacion.id}",
+                "rol_id": delegacion.rol.id,
+                "codigo": delegacion.rol.codigo,
+                "rol_codigo": delegacion.rol.codigo,
+                "nombre": delegacion.rol.nombre,
+                "rol_nombre": delegacion.rol.nombre,
+                "es_global": delegacion.rol.es_global,
+                "delegado": True,
+                "delegado_por": delegacion.delegante.nombre_completo,
+                "delegacion_vigencia_hasta": delegacion.vigencia_hasta,
+                "area_id": None,
+                "area": None,
+                "area_codigo": None,
+                "area_nombre": None,
             }
         )
 
@@ -1805,129 +2089,19 @@ def cambiar_password_obligatorio(
 
 
     # ======================================================
-    # LONGITUD
+    # COMPLEJIDAD (misma política de AUTH_PASSWORD_VALIDATORS
+    # que se aplica al crear el usuario y en recuperación)
     # ======================================================
 
-    if (
-        len(
-            nueva_password
-        )
-        < 8
-    ):
-
+    try:
+        password_validation.validate_password(nueva_password, user=usuario)
+    except DjangoValidationError as error:
         return Response(
             {
-                "ok":
-                    False,
-
-                "mensaje":
-                    (
-                        "La contraseña debe tener "
-                        "mínimo 8 caracteres."
-                    )
+                "ok": False,
+                "mensaje": " ".join(error.messages),
             },
-            status=
-                status.HTTP_400_BAD_REQUEST
-        )
-
-
-    # ======================================================
-    # MAYÚSCULA
-    # ======================================================
-
-    if not re.search(
-        r"[A-Z]",
-        nueva_password
-    ):
-
-        return Response(
-            {
-                "ok":
-                    False,
-
-                "mensaje":
-                    (
-                        "Debe incluir al menos "
-                        "una letra mayúscula."
-                    )
-            },
-            status=
-                status.HTTP_400_BAD_REQUEST
-        )
-
-
-    # ======================================================
-    # MINÚSCULA
-    # ======================================================
-
-    if not re.search(
-        r"[a-z]",
-        nueva_password
-    ):
-
-        return Response(
-            {
-                "ok":
-                    False,
-
-                "mensaje":
-                    (
-                        "Debe incluir al menos "
-                        "una letra minúscula."
-                    )
-            },
-            status=
-                status.HTTP_400_BAD_REQUEST
-        )
-
-
-    # ======================================================
-    # NÚMERO
-    # ======================================================
-
-    if not re.search(
-        r"\d",
-        nueva_password
-    ):
-
-        return Response(
-            {
-                "ok":
-                    False,
-
-                "mensaje":
-                    (
-                        "Debe incluir al menos "
-                        "un número."
-                    )
-            },
-            status=
-                status.HTTP_400_BAD_REQUEST
-        )
-
-
-    # ======================================================
-    # CARÁCTER ESPECIAL
-    # ======================================================
-
-    if not re.search(
-        r"[^\w\s]",
-        nueva_password
-    ):
-
-        return Response(
-            {
-                "ok":
-                    False,
-
-                "mensaje":
-                    (
-                        "Debe incluir al menos "
-                        "un carácter especial."
-                    )
-            },
-            status=
-                status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_400_BAD_REQUEST
         )
 
 

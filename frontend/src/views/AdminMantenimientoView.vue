@@ -1520,15 +1520,17 @@
             <div class="field">
 
               <label>
-                Código de compra vinculada
+                Expediente de compra vinculado
               </label>
 
-              <input
-                v-model="
-                  formCompra.codigo_compra
-                "
-                placeholder="Ej.: CP-2026-0001"
-              />
+              <p v-if="requerimientoSeleccionado?.compra_vinculada">
+                <strong>{{ requerimientoSeleccionado.compra_vinculada.codigo }}</strong>
+                — {{ requerimientoSeleccionado.compra_vinculada.estado_nombre }}
+              </p>
+
+              <p v-else>
+                Aún no se generó el expediente de compra para este requerimiento.
+              </p>
 
             </div>
 
@@ -1538,14 +1540,16 @@
               type="button"
               :disabled="
                 procesando
-                || !formCompra.codigo_compra.trim()
+                || requerimientoSeleccionado?.compra_vinculada?.estado !== 'CERRADO_ARCHIVADO'
               "
               @click="registrarCompra"
             >
               {{
                 procesando
                   ? 'Procesando...'
-                  : 'Registrar producto recibido de Compra Caja Chica'
+                  : requerimientoSeleccionado?.compra_vinculada?.estado === 'CERRADO_ARCHIVADO'
+                    ? 'Registrar producto recibido de Compra Caja Chica'
+                    : 'Esperando que Compras cierre el expediente'
               }}
             </button>
 
@@ -1974,10 +1978,6 @@ const formAlmacen =
   })
 
 
-const formCompra =
-  reactive({
-    codigo_compra: '',
-  })
 
 
 const formTrabajo =
@@ -2432,14 +2432,6 @@ function reiniciarFormularios() {
 
 
   Object.assign(
-    formCompra,
-    {
-      codigo_compra: '',
-    }
-  )
-
-
-  Object.assign(
     formTrabajo,
     {
       trabajo_realizado: '',
@@ -2732,14 +2724,12 @@ async function reportarExistencia() {
 
 async function registrarCompra() {
 
+  // El backend ya no recibe un código a mano: confirma el
+  // expediente real vinculado (creado en reportar-existencia)
+  // y exige que Compras lo haya cerrado y archivado.
   await ejecutarAccion(
     'registrar-compra',
-    {
-      codigo_compra:
-        formCompra
-          .codigo_compra
-          .trim(),
-    }
+    {}
   )
 }
 

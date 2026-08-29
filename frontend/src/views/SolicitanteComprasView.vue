@@ -236,7 +236,6 @@
 
       <div class="purchase-page">
         <div class="purchase-page-header">
-          <span>SIGTA / Portal Solicitante / Compras</span>
           <h1>Registrar solicitud de compra</h1>
           <p>Envíe el expediente de adquisición con toda la documentación requerida.</p>
         </div>
@@ -1153,7 +1152,7 @@ header h1 {
 
 header p {
   color: #71818f;
-  font-size: 13px;
+  font-size: 19px;
 }
 
 .new {
@@ -1183,7 +1182,7 @@ header p {
 
 .stats span {
   color: #71818f;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -1191,7 +1190,7 @@ header p {
   display: block;
   margin-top: 5px;
   color: #073b6f;
-  font-size: 25px;
+  font-size: 31px;
 }
 
 .filters {
@@ -1225,7 +1224,7 @@ header p {
 
 .code {
   color: #07518d;
-  font-size: 11px;
+  font-size: 17px;
 }
 
 .purchase h3 {
@@ -1235,7 +1234,7 @@ header p {
 
 .purchase p {
   color: #73818c;
-  font-size: 11px;
+  font-size: 17px;
 }
 
 .meta {
@@ -1248,7 +1247,7 @@ header p {
   padding: 4px 7px;
   background: #f3f6f8;
   border-radius: 4px;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 .side {
@@ -1263,7 +1262,7 @@ header p {
   border-radius: 20px;
   background: #eaf3fb;
   color: #07518d;
-  font-size: 9px;
+  font-size: 15px;
   font-weight: 800;
 }
 
@@ -1328,13 +1327,13 @@ header p {
 
 .modal-header p {
   color: #71818f;
-  font-size: 11px;
+  font-size: 17px;
 }
 
 .close {
   border: none;
   background: transparent;
-  font-size: 27px;
+  font-size: 33px;
   cursor: pointer;
 }
 
@@ -1355,20 +1354,20 @@ header p {
 }
 
 .field label {
-  font-size: 11px;
+  font-size: 17px;
   font-weight: 700;
 }
 
 .field input,
 .field select,
 .field textarea {
-  padding: 10px;
+  padding: 14px 15px;
   border: 1px solid #ccd6de;
   border-radius: 7px;
 }
 
 .field textarea {
-  min-height: 90px;
+  min-height: 110px;
 }
 
 .modal-actions {
@@ -1435,54 +1434,10 @@ header p {
   }
 }
 
-/* Código retirado del bloque de estilos:
-function seleccionarDocumento(accept = '*/*') {
-  return new Promise((resolve) => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = accept
-    input.onchange = () => resolve(input.files?.[0] || null)
-    input.click()
-  })
-}
-
-async function presentarDescargo(solicitud) {
-  try {
-    alert('Seleccione la Factura, luego el Acta de Conformidad y finalmente el Fotograma.')
-    const factura = await seleccionarDocumento('.pdf,.jpg,.jpeg,.png')
-    if (!factura) return
-    const acta = await seleccionarDocumento('.pdf,.jpg,.jpeg,.png')
-    if (!acta) return
-    const fotograma = await seleccionarDocumento('image/*,.pdf')
-    if (!fotograma) return
-
-    const datos = new FormData()
-    datos.append('factura', factura)
-    datos.append('acta_conformidad', acta)
-    datos.append('fotograma', fotograma)
-
-    const respuesta = await fetch(
-      `/api/compras/solicitudes/${solicitud.id}/presentar-descargo/`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Token ${token()}` },
-        body: datos,
-      }
-    )
-    const resultado = await respuesta.json()
-    if (!respuesta.ok) throw new Error(resultado.detalle || 'No fue posible presentar el descargo.')
-    await cargarSolicitudes()
-    alert('Descargo enviado correctamente a Tesorería.')
-  } catch (error) {
-    alert(error.message)
-  }
-}
-
-*/
 .file-help {
   margin: 0 0 10px;
   color: #728393;
-  font-size: 10px;
+  font-size: 16px;
 }
 
 .document-grid {
@@ -1502,13 +1457,13 @@ async function presentarDescargo(solicitud) {
   display: block;
   margin-bottom: 7px;
   color: #174a7d;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .document-input input {
   width: 100%;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 @media (max-width: 560px) {
@@ -1533,7 +1488,7 @@ async function presentarDescargo(solicitud) {
 
 .purchase-page {
   width: 100%;
-  max-width: 1160px;
+  max-width: 1040px;
   margin: 0 auto;
 }
 
@@ -1541,23 +1496,17 @@ async function presentarDescargo(solicitud) {
   margin-bottom: 20px;
 }
 
-.purchase-page-header span {
-  display: block;
-  margin-bottom: 7px;
-  color: #8493a0;
-  font-size: 9px;
-}
 
 .purchase-page-header h1 {
   margin: 0;
   color: #17324a;
-  font-size: 28px;
+  font-size: 34px;
 }
 
 .purchase-page-header p {
   margin: 6px 0 0;
   color: #758391;
-  font-size: 12px;
+  font-size: 18px;
 }
 
 .modal {
@@ -1577,7 +1526,7 @@ async function presentarDescargo(solicitud) {
 }
 
 .modal-header h2 {
-  font-size: 18px;
+  font-size: 24px;
 }
 
 .modal-header h2::before {
@@ -1590,7 +1539,7 @@ async function presentarDescargo(solicitud) {
   border-radius: 50%;
   background: #174a7d;
   color: #fff;
-  font-size: 12px;
+  font-size: 18px;
 }
 
 .modal .close,
@@ -1617,28 +1566,28 @@ async function presentarDescargo(solicitud) {
 }
 
 .form-section-title > span {
-  width: 31px;
-  height: 31px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: #174a7d;
   color: #fff;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 800;
 }
 
 .form-section-title h3 {
   margin: 0;
   color: #17324a;
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .form-section-title p {
   margin: 4px 0 0;
   color: #758391;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 .documents-field > label,
@@ -1648,18 +1597,22 @@ async function presentarDescargo(solicitud) {
 
 .field label {
   color: #17324a;
-  font-size: 11px;
+  font-size: 17px;
 }
 
 .field input,
 .field select,
 .field textarea {
-  min-height: 44px;
-  padding: 11px 13px;
+  padding: 14px 15px;
   background: #fff;
   border: 1px solid #cbd7e1;
   border-radius: 7px;
   font-family: inherit;
+}
+
+.field select {
+  min-height: 41px;
+  cursor: pointer;
 }
 
 .field input:focus,

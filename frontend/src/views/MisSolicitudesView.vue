@@ -15,17 +15,13 @@
 
         <div>
 
-          <span class="breadcrumb">
-            SIGTA / Portal Solicitante / Mis solicitudes
-          </span>
-
           <h1>
             Mis solicitudes
           </h1>
 
           <p>
             Consulte y dé seguimiento a sus requerimientos
-            de Soporte Técnico, Mantenimiento y Compras.
+            de Soporte Técnico y Mantenimiento.
           </p>
 
         </div>
@@ -97,23 +93,6 @@
 
         </article>
 
-
-        <article>
-
-          <span>
-            Compras
-          </span>
-
-          <strong>
-            {{ compras.length }}
-          </strong>
-
-          <small>
-            Solicitudes de compra
-          </small>
-
-        </article>
-
       </section>
 
 
@@ -160,10 +139,6 @@
               Mantenimiento
             </option>
 
-            <option value="COMPRAS">
-              Compras
-            </option>
-
           </select>
 
         </div>
@@ -185,10 +160,10 @@
 
             <option
               v-for="estado in estadosDisponibles"
-              :key="estado"
-              :value="estado"
+              :key="estado.valor"
+              :value="estado.valor"
             >
-              {{ estado }}
+              {{ estado.etiqueta }}
             </option>
 
           </select>
@@ -241,9 +216,8 @@
           </h3>
 
           <p>
-            Puede registrar una solicitud de soporte,
-            un requerimiento de mantenimiento o
-            una solicitud de compra.
+            Puede registrar una solicitud de soporte
+            o un requerimiento de mantenimiento.
           </p>
 
           <button
@@ -400,15 +374,19 @@
 
 
                 <button
-                  v-if="item.proceso === 'COMPRAS'"
-                  class="open-module"
-                  @click="
-                    router.push(
-                      '/usuario/compras'
-                    )
-                  "
+                  v-if="item.proceso === 'SOPORTE' && item.estado_codigo === 'PENDIENTE_CONFORMIDAD'"
+                  class="edit"
+                  @click="informarConformidad(item, true)"
                 >
-                  Ir a Compras
+                  Estoy conforme
+                </button>
+
+                <button
+                  v-if="item.proceso === 'SOPORTE' && item.estado_codigo === 'PENDIENTE_CONFORMIDAD'"
+                  class="cancel"
+                  @click="informarConformidad(item, false)"
+                >
+                  No conforme
                 </button>
 
               </div>
@@ -720,103 +698,6 @@
 
           </template>
 
-
-          <!-- COMPRAS -->
-
-          <template
-            v-if="
-              solicitudSeleccionada?.proceso
-              === 'COMPRAS'
-            "
-          >
-
-            <div>
-
-              <label>
-                Cantidad
-              </label>
-
-              <p>
-                {{
-                  solicitudSeleccionada?.cantidad
-                  || 1
-                }}
-              </p>
-
-            </div>
-
-
-            <div>
-
-              <label>
-                Monto estimado
-              </label>
-
-              <p>
-                {{
-                  solicitudSeleccionada?.monto_estimado
-                    ? `Bs ${Number(
-                        solicitudSeleccionada.monto_estimado
-                      ).toFixed(2)}`
-                    : 'No indicado'
-                }}
-              </p>
-
-            </div>
-
-
-            <div>
-
-              <label>
-                Vía de adquisición
-              </label>
-
-              <p>
-                {{
-                  solicitudSeleccionada?.via_nombre
-                  ||
-                  solicitudSeleccionada?.via_adquisicion
-                  ||
-                  'Pendiente'
-                }}
-              </p>
-
-            </div>
-
-
-            <div class="full">
-
-              <label>
-                Especificaciones
-              </label>
-
-              <p>
-                {{
-                  solicitudSeleccionada?.especificaciones
-                  || 'No registradas'
-                }}
-              </p>
-
-            </div>
-
-
-            <div class="full">
-
-              <label>
-                Justificación
-              </label>
-
-              <p>
-                {{
-                  solicitudSeleccionada?.justificacion
-                  || 'No registrada'
-                }}
-              </p>
-
-            </div>
-
-          </template>
-
         </div>
 
 
@@ -1074,7 +955,8 @@ import {
 } from 'vue'
 
 import {
-  useRouter
+  useRouter,
+  useRoute
 } from 'vue-router'
 
 import SolicitanteMenu
@@ -1083,6 +965,9 @@ import SolicitanteMenu
 
 const router =
   useRouter()
+
+const route =
+  useRoute()
 
 
 // ==========================================================
@@ -1093,9 +978,6 @@ const soporte =
   ref([])
 
 const mantenimiento =
-  ref([])
-
-const compras =
   ref([])
 
 const areas =
@@ -1119,7 +1001,11 @@ const busqueda =
   ref('')
 
 const filtroProceso =
-  ref('')
+  ref(
+    typeof route.query.proceso === 'string'
+      ? route.query.proceso
+      : ''
+  )
 
 const filtroEstado =
   ref('')
@@ -1309,8 +1195,7 @@ async function cargarTodo() {
 
     const [
       soporteData,
-      mantenimientoData,
-      comprasData
+      mantenimientoData
     ] =
       await Promise.all([
 
@@ -1321,10 +1206,6 @@ async function cargarTodo() {
         cargarLista(
           '/api/mantenimiento/requerimientos/'
         ),
-
-        cargarLista(
-          '/api/compras/solicitudes/'
-        ),
       ])
 
 
@@ -1334,10 +1215,6 @@ async function cargarTodo() {
 
     mantenimiento.value =
       mantenimientoData
-
-
-    compras.value =
-      comprasData
 
 
   } catch (error) {
@@ -1437,49 +1314,9 @@ const solicitudes =
       )
 
 
-    const cp =
-      compras.value.map(
-        item => ({
-
-          ...item,
-
-          proceso:
-            'COMPRAS',
-
-          modulo:
-            'Compras',
-
-          titulo:
-            item.titulo
-            || item.descripcion
-            || 'Solicitud de compra',
-
-          detalle_tipo:
-            item.tipo_nombre
-            || item.tipo
-            || 'Compra',
-
-          estado_codigo:
-            item.estado
-            || item.estado_codigo,
-
-          estado_nombre:
-            item.estado_nombre
-            || item.estado
-            || 'Registrado',
-
-          fecha:
-            item.creado_en
-            || item.created_at
-            || null,
-        })
-      )
-
-
     return [
       ...st,
-      ...mt,
-      ...cp
+      ...mt
     ]
       .sort(
         (a, b) => {
@@ -1570,13 +1407,10 @@ const solicitudesFiltradas =
         const coincideEstado =
           !filtroEstado.value
           ||
-          (
-            item.estado_nombre
-            === filtroEstado.value
-            ||
+          bucketEstado(
             item.estado_codigo
-            === filtroEstado.value
           )
+          === filtroEstado.value
 
 
         return (
@@ -1592,25 +1426,68 @@ const solicitudesFiltradas =
 
 
 // ==========================================================
-// ESTADOS DISPONIBLES
+// ESTADOS DISPONIBLES (BUCKETS SIMPLIFICADOS)
+// ==========================================================
+//
+// El solicitante no necesita ver los estados internos
+// granulares del workflow (Asignado, En verificación,
+// Derivado al auxiliar, etc.). Se agrupan en 3 buckets.
 // ==========================================================
 
-const estadosDisponibles =
-  computed(() => {
+const estadosDisponibles = [
 
-    return [
-      ...new Set(
-        solicitudes.value
-          .map(
-            item =>
-              item.estado_nombre
-              || item.estado_codigo
-          )
-          .filter(Boolean)
+  { valor: 'EN_PROCESO', etiqueta: 'En proceso' },
+
+  { valor: 'FINALIZADO', etiqueta: 'Finalizado' },
+
+  { valor: 'RECHAZADO', etiqueta: 'Rechazado' },
+]
+
+
+function bucketEstado(
+  codigo
+) {
+
+  const estado =
+    String(
+      codigo
+      || ''
+    )
+      .toUpperCase()
+      .replaceAll(
+        ' ',
+        '_'
       )
-    ]
-      .sort()
-  })
+
+
+  if (
+    estado.includes(
+      'ANUL'
+    )
+    ||
+    estado.includes(
+      'RECHAZ'
+    )
+  ) {
+
+    return 'RECHAZADO'
+  }
+
+
+  if (
+    estado === 'CERRADO'
+    ||
+    estado === 'RESUELTO'
+    ||
+    estado === 'FINALIZADO'
+  ) {
+
+    return 'FINALIZADO'
+  }
+
+
+  return 'EN_PROCESO'
+}
 
 
 // ==========================================================
@@ -1636,15 +1513,6 @@ function claseProceso(
   ) {
 
     return 'maintenance'
-  }
-
-
-  if (
-    proceso ===
-    'COMPRAS'
-  ) {
-
-    return 'purchase'
   }
 
 
@@ -2203,6 +2071,86 @@ async function anularSoporte(
 
 
 // ==========================================================
+// INFORMAR CONFORMIDAD (CIERRE DEL TICKET)
+// ==========================================================
+
+async function informarConformidad(
+  item,
+  conforme
+) {
+
+  let observaciones = ''
+
+  if (!conforme) {
+
+    observaciones = window.prompt(
+      'Indique por qué no está conforme con la solución:'
+    ) || ''
+
+    if (!observaciones.trim()) {
+      return
+    }
+
+  } else if (
+    !window.confirm(
+      `¿Confirma que está conforme con la solución de ${item.codigo}? El ticket se cerrará.`
+    )
+  ) {
+
+    return
+  }
+
+  try {
+
+    const respuesta = await fetch(
+      `/api/soporte/tickets/${item.id}/informar-conformidad/`,
+      {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          conformidad: conforme,
+          observaciones: observaciones.trim(),
+        }),
+      }
+    )
+
+    let datos = {}
+
+    try {
+      datos = await respuesta.json()
+    } catch {
+      datos = {}
+    }
+
+    if (!respuesta.ok) {
+      mostrarMensaje(
+        datos.detalle || 'No fue posible registrar la conformidad.',
+        true
+      )
+      return
+    }
+
+    mostrarMensaje(
+      conforme
+        ? 'Conformidad registrada. El ticket fue cerrado.'
+        : 'No conformidad registrada. El ticket volvió a ejecución.'
+    )
+
+    await cargarTodo()
+
+  } catch (error) {
+
+    console.error('Error informando conformidad:', error)
+
+    mostrarMensaje(
+      'No fue posible registrar la conformidad.',
+      true
+    )
+  }
+}
+
+
+// ==========================================================
 // MENSAJE BACKEND
 // ==========================================================
 
@@ -2450,25 +2398,19 @@ function cerrarSesion() {
 }
 
 
-.breadcrumb {
-  display: block;
-  margin-bottom: 6px;
-  color: #8493a0;
-  font-size: 9px;
-}
 
 
 .topbar h1 {
   margin: 0;
   color: #17324a;
-  font-size: 27px;
+  font-size: 33px;
 }
 
 
 .topbar p {
   margin: 5px 0 0;
   color: #71818f;
-  font-size: 11px;
+  font-size: 17px;
 }
 
 
@@ -2479,7 +2421,7 @@ function cerrarSesion() {
   border-radius: 7px;
   background: #f2c400;
   color: #17324a;
-  font-size: 9px;
+  font-size: 15px;
   font-weight: 900;
   cursor: pointer;
 }
@@ -2491,7 +2433,7 @@ function cerrarSesion() {
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(4,1fr);
+  grid-template-columns: repeat(3,1fr);
   gap: 13px;
   margin-bottom: 17px;
 }
@@ -2515,7 +2457,7 @@ function cerrarSesion() {
 
 .summary span {
   color: #738391;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -2525,13 +2467,13 @@ function cerrarSesion() {
   display: block;
   margin: 7px 0 4px;
   color: #073b6f;
-  font-size: 25px;
+  font-size: 31px;
 }
 
 
 .summary small {
   color: #8996a1;
-  font-size: 8px;
+  font-size: 14px;
 }
 
 
@@ -2561,7 +2503,7 @@ function cerrarSesion() {
 
 .filters-card label {
   color: #536575;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -2576,7 +2518,7 @@ function cerrarSesion() {
   background: white;
   color: #344b5e;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 15px;
   outline: none;
 }
 
@@ -2649,11 +2591,6 @@ function cerrarSesion() {
 }
 
 
-.process-indicator.purchase {
-  background: #8a6a00;
-}
-
-
 .request-code strong,
 .request-code small {
   display: block;
@@ -2662,21 +2599,21 @@ function cerrarSesion() {
 
 .request-code strong {
   color: #07518d;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
 .request-code small {
   margin-top: 4px;
   color: #81909c;
-  font-size: 7px;
+  font-size: 13px;
 }
 
 
 .request-info h3 {
   margin: 0 0 5px;
   color: #29475e;
-  font-size: 12px;
+  font-size: 18px;
 }
 
 
@@ -2685,7 +2622,7 @@ function cerrarSesion() {
   margin: 0 0 8px;
   overflow: hidden;
   color: #73818c;
-  font-size: 9px;
+  font-size: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2703,7 +2640,7 @@ function cerrarSesion() {
   border-radius: 4px;
   background: #f3f6f8;
   color: #687986;
-  font-size: 7px;
+  font-size: 13px;
 }
 
 
@@ -2724,7 +2661,7 @@ function cerrarSesion() {
   display: inline-block;
   padding: 5px 8px;
   border-radius: 20px;
-  font-size: 7px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -2769,7 +2706,7 @@ function cerrarSesion() {
   padding: 6px 8px;
   border: none;
   border-radius: 5px;
-  font-size: 7px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -2793,12 +2730,6 @@ function cerrarSesion() {
 }
 
 
-.actions .open-module {
-  background: #fff5d4;
-  color: #765a00;
-}
-
-
 /* ============================================
    VACÍO
 ============================================ */
@@ -2807,13 +2738,13 @@ function cerrarSesion() {
   padding: 45px 20px;
   text-align: center;
   color: #798793;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
 .empty h3 {
   color: #314c61;
-  font-size: 12px;
+  font-size: 18px;
 }
 
 
@@ -2830,7 +2761,7 @@ function cerrarSesion() {
   border-radius: 6px;
   background: #073b6f;
   color: white;
-  font-size: 8px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -2843,7 +2774,7 @@ function cerrarSesion() {
   margin-bottom: 14px;
   padding: 10px 12px;
   border-radius: 7px;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
@@ -2904,20 +2835,20 @@ function cerrarSesion() {
 .modal-header h2 {
   margin: 3px 0;
   color: #17324a;
-  font-size: 19px;
+  font-size: 25px;
 }
 
 
 .modal-header p {
   margin: 4px 0 0;
   color: #778792;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 
 .modal-code {
   color: #07518d;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -2926,7 +2857,7 @@ function cerrarSesion() {
   border: none;
   background: transparent;
   color: #687988;
-  font-size: 27px;
+  font-size: 33px;
   cursor: pointer;
 }
 
@@ -2957,7 +2888,7 @@ function cerrarSesion() {
 
 .detail-grid label {
   color: #72818d;
-  font-size: 7px;
+  font-size: 13px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -2966,7 +2897,7 @@ function cerrarSesion() {
 .detail-grid p {
   margin: 5px 0 0;
   color: #354d60;
-  font-size: 9px;
+  font-size: 15px;
   line-height: 1.5;
 }
 
@@ -2992,7 +2923,7 @@ function cerrarSesion() {
 
 .field label {
   color: #344a5d;
-  font-size: 9px;
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -3005,7 +2936,7 @@ function cerrarSesion() {
   border: 1px solid #ccd6de;
   border-radius: 7px;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 15px;
   outline: none;
 }
 
@@ -3028,7 +2959,7 @@ function cerrarSesion() {
   min-height: 38px;
   padding: 0 14px;
   border-radius: 7px;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -3053,7 +2984,7 @@ function cerrarSesion() {
   border-radius: 6px;
   background: #fdecec;
   color: #a53232;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 

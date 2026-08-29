@@ -14,10 +14,6 @@
 
         <div>
 
-          <span class="breadcrumb">
-            SIGTA / Portal Solicitante / Inicio
-          </span>
-
           <h1>
             Bienvenido a SIGTA
           </h1>
@@ -58,83 +54,7 @@
 
 
       <!-- =================================================
-           RESUMEN
-      ================================================== -->
-
-      <section class="stats-grid">
-
-        <article class="stat-card">
-
-          <span>
-            Requerimientos de soporte
-          </span>
-
-          <strong>
-            {{ soporte.length }}
-          </strong>
-
-          <small>
-            Solicitudes de soporte registradas
-          </small>
-
-        </article>
-
-
-        <article class="stat-card">
-
-          <span>
-            Requerimientos de mantenimiento
-          </span>
-
-          <strong>
-            {{ mantenimiento.length }}
-          </strong>
-
-          <small>
-            Requerimientos de mantenimiento registrados
-          </small>
-
-        </article>
-
-
-        <article class="stat-card">
-
-          <span>
-            Solicitudes de compra
-          </span>
-
-          <strong>
-            {{ compras.length }}
-          </strong>
-
-          <small>
-            Solicitudes de adquisición registradas
-          </small>
-
-        </article>
-
-
-        <article class="stat-card">
-
-          <span>
-            Total
-          </span>
-
-          <strong>
-            {{ total }}
-          </strong>
-
-          <small>
-            Requerimientos y solicitudes registradas
-          </small>
-
-        </article>
-
-      </section>
-
-
-      <!-- =================================================
-           ACCIONES PRINCIPALES
+           REGISTRAR SOLICITUD
       ================================================== -->
 
       <section class="portal-card">
@@ -144,12 +64,13 @@
           <div>
 
             <h2>
-              ¿Qué necesita registrar?
+              Registrar solicitud
             </h2>
 
             <p>
-              Seleccione el proceso institucional
-              que corresponde a su requerimiento.
+              Complete el formulario para reportar
+              su problema. El equipo correspondiente
+              le dará seguimiento.
             </p>
 
           </div>
@@ -157,162 +78,137 @@
         </div>
 
 
-        <div class="cards">
+        <form
+          class="request-form"
+          @submit.prevent="enviarSolicitud"
+        >
 
-          <!-- SOPORTE TÉCNICO -->
+          <div class="categoria-toggle">
 
-          <button
-            class="action-card"
-            @click="
-              router.push(
-                '/usuario/soporte'
-              )
-            "
+            <button
+              type="button"
+              class="categoria-btn"
+              :class="{ activo: form.categoria === 'SOPORTE' }"
+              @click="form.categoria = 'SOPORTE'"
+            >
+              <span class="categoria-icon">🎧</span>
+              <span>Soporte Técnico</span>
+            </button>
+
+            <button
+              type="button"
+              class="categoria-btn"
+              :class="{ activo: form.categoria === 'MANTENIMIENTO' }"
+              @click="form.categoria = 'MANTENIMIENTO'"
+            >
+              <span class="categoria-icon">🛠️</span>
+              <span>Mantenimiento</span>
+            </button>
+
+          </div>
+
+
+          <div class="field full">
+
+            <label>
+              Título del problema
+              <span>*</span>
+            </label>
+
+            <input
+              v-model="form.titulo"
+              type="text"
+              maxlength="200"
+              placeholder="Ej. La impresora del laboratorio no enciende"
+            />
+
+          </div>
+
+
+          <div class="field full">
+
+            <label>
+              Descripción de la falla
+              <span>*</span>
+            </label>
+
+            <textarea
+              v-model="form.descripcion"
+              rows="4"
+              placeholder="Describa con el mayor detalle posible lo que ocurre..."
+            ></textarea>
+
+          </div>
+
+
+          <div class="field full">
+
+            <label>
+              Adjuntar foto
+              <span>*</span>
+            </label>
+
+            <div
+              v-if="!archivoSeleccionado"
+              class="file-drop"
+              @click="inputArchivo?.click()"
+            >
+              <span>📷 Seleccionar una foto</span>
+            </div>
+
+            <div
+              v-else
+              class="file-preview"
+            >
+              <img
+                v-if="vistaPrevia"
+                :src="vistaPrevia"
+                alt="Vista previa"
+              />
+
+              <span>{{ archivoSeleccionado.name }}</span>
+
+              <button
+                type="button"
+                @click="quitarArchivo"
+              >
+                Quitar
+              </button>
+            </div>
+
+            <input
+              ref="inputArchivo"
+              type="file"
+              accept="image/jpeg,image/png"
+              class="input-oculto"
+              @change="seleccionarArchivo"
+            />
+
+          </div>
+
+
+          <p
+            v-if="mensajeForm"
+            class="form-mensaje"
+            :class="{ error: esErrorForm }"
           >
-
-            <div class="card-header">
-
-              <div class="card-icon">
-                ST
-              </div>
-
-              <span class="tag">
-                SOPORTE
-              </span>
-
-            </div>
+            {{ mensajeForm }}
+          </p>
 
 
-            <h3>
-              Soporte Técnico
-            </h3>
+          <div class="form-actions">
 
+            <button
+              type="submit"
+              class="btn-enviar"
+              :disabled="guardando"
+            >
+              {{ guardando ? 'Enviando...' : 'Enviar solicitud' }}
+            </button>
 
-            <p>
-              Registre una solicitud de soporte para
-              problemas de hardware, software, red,
-              proyectores, conectividad o sistemas
-              institucionales.
-            </p>
+          </div>
 
-
-            <div class="card-footer">
-
-              <strong>
-                Registrar solicitud de soporte
-              </strong>
-
-              <span>
-                →
-              </span>
-
-            </div>
-
-          </button>
-
-
-          <!-- MANTENIMIENTO -->
-
-          <button
-            class="action-card"
-            @click="
-              router.push(
-                '/usuario/mantenimiento'
-              )
-            "
-          >
-
-            <div class="card-header">
-
-              <div class="card-icon">
-                MT
-              </div>
-
-              <span class="tag">
-                MANTENIMIENTO
-              </span>
-
-            </div>
-
-
-            <h3>
-              Mantenimiento
-            </h3>
-
-
-            <p>
-              Registre un requerimiento de mantenimiento
-              preventivo o correctivo para infraestructura,
-              bienes o activos institucionales.
-            </p>
-
-
-            <div class="card-footer">
-
-              <strong>
-                Registrar requerimiento de mantenimiento
-              </strong>
-
-              <span>
-                →
-              </span>
-
-            </div>
-
-          </button>
-
-
-          <!-- COMPRAS -->
-
-          <button
-            class="action-card"
-            @click="
-              router.push(
-                '/usuario/compras'
-              )
-            "
-          >
-
-            <div class="card-header">
-
-              <div class="card-icon">
-                CP
-              </div>
-
-              <span class="tag">
-                COMPRAS
-              </span>
-
-            </div>
-
-
-            <h3>
-              Compras
-            </h3>
-
-
-            <p>
-              Registre una solicitud de compra para
-              la adquisición de bienes, equipos,
-              componentes o materiales institucionales.
-            </p>
-
-
-            <div class="card-footer">
-
-              <strong>
-                Registrar solicitud de compra
-              </strong>
-
-              <span>
-                →
-              </span>
-
-            </div>
-
-          </button>
-
-        </div>
+        </form>
 
       </section>
 
@@ -505,6 +401,42 @@
 
     </main>
 
+
+    <!-- =================================================
+         MODAL ÉXITO
+    ================================================== -->
+
+    <div
+      v-if="mostrarExito"
+      class="detalle-modal-backdrop"
+      @click.self="mostrarExito = false"
+    >
+
+      <div class="detalle-modal exito-modal">
+
+        <div class="exito-icon">
+          ✅
+        </div>
+
+        <h3>
+          Solicitud enviada exitosamente
+        </h3>
+
+        <p>
+          {{ mensajeExito }}
+        </p>
+
+        <button
+          class="btn-enviar"
+          @click="mostrarExito = false"
+        >
+          Aceptar
+        </button>
+
+      </div>
+
+    </div>
+
   </div>
 
 </template>
@@ -514,7 +446,9 @@
 
 import {
   computed,
+  onBeforeUnmount,
   onMounted,
+  reactive,
   ref
 } from 'vue'
 
@@ -589,23 +523,6 @@ const inicialesUsuario =
             .toUpperCase()
       )
       .join('')
-  })
-
-
-// ==========================================================
-// TOTAL
-// ==========================================================
-
-const total =
-  computed(() => {
-
-    return (
-      soporte.value.length
-      +
-      mantenimiento.value.length
-      +
-      compras.value.length
-    )
   })
 
 
@@ -1082,6 +999,434 @@ function claseEstadoGeneral(
 
 
 // ==========================================================
+// REGISTRAR SOLICITUD (FORMULARIO SIMPLIFICADO)
+// ==========================================================
+
+const form =
+  reactive({
+
+    categoria: 'SOPORTE',
+
+    titulo: '',
+
+    descripcion: '',
+  })
+
+
+const archivoSeleccionado =
+  ref(null)
+
+const vistaPrevia =
+  ref(null)
+
+const inputArchivo =
+  ref(null)
+
+const mensajeForm =
+  ref('')
+
+const esErrorForm =
+  ref(false)
+
+const guardando =
+  ref(false)
+
+const mostrarExito =
+  ref(false)
+
+const mensajeExito =
+  ref('')
+
+
+const endpointPorCategoria = {
+
+  SOPORTE:
+    '/api/soporte/tickets/',
+
+  MANTENIMIENTO:
+    '/api/mantenimiento/requerimientos/',
+}
+
+
+function liberarVistaPrevia() {
+
+  if (
+    vistaPrevia.value
+  ) {
+
+    URL.revokeObjectURL(
+      vistaPrevia.value
+    )
+  }
+
+
+  vistaPrevia.value =
+    null
+}
+
+
+onBeforeUnmount(
+  () => {
+
+    liberarVistaPrevia()
+  }
+)
+
+
+function seleccionarArchivo(
+  evento
+) {
+
+  mensajeForm.value = ''
+
+  esErrorForm.value = false
+
+
+  const archivo =
+    evento.target.files?.[0]
+
+
+  if (
+    !archivo
+  ) {
+
+    return
+  }
+
+
+  const tiposPermitidos = [
+
+    'image/jpeg',
+
+    'image/png',
+  ]
+
+
+  if (
+    !tiposPermitidos.includes(
+      archivo.type
+    )
+  ) {
+
+    mensajeForm.value =
+      'Solo puede adjuntar fotos en formato JPG, JPEG o PNG.'
+
+    esErrorForm.value =
+      true
+
+
+    if (
+      inputArchivo.value
+    ) {
+
+      inputArchivo.value.value = ''
+    }
+
+
+    return
+  }
+
+
+  const cincoMB =
+    5 * 1024 * 1024
+
+
+  if (
+    archivo.size > cincoMB
+  ) {
+
+    mensajeForm.value =
+      'La foto no puede superar los 5 MB.'
+
+    esErrorForm.value =
+      true
+
+
+    if (
+      inputArchivo.value
+    ) {
+
+      inputArchivo.value.value = ''
+    }
+
+
+    return
+  }
+
+
+  archivoSeleccionado.value =
+    archivo
+
+
+  liberarVistaPrevia()
+
+  vistaPrevia.value =
+    URL.createObjectURL(
+      archivo
+    )
+}
+
+
+function quitarArchivo() {
+
+  archivoSeleccionado.value =
+    null
+
+
+  liberarVistaPrevia()
+
+
+  if (
+    inputArchivo.value
+  ) {
+
+    inputArchivo.value.value = ''
+  }
+}
+
+
+function obtenerError(
+  datos
+) {
+
+  if (
+    datos.detalle
+  ) {
+
+    return datos.detalle
+  }
+
+
+  if (
+    datos.detail
+  ) {
+
+    return datos.detail
+  }
+
+
+  const errores =
+    Object.entries(
+      datos
+    )
+      .map(
+        ([campo, valor]) => {
+
+          const texto =
+            Array.isArray(valor)
+              ? valor.join(', ')
+              : String(valor)
+
+
+          return (
+            `${campo}: ${texto}`
+          )
+        }
+      )
+      .join(' | ')
+
+
+  return (
+    errores
+    ||
+    'Revise la información ingresada.'
+  )
+}
+
+
+async function enviarSolicitud() {
+
+  mensajeForm.value = ''
+
+  esErrorForm.value = false
+
+
+  if (
+    !form.titulo.trim()
+    ||
+    !form.descripcion.trim()
+  ) {
+
+    mensajeForm.value =
+      'Complete el título y la descripción del problema.'
+
+    esErrorForm.value =
+      true
+
+    return
+  }
+
+
+  if (
+    !archivoSeleccionado.value
+  ) {
+
+    mensajeForm.value =
+      'Debe adjuntar una foto del problema.'
+
+    esErrorForm.value =
+      true
+
+    return
+  }
+
+
+  guardando.value =
+    true
+
+
+  try {
+
+    const datosFormulario =
+      new FormData()
+
+
+    datosFormulario.append(
+      'titulo',
+      form.titulo.trim()
+    )
+
+
+    datosFormulario.append(
+      'descripcion',
+      form.descripcion.trim()
+    )
+
+
+    if (
+      archivoSeleccionado.value
+    ) {
+
+      datosFormulario.append(
+        'evidencia_archivo',
+        archivoSeleccionado.value
+      )
+    }
+
+
+    const respuesta =
+      await fetch(
+        endpointPorCategoria[form.categoria],
+        {
+
+          method:
+            'POST',
+
+          headers: {
+
+            Authorization:
+              `Token ${token()}`,
+
+            Accept:
+              'application/json',
+          },
+
+          body:
+            datosFormulario,
+        }
+      )
+
+
+    let datos = {}
+
+    try {
+
+      datos =
+        await respuesta.json()
+
+    } catch {
+
+      datos = {}
+    }
+
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
+      return
+    }
+
+
+    if (
+      !respuesta.ok
+    ) {
+
+      console.error(
+        'Error registrando solicitud:',
+        datos
+      )
+
+
+      mensajeForm.value =
+        obtenerError(
+          datos
+        )
+
+      esErrorForm.value =
+        true
+
+      return
+    }
+
+
+    const codigo =
+      datos.ticket?.codigo
+      ||
+      datos.requerimiento?.codigo
+      ||
+      ''
+
+
+    mensajeExito.value =
+      codigo
+
+        ? `Su solicitud ${codigo} fue registrada correctamente.`
+
+        : 'Su solicitud fue registrada correctamente.'
+
+    mostrarExito.value =
+      true
+
+
+    form.titulo = ''
+
+    form.descripcion = ''
+
+    quitarArchivo()
+
+
+    await cargarTodo()
+
+
+  } catch (error) {
+
+    console.error(
+      'Error registrando solicitud:',
+      error
+    )
+
+
+    mensajeForm.value =
+      'No fue posible registrar la solicitud. Intente nuevamente.'
+
+    esErrorForm.value =
+      true
+
+
+  } finally {
+
+    guardando.value =
+      false
+  }
+}
+
+
+// ==========================================================
 // CERRAR SESIÓN
 // ==========================================================
 
@@ -1140,6 +1485,21 @@ function cerrarSesion() {
     30px;
 
   overflow-x: hidden;
+
+  background-image:
+    url('/img/marca-de-agua-body.png');
+
+  background-repeat:
+    no-repeat;
+
+  background-position:
+    top center;
+
+  background-size:
+    620px auto;
+
+  background-attachment:
+    fixed;
 }
 
 
@@ -1162,25 +1522,15 @@ function cerrarSesion() {
 }
 
 
-.breadcrumb {
-
-  display: block;
-
-  margin-bottom: 7px;
-
-  color: #8494a2;
-
-  font-size: 9px;
-}
 
 
 .topbar h1 {
 
   margin: 0;
 
-  color: #17324a;
+  color: #111111;
 
-  font-size: 28px;
+  font-size: 36px;
 }
 
 
@@ -1191,9 +1541,9 @@ function cerrarSesion() {
     0
     0;
 
-  color: #71818f;
+  color: #3a3a3a;
 
-  font-size: 12px;
+  font-size: 17px;
 }
 
 
@@ -1250,7 +1600,7 @@ function cerrarSesion() {
 
   color: #073b6f;
 
-  font-size: 9px;
+  font-size: 17px;
 
   font-weight: 900;
 }
@@ -1265,9 +1615,9 @@ function cerrarSesion() {
 
 .user-card strong {
 
-  color: #17324a;
+  color: #111111;
 
-  font-size: 10px;
+  font-size: 19px;
 }
 
 
@@ -1275,84 +1625,9 @@ function cerrarSesion() {
 
   margin-top: 2px;
 
-  color: #7b8995;
+  color: #3a3a3a;
 
-  font-size: 8px;
-}
-
-
-/* =========================================================
-   ESTADÍSTICAS
-========================================================= */
-
-.stats-grid {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(4,1fr);
-
-  gap: 13px;
-
-  margin-bottom: 19px;
-}
-
-
-.stat-card {
-
-  min-height: 105px;
-
-  padding: 16px;
-
-  border-top:
-    3px solid #f2c400;
-
-  border-radius: 9px;
-
-  background: #ffffff;
-
-  box-shadow:
-    0
-    3px
-    12px
-    rgba(0,0,0,.05);
-}
-
-
-.stat-card span {
-
-  display: block;
-
-  color: #637789;
-
-  font-size: 9px;
-
-  font-weight: 800;
-
-  text-transform:
-    uppercase;
-}
-
-
-.stat-card strong {
-
-  display: block;
-
-  margin:
-    7px
-    0;
-
-  color: #073b6f;
-
-  font-size: 25px;
-}
-
-
-.stat-card small {
-
-  color: #8996a1;
-
-  font-size: 8px;
+  font-size: 16px;
 }
 
 
@@ -1382,9 +1657,9 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17324a;
+  color: #111111;
 
-  font-size: 17px;
+  font-size: 24px;
 }
 
 
@@ -1395,92 +1670,37 @@ function cerrarSesion() {
     0
     17px;
 
-  color: #788794;
+  color: #3a3a3a;
 
-  font-size: 10px;
+  font-size: 17px;
 }
 
 
 /* =========================================================
-   ACCIONES
+   FORMULARIO DE REGISTRO
 ========================================================= */
 
-.cards {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(3,1fr);
-
-  gap: 15px;
-}
-
-
-.action-card {
-
-  min-height: 210px;
+.request-form {
 
   display: flex;
 
   flex-direction: column;
 
-  padding: 19px;
-
-  border:
-    1px solid #dae2e8;
-
-  border-radius: 9px;
-
-  background: #fbfcfd;
-
-  text-align: left;
-
-  cursor: pointer;
-
-  transition:
-    border-color .2s,
-    box-shadow .2s,
-    transform .1s;
+  gap: 16px;
 }
 
 
-.action-card:hover {
-
-  border-color: #0b5795;
-
-  box-shadow:
-    0
-    5px
-    14px
-    rgba(0,0,0,.06);
-}
-
-
-.action-card:active {
-
-  transform:
-    scale(.995);
-}
-
-
-.card-header {
+.categoria-toggle {
 
   display: flex;
 
-  align-items: center;
-
-  justify-content:
-    space-between;
-
-  gap: 10px;
+  gap: 12px;
 }
 
 
-.card-icon {
+.categoria-btn {
 
-  width: 38px;
-
-  height: 38px;
+  flex: 1;
 
   display: flex;
 
@@ -1488,86 +1708,349 @@ function cerrarSesion() {
 
   justify-content: center;
 
-  border-radius: 7px;
+  gap: 10px;
 
-  background: #153f73;
+  min-height: 56px;
 
-  color: white;
+  border:
+    2px solid #dae2e8;
 
-  font-size: 9px;
+  border-radius: 9px;
 
-  font-weight: 900;
+  background: #fbfcfd;
+
+  color: #3a3a3a;
+
+  font-size: 18px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    border-color .15s,
+    background .15s,
+    color .15s;
 }
 
 
-.tag {
+.categoria-btn:hover {
 
-  display: inline-block;
+  border-color: #6576B4;
+}
+
+
+.categoria-btn.activo {
+
+  border-color: #6576B4;
+
+  background: #eef0fa;
+
+  color: #6576B4;
+}
+
+
+.categoria-icon {
+
+  font-size: 22px;
+}
+
+
+.field {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+
+.field label {
+
+  color: #111111;
+
+  font-size: 17px;
+
+  font-weight: 700;
+}
+
+
+.field label span {
+
+  color: #c0392b;
+}
+
+
+.field input[type="text"],
+.field textarea {
 
   padding:
-    5px
-    8px;
+    14px
+    15px;
 
-  border-radius: 5px;
+  border:
+    1px solid #cdd7e0;
 
-  background: #edf4fa;
+  border-radius: 8px;
 
-  color: #07518d;
+  background: white;
 
-  font-size: 8px;
+  color: #111111;
 
-  font-weight: 800;
-}
-
-
-.action-card h3 {
-
-  margin:
-    15px
-    0
-    7px;
-
-  color: #17324a;
+  font-family: inherit;
 
   font-size: 17px;
 }
 
 
-.action-card p {
+.field textarea {
 
-  flex: 1;
-
-  margin: 0;
-
-  color: #6f7f8d;
-
-  font-size: 10px;
-
-  line-height: 1.55;
+  resize: vertical;
 }
 
 
-.card-footer {
+.field input[type="text"]:focus,
+.field textarea:focus {
+
+  outline: none;
+
+  border-color: #6576B4;
+}
+
+
+.input-oculto {
+
+  display: none;
+}
+
+
+.file-drop {
 
   display: flex;
 
   align-items: center;
 
-  justify-content:
-    space-between;
+  justify-content: center;
 
-  gap: 10px;
+  min-height: 56px;
 
-  margin-top: 16px;
+  border:
+    2px dashed #cdd7e0;
 
-  padding-top: 12px;
+  border-radius: 8px;
 
-  border-top:
-    1px solid #e9edf1;
+  background: #fbfcfd;
 
-  color: #07518d;
+  color: #3a3a3a;
 
-  font-size: 10px;
+  font-size: 16px;
+
+  cursor: pointer;
+
+  transition:
+    border-color .15s;
+}
+
+
+.file-drop:hover {
+
+  border-color: #6576B4;
+}
+
+
+.file-preview {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 10px;
+
+  border:
+    1px solid #cdd7e0;
+
+  border-radius: 8px;
+
+  background: #fbfcfd;
+}
+
+
+.file-preview img {
+
+  width: 48px;
+
+  height: 48px;
+
+  border-radius: 6px;
+
+  object-fit: cover;
+}
+
+
+.file-preview span {
+
+  flex: 1;
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+  color: #3a3a3a;
+
+  font-size: 15px;
+}
+
+
+.file-preview button {
+
+  padding:
+    7px
+    12px;
+
+  border: none;
+
+  border-radius: 6px;
+
+  background: #fdecec;
+
+  color: #a83232;
+
+  font-size: 15px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.form-mensaje {
+
+  margin: 0;
+
+  padding:
+    10px
+    14px;
+
+  border-radius: 7px;
+
+  background: #e8f7ef;
+
+  color: #267449;
+
+  font-size: 16px;
+}
+
+
+.form-mensaje.error {
+
+  background: #fdecec;
+
+  color: #a83232;
+}
+
+
+.form-actions {
+
+  display: flex;
+
+  justify-content: flex-end;
+}
+
+
+.btn-enviar {
+
+  min-height: 50px;
+
+  padding:
+    0
+    26px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  background: #6576B4;
+
+  color: white;
+
+  font-size: 17px;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    opacity .15s;
+}
+
+
+.btn-enviar:disabled {
+
+  opacity: .6;
+
+  cursor: default;
+}
+
+
+/* =========================================================
+   MODAL ÉXITO
+========================================================= */
+
+.exito-modal {
+
+  max-width: 420px;
+
+  padding:
+    36px
+    30px;
+
+  text-align: center;
+}
+
+
+.exito-icon {
+
+  font-size: 48px;
+
+  margin-bottom: 12px;
+}
+
+
+.exito-modal h3 {
+
+  margin: 0;
+
+  color: #111111;
+
+  font-size: 22px;
+}
+
+
+.exito-modal p {
+
+  margin:
+    10px
+    0
+    22px;
+
+  color: #3a3a3a;
+
+  font-size: 16px;
+
+  line-height: 1.5;
+}
+
+
+.exito-modal .btn-enviar {
+
+  width: 100%;
 }
 
 
@@ -1603,6 +2086,12 @@ function cerrarSesion() {
   gap: 15px;
 
   margin-bottom: 12px;
+
+  padding: 16px 18px;
+
+  border-radius: 9px;
+
+  background: #d8e4f7;
 }
 
 
@@ -1610,9 +2099,9 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17324a;
+  color: #111111;
 
-  font-size: 17px;
+  font-size: 24px;
 }
 
 
@@ -1623,9 +2112,9 @@ function cerrarSesion() {
     0
     0;
 
-  color: #788794;
+  color: #3a3a3a;
 
-  font-size: 9px;
+  font-size: 17px;
 }
 
 
@@ -1646,7 +2135,7 @@ function cerrarSesion() {
 
   color: #07518d;
 
-  font-size: 9px;
+  font-size: 17px;
 
   font-weight: 700;
 
@@ -1708,7 +2197,7 @@ function cerrarSesion() {
 
   color: #07518d;
 
-  font-size: 9px;
+  font-size: 17px;
 }
 
 
@@ -1718,9 +2207,9 @@ function cerrarSesion() {
     5px
     0;
 
-  color: #314a5e;
+  color: #111111;
 
-  font-size: 12px;
+  font-size: 20px;
 }
 
 
@@ -1744,9 +2233,9 @@ function cerrarSesion() {
 
   background: #f0f4f7;
 
-  color: #82909b;
+  color: #3a3a3a;
 
-  font-size: 7px;
+  font-size: 15px;
 }
 
 
@@ -1776,7 +2265,7 @@ function cerrarSesion() {
 
   color: #07518d;
 
-  font-size: 8px;
+  font-size: 16px;
 
   font-weight: 700;
 
@@ -1796,7 +2285,7 @@ function cerrarSesion() {
 
   border-radius: 20px;
 
-  font-size: 8px;
+  font-size: 16px;
 
   font-weight: 700;
 }
@@ -1895,9 +2384,9 @@ function cerrarSesion() {
 
   text-align: center;
 
-  color: #788794;
+  color: #3a3a3a;
 
-  font-size: 10px;
+  font-size: 18px;
 }
 
 
@@ -1934,7 +2423,7 @@ function cerrarSesion() {
 
   color: #07518d;
 
-  font-size: 9px;
+  font-size: 17px;
 
   font-weight: 900;
 }
@@ -1944,9 +2433,9 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #314a5e;
+  color: #111111;
 
-  font-size: 13px;
+  font-size: 21px;
 }
 
 
@@ -1959,9 +2448,9 @@ function cerrarSesion() {
     auto
     14px;
 
-  color: #84929d;
+  color: #3a3a3a;
 
-  font-size: 9px;
+  font-size: 17px;
 
   line-height: 1.5;
 }
@@ -1981,39 +2470,13 @@ function cerrarSesion() {
 
   color: #a83232;
 
-  font-size: 10px;
+  font-size: 18px;
 }
 
 
 /* =========================================================
    RESPONSIVE
 ========================================================= */
-
-@media (
-  max-width: 1100px
-) {
-
-  .cards {
-
-    grid-template-columns:
-      1fr;
-  }
-
-}
-
-
-@media (
-  max-width: 1000px
-) {
-
-  .stats-grid {
-
-    grid-template-columns:
-      repeat(2,1fr);
-  }
-
-}
-
 
 @media (
   max-width: 760px
@@ -2073,19 +2536,14 @@ function cerrarSesion() {
       space-between;
   }
 
-}
 
+  .categoria-toggle {
 
-@media (
-  max-width: 480px
-) {
-
-  .stats-grid {
-
-    grid-template-columns:
-      1fr;
+    flex-direction: column;
   }
 
 }
+
+
 
 </style>

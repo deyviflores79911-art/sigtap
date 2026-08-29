@@ -9,7 +9,7 @@
       <div class="brand">
 
         <div class="logo">
-          EMI
+          <img src="/img/emi.jpg" alt="EMI" class="logo-img">
         </div>
 
         <div class="brand-text">
@@ -1281,7 +1281,7 @@ function mostrarError(texto) {
   border-radius: 17px;
 
   border-top:
-    4px solid #f2c400;
+    4px solid #FFFF00;
 
   box-shadow:
     0 24px 65px
@@ -1322,18 +1322,23 @@ function mostrarError(texto) {
 
   justify-content: center;
 
-  background: #0a437c;
+  background: #6576B4;
 
   border:
-    3px solid #f2c400;
+    3px solid #FFFF00;
 
   border-radius: 13px;
 
-  color: #ffffff;
+  overflow: hidden;
+}
 
-  font-size: 20px;
+.logo-img {
 
-  font-weight: 900;
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: contain;
 }
 
 
@@ -1385,7 +1390,7 @@ function mostrarError(texto) {
 
   border-radius: 8px;
 
-  background: #f2c400;
+  background: #FFFF00;
 }
 
 
@@ -1765,7 +1770,7 @@ function mostrarError(texto) {
 
 .code-input:focus {
 
-  border-color: #f2c400;
+  border-color: #FFFF00;
 
   box-shadow:
     0 0 0 3px
@@ -1788,7 +1793,7 @@ function mostrarError(texto) {
   background: #f5f7f9;
 
   border-left:
-    4px solid #f2c400;
+    4px solid #FFFF00;
 
   border-radius: 7px;
 

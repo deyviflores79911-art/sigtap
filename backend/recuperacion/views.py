@@ -1,5 +1,5 @@
-import re
-
+from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import EmailMultiAlternatives
 
 from django.utils import timezone
@@ -44,59 +44,15 @@ def obtener_ip(request):
     )
 
 
-def validar_password(password):
+def validar_password(password, usuario=None):
 
-    if len(password) < 8:
-
-        return (
-            "La contraseña debe tener "
-            "mínimo 8 caracteres."
-        )
-
-
-    if not re.search(
-        r"[A-Z]",
-        password
-    ):
-
-        return (
-            "Debe incluir al menos "
-            "una letra mayúscula."
-        )
-
-
-    if not re.search(
-        r"[a-z]",
-        password
-    ):
-
-        return (
-            "Debe incluir al menos "
-            "una letra minúscula."
-        )
-
-
-    if not re.search(
-        r"\d",
-        password
-    ):
-
-        return (
-            "Debe incluir al menos "
-            "un número."
-        )
-
-
-    if not re.search(
-        r"[^\w\s]",
-        password
-    ):
-
-        return (
-            "Debe incluir al menos "
-            "un carácter especial."
-        )
-
+    # Delega en AUTH_PASSWORD_VALIDATORS (incluye
+    # ComplejidadPasswordValidator) para no duplicar la
+    # política de contraseñas en un tercer lugar del proyecto.
+    try:
+        password_validation.validate_password(password, user=usuario)
+    except DjangoValidationError as error:
+        return " ".join(error.messages)
 
     return None
 

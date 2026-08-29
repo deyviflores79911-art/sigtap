@@ -5,8 +5,8 @@ from rest_framework import (
     viewsets,
 )
 
-from rest_framework.authentication import (
-    TokenAuthentication,
+from usuarios.authentication import (
+    ExpiringTokenAuthentication as TokenAuthentication,
 )
 
 from rest_framework.decorators import (
@@ -27,8 +27,10 @@ from rest_framework.response import Response
 
 
 from usuarios.models import (
+    Area,
     Usuario,
     UsuarioRol,
+    obtener_codigos_rol_efectivos,
 )
 
 from auditoria.utils import (
@@ -48,6 +50,26 @@ from .serializers import (
 
 
 # ==========================================================
+# VALORES POR DEFECTO DEL FORMULARIO SIMPLIFICADO
+# ==========================================================
+#
+# El portal solicitante ya no pide área ni tipo: solo
+# título, descripción, categoría (Soporte/Mantenimiento)
+# y foto. Este helper completa el área que el modelo
+# RequerimientoMantenimiento sigue requiriendo.
+# ==========================================================
+
+def _area_por_defecto():
+
+    return (
+        Area.objects
+        .filter(activo=True)
+        .order_by("id")
+        .first()
+    )
+
+
+# ==========================================================
 # ROLES ADMINISTRATIVOS
 # ==========================================================
 
@@ -64,25 +86,9 @@ ROLES_ADMIN = {
 
 def obtener_roles(usuario):
 
-    if (
-        not usuario
-        or not usuario.is_authenticated
-    ):
-        return []
-
-
-    return list(
-        UsuarioRol.objects
-        .filter(
-            usuario=usuario,
-            activo=True,
-            rol__activo=True
-        )
-        .values_list(
-            "rol__codigo",
-            flat=True
-        )
-    )
+    # Incluye roles delegados temporalmente (Delegar aprobación
+    # temporal) además de los roles propios.
+    return obtener_codigos_rol_efectivos(usuario)
 
 
 # ==========================================================
@@ -160,7 +166,6 @@ def puede_operar_mantenimiento(usuario):
             usuario,
             "SERVICIOS_GENERALES",
             "AUXILIAR_SERVICIOS_GENERALES",
-            "ENCARGADO_COMPRAS",
             "ENCARGADO_COMPRAS_ALMACEN",
         )
     )
@@ -320,6 +325,17 @@ class RequerimientoMantenimientoViewSet(
             return queryset
 
 
+        # Director: acceso de solo lectura a los requerimientos
+        # ya finalizados (BPMN: "Director recibe los reportes").
+        # No opera el flujo, por eso no entra en
+        # puede_operar_mantenimiento.
+        if tiene_rol(usuario, "DIRECTOR"):
+
+            return queryset.filter(
+                estado__codigo="FINALIZADO"
+            )
+
+
         # Solicitante solamente ve sus requerimientos
         return queryset.filter(
             solicitante=usuario
@@ -347,8 +363,37 @@ class RequerimientoMantenimientoViewSet(
         )
 
 
+        if not serializer.validated_data.get("evidencia_archivo"):
+
+            return Response(
+                {"detalle": "Debe adjuntar una foto como evidencia."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        extra = {}
+
+        if not serializer.validated_data.get("area"):
+
+            area_defecto = _area_por_defecto()
+
+            if area_defecto is None:
+                return Response(
+                    {"detalle": "No hay áreas registradas en el sistema."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            extra["area"] = area_defecto
+
+        if not serializer.validated_data.get("ubicacion"):
+            extra["ubicacion"] = "No especificado"
+
+        if not serializer.validated_data.get("tipo"):
+            extra["tipo"] = "CORRECTIVO"
+
+
         requerimiento = (
-            serializer.save()
+            serializer.save(**extra)
         )
 
 
@@ -1148,8 +1193,7 @@ class RequerimientoMantenimientoViewSet(
 
         if not tiene_rol(
             request.user,
-            "ENCARGADO_COMPRAS_ALMACEN",
-            "ENCARGADO_COMPRAS"
+            "ENCARGADO_COMPRAS_ALMACEN"
         ):
 
             return Response(
@@ -1337,11 +1381,53 @@ class RequerimientoMantenimientoViewSet(
         )
 
 
+        # Se crea el expediente real de Compra Caja Chica en vez
+        # de dejar solo la bandera derivado_compra encendida. El
+        # responsable (auxiliar o, en su defecto, Servicios
+        # Generales) queda como solicitante del expediente para
+        # poder completar Informe/POA/Pedido/Proforma.
+        from compras.models import SolicitudCompra
+
+        responsable_compra = (
+            requerimiento.auxiliar_asignado
+            or requerimiento.responsable_servicios_generales
+            or requerimiento.solicitante
+        )
+
+        solicitud_compra = SolicitudCompra.objects.create(
+            codigo=SolicitudCompra.generar_codigo(),
+            titulo=(
+                requerimiento.producto_requerido
+                or f"Reposición para mantenimiento {requerimiento.codigo}"
+            ),
+            descripcion=(
+                requerimiento.especificacion_producto
+                or requerimiento.producto_requerido
+                or ""
+            ),
+            solicitante=responsable_compra,
+            area=requerimiento.area,
+            tipo="COMPONENTE",
+            cantidad=requerimiento.cantidad_requerida or 1,
+            especificaciones=requerimiento.especificacion_producto,
+            justificacion=(
+                "Reposición de almacén requerida para atender "
+                f"el mantenimiento {requerimiento.codigo}."
+            ),
+            estado="CREADO_PENDIENTE_DAF",
+            origen_modulo="MANTENIMIENTO",
+            requerimiento_mantenimiento=requerimiento,
+        )
+
+        requerimiento.codigo_compra_vinculada = solicitud_compra.codigo
+
+
         requerimiento.save(
             update_fields=[
                 "producto_disponible_almacen",
                 "observacion_almacen",
                 "derivado_compra",
+                "codigo_compra_vinculada",
                 "estado",
                 "actualizado_en",
             ]
@@ -1357,7 +1443,8 @@ class RequerimientoMantenimientoViewSet(
             detalle=(
                 f"No existe el producto requerido "
                 f"para {requerimiento.codigo}. "
-                f"Se deriva a Compra Caja Chica."
+                f"Se generó el expediente {solicitud_compra.codigo} "
+                f"y se derivó a Compra Caja Chica."
             ),
             nivel=
                 "WARNING",
@@ -1368,8 +1455,8 @@ class RequerimientoMantenimientoViewSet(
             requerimiento,
             (
                 "No existe el producto en almacén. "
-                "El requerimiento fue derivado "
-                "a Compra Caja Chica."
+                f"Se generó el expediente {solicitud_compra.codigo} "
+                "en Compra Caja Chica."
             ),
             request
         )
@@ -1400,7 +1487,6 @@ class RequerimientoMantenimientoViewSet(
             or
             tiene_rol(
                 request.user,
-                "ENCARGADO_COMPRAS",
                 "ENCARGADO_COMPRAS_ALMACEN",
                 "SERVICIOS_GENERALES",
             )
@@ -1441,28 +1527,42 @@ class RequerimientoMantenimientoViewSet(
             )
 
 
-        codigo_compra = (
-            str(
-                request.data.get(
-                    "codigo_compra",
-                    ""
-                )
-            )
-            .strip()
+        # La compra ya no se confirma con un código escrito a
+        # mano: se busca el expediente real vinculado (creado
+        # automáticamente en reportar-existencia) y se exige
+        # que Compras ya lo haya cerrado y archivado.
+        solicitud_compra = (
+            requerimiento.compras_generadas
+            .filter(activo__in=[True, False])
+            .order_by("-creado_en")
+            .first()
         )
 
-
-        if not codigo_compra:
+        if not solicitud_compra:
 
             return Response(
                 {
-                    "codigo_compra": (
-                        "Debe indicar el código "
-                        "de la compra vinculada."
+                    "detalle": (
+                        "Este requerimiento no tiene una "
+                        "solicitud de compra vinculada."
                     )
                 },
                 status=
-                    status.HTTP_400_BAD_REQUEST
+                    status.HTTP_409_CONFLICT
+            )
+
+        if solicitud_compra.estado != "CERRADO_ARCHIVADO":
+
+            return Response(
+                {
+                    "detalle": (
+                        "La compra vinculada "
+                        f"({solicitud_compra.codigo}) todavía "
+                        "no fue cerrada y archivada por Tesorería."
+                    )
+                },
+                status=
+                    status.HTTP_409_CONFLICT
             )
 
 
@@ -1486,7 +1586,7 @@ class RequerimientoMantenimientoViewSet(
 
 
         requerimiento.codigo_compra_vinculada = (
-            codigo_compra
+            solicitud_compra.codigo
         )
 
         requerimiento.compra_completada = (
@@ -1525,8 +1625,8 @@ class RequerimientoMantenimientoViewSet(
             modulo=
                 "Mantenimiento",
             detalle=(
-                f"La compra {codigo_compra} "
-                f"fue vinculada al requerimiento "
+                f"La compra {solicitud_compra.codigo} "
+                f"fue confirmada para el requerimiento "
                 f"{requerimiento.codigo}."
             ),
             nivel=
@@ -1958,4 +2058,91 @@ class RequerimientoMantenimientoViewSet(
             requerimiento,
             "Requerimiento de mantenimiento finalizado.",
             request
+        )
+
+
+    # ======================================================
+    # 7. REPORTE MENSUAL
+    # ======================================================
+    #
+    # BPMN: "A fin de mes se da a conocer todos los
+    # mantenimientos" -> "Director recibe los reportes".
+    # Consolidado real por periodo (no un filtro de texto
+    # en el frontend).
+    #
+    # ======================================================
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="reporte-mensual"
+    )
+    def reporte_mensual(
+        self,
+        request
+    ):
+
+        if not (
+            es_admin(request.user)
+            or
+            tiene_rol(
+                request.user,
+                "SERVICIOS_GENERALES",
+                "DIRECTOR",
+            )
+        ):
+
+            return Response(
+                {
+                    "detalle": (
+                        "No tiene permiso para consultar "
+                        "el reporte mensual de mantenimiento."
+                    )
+                },
+                status=
+                    status.HTTP_403_FORBIDDEN
+            )
+
+
+        ahora = timezone.now()
+
+        try:
+            anio = int(request.query_params.get("anio", ahora.year))
+            mes = int(request.query_params.get("mes", ahora.month))
+        except ValueError:
+            return Response(
+                {"detalle": "Año y mes deben ser numéricos."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        queryset = (
+            RequerimientoMantenimiento.objects
+            .filter(
+                estado__codigo="FINALIZADO",
+                finalizado_en__year=anio,
+                finalizado_en__month=mes,
+            )
+            .select_related(
+                "solicitante",
+                "area",
+                "responsable_servicios_generales",
+                "auxiliar_asignado",
+            )
+            .order_by("-finalizado_en")
+        )
+
+        serializer = RequerimientoMantenimientoSerializer(
+            queryset,
+            many=True,
+            context={"request": request}
+        )
+
+        return Response(
+            {
+                "anio": anio,
+                "mes": mes,
+                "total_finalizados": queryset.count(),
+                "requerimientos": serializer.data,
+            }
         )

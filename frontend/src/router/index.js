@@ -75,7 +75,7 @@ import MisSolicitudesView
   from '../views/MisSolicitudesView.vue'
 
 import SolicitanteComprasView
-  from '../views/SolicitanteCompraFormView.vue'
+  from '../views/SolicitanteComprasView.vue'
 
 import SolicitanteMantenimientoView
   from '../views/SolicitanteMantenimientoView.vue'
@@ -86,8 +86,17 @@ import NotificacionesView
 import PerfilView
   from '../views/PerfilView.vue'
 
-import TecnicoDashboardView
-  from '../views/TecnicoDashboardView.vue'
+import JefeUticDashboardView
+  from '../views/JefeUticDashboardView.vue'
+
+import EspecialistaDashboardView
+  from '../views/EspecialistaDashboardView.vue'
+
+import ServiciosGeneralesDashboardView
+  from '../views/ServiciosGeneralesDashboardView.vue'
+
+import AuxiliarServiciosGeneralesDashboardView
+  from '../views/AuxiliarServiciosGeneralesDashboardView.vue'
 
 import TesoreriaDashboardView
   from '../views/TesoreriaDashboardView.vue'
@@ -387,15 +396,29 @@ const router = createRouter({
     {
       path: '/jefe-utic/dashboard',
       name: 'jefe-utic-dashboard',
-      component: TecnicoDashboardView,
+      component: JefeUticDashboardView,
       meta: { requiereAuth: true, roles: ['JEFE_UTIC'] },
     },
 
     {
       path: '/especialista/dashboard',
       name: 'especialista-dashboard',
-      component: TecnicoDashboardView,
+      component: EspecialistaDashboardView,
       meta: { requiereAuth: true, roles: ['ESPECIALISTA'] },
+    },
+
+    {
+      path: '/servicios-generales/dashboard',
+      name: 'servicios-generales-dashboard',
+      component: ServiciosGeneralesDashboardView,
+      meta: { requiereAuth: true, roles: ['SERVICIOS_GENERALES'] },
+    },
+
+    {
+      path: '/auxiliar-servicios-generales/dashboard',
+      name: 'auxiliar-servicios-generales-dashboard',
+      component: AuxiliarServiciosGeneralesDashboardView,
+      meta: { requiereAuth: true, roles: ['AUXILIAR_SERVICIOS_GENERALES'] },
     },
 
     {
@@ -487,6 +510,23 @@ router.beforeEach(
       return '/login'
     }
 
+    /* HU-02: mientras must_change_password siga activo, ninguna
+       otra vista debe ser navegable (el backend ya rechaza las
+       llamadas a la API con 403; esto evita además que el
+       usuario vea una pantalla rota). */
+    if (
+      to.meta.requiereAuth
+      &&
+      token
+      &&
+      usuario?.must_change_password
+      &&
+      to.path !== '/cambiar-contrasena'
+    ) {
+
+      return '/cambiar-contrasena'
+    }
+
     /* El portal del solicitante no debe funcionar como ruta
        de respaldo para actores institucionales. */
     if (to.path.startsWith('/usuario/')) {
@@ -498,6 +538,8 @@ router.beforeEach(
         if (roles.includes('ADMIN')) return '/admin/dashboard'
         if (roles.includes('JEFE_UTIC')) return '/jefe-utic/dashboard'
         if (roles.includes('ESPECIALISTA')) return '/especialista/dashboard'
+        if (roles.includes('SERVICIOS_GENERALES')) return '/servicios-generales/dashboard'
+        if (roles.includes('AUXILIAR_SERVICIOS_GENERALES')) return '/auxiliar-servicios-generales/dashboard'
         if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
         if (roles.includes('DIRECTOR')) return '/director/dashboard'
         if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'
@@ -571,6 +613,8 @@ router.beforeEach(
 
       if (roles.includes('JEFE_UTIC')) return '/jefe-utic/dashboard'
       if (roles.includes('ESPECIALISTA')) return '/especialista/dashboard'
+      if (roles.includes('SERVICIOS_GENERALES')) return '/servicios-generales/dashboard'
+      if (roles.includes('AUXILIAR_SERVICIOS_GENERALES')) return '/auxiliar-servicios-generales/dashboard'
       if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
       if (roles.includes('DIRECTOR')) return '/director/dashboard'
       if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'

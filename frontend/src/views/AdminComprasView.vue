@@ -11,135 +11,42 @@
       <header class="page-header">
 
         <div>
-          <span class="breadcrumb">
-            SIGTA / Operación / Compras
-          </span>
-
           <h1>
-            Compras
+            Solicitudes
           </h1>
 
           <p>
-            Gestión y seguimiento de solicitudes de compra,
-            Caja Chica y adquisición institucional.
+            Registros de solicitudes de compra y Caja Chica.
           </p>
         </div>
 
-        <button
-          class="refresh-button"
-          type="button"
-          :disabled="cargando"
-          @click="cargarCompras"
-        >
-          {{
-            cargando
-              ? 'Actualizando...'
-              : 'Actualizar'
-          }}
-        </button>
+        <div class="header-actions">
+
+          <select
+            v-model="filtroEstado"
+            class="filtro-estado"
+          >
+            <option value="">Todas las solicitudes</option>
+            <option value="APROBADA">Solicitudes aprobadas</option>
+            <option value="RECHAZADA">Solicitudes rechazadas</option>
+          </select>
+
+          <button
+            class="refresh-button"
+            type="button"
+            :disabled="cargando"
+            @click="cargarCompras"
+          >
+            {{
+              cargando
+                ? 'Actualizando...'
+                : 'Actualizar'
+            }}
+          </button>
+
+        </div>
 
       </header>
-
-
-      <!-- =================================================
-           INDICADORES
-      ================================================== -->
-      <section class="metrics">
-
-        <article>
-          <span>
-            Solicitudes de compra
-          </span>
-
-          <strong>
-            {{ compras.length }}
-          </strong>
-
-          <small>
-            Solicitudes registradas
-          </small>
-        </article>
-
-
-        <article>
-          <span>
-            Caja Chica
-          </span>
-
-          <strong>
-            {{ cajaChica }}
-          </strong>
-
-          <small>
-            Solicitudes hasta Bs 1.500
-          </small>
-        </article>
-
-
-        <article>
-          <span>
-            Finanzas
-          </span>
-
-          <strong>
-            {{ fueraCaja }}
-          </strong>
-
-          <small>
-            Solicitudes mayores a Bs 1.500
-          </small>
-        </article>
-
-
-        <article>
-          <span>
-            Cerradas
-          </span>
-
-          <strong>
-            {{ cerradas }}
-          </strong>
-
-          <small>
-            Solicitudes concluidas
-          </small>
-        </article>
-
-      </section>
-
-
-      <!-- =================================================
-           FLUJO BPMN
-      ================================================== -->
-      <section class="flow-summary">
-
-        <div>
-          <span class="section-label">
-            FLUJO DE COMPRAS
-          </span>
-
-          <strong>
-            Seguimiento del proceso de adquisición
-          </strong>
-
-          <p>
-            La interfaz utiliza las mismas actividades
-            institucionales definidas en el BPMN de Compras.
-          </p>
-        </div>
-
-        <div class="flow-steps">
-          <span>Cargar expediente de compra</span>
-          <span>Autorizar gasto</span>
-          <span>Certificar presupuesto disponible</span>
-          <span>Derivar trámite</span>
-          <span>Registrar verificación de componentes</span>
-          <span>Registrar desembolso de dinero</span>
-          <span>Registrar ingreso al almacén</span>
-          <span>Registrar despacho desde almacén</span>
-        </div>
-
-      </section>
 
 
       <!-- =================================================
@@ -154,213 +61,344 @@
 
 
       <!-- =================================================
-           TABLERO
-      ================================================== -->
-      <section
-        v-else
-        class="board-section"
-      >
-
-        <div class="board-header">
-
-          <div>
-            <span class="section-label">
-              SEGUIMIENTO DE SOLICITUDES
-            </span>
-
-            <h2>
-              Estado de las compras
-            </h2>
-          </div>
-
-          <span class="result-count">
-            {{ compras.length }} solicitud(es)
-          </span>
-
-        </div>
-
-
-        <div class="board-scroll">
-
-          <div class="kanban">
-
-            <section
-              v-for="columna in columnas"
-              :key="columna.codigo"
-              class="column"
-            >
-
-              <header class="column-header">
-
-                <div>
-                  <strong>
-                    {{ columna.nombre }}
-                  </strong>
-
-                  <small>
-                    {{ columna.descripcion }}
-                  </small>
-                </div>
-
-                <span>
-                  {{ comprasPorEstado(columna.codigo).length }}
-                </span>
-
-              </header>
-
-
-              <div class="column-body">
-
-                <article
-                  v-for="compra in comprasPorEstado(columna.codigo)"
-                  :key="compra.id"
-                  class="card"
-                >
-
-                  <div class="card-top">
-
-                    <strong class="code">
-                      {{ compra.codigo }}
-                    </strong>
-
-                    <span
-                      :class="[
-                        'via-badge',
-                        claseVia(compra.via_adquisicion)
-                      ]"
-                    >
-                      {{ textoVia(compra) }}
-                    </span>
-
-                  </div>
-
-
-                  <h3>
-                    {{
-                      compra.titulo
-                      || compra.descripcion
-                      || 'Solicitud de compra'
-                    }}
-                  </h3>
-
-
-                  <div class="card-info">
-
-                    <div>
-                      <span>
-                        Área solicitante
-                      </span>
-
-                      <strong>
-                        {{
-                          compra.area_nombre
-                          || 'No indicada'
-                        }}
-                      </strong>
-                    </div>
-
-
-                    <div>
-                      <span>
-                        Tipo
-                      </span>
-
-                      <strong>
-                        {{
-                          compra.tipo_nombre
-                          || compra.tipo
-                          || 'No indicado'
-                        }}
-                      </strong>
-                    </div>
-
-
-                    <div>
-                      <span>
-                        Cantidad
-                      </span>
-
-                      <strong>
-                        {{
-                          compra.cantidad
-                          || 1
-                        }}
-                      </strong>
-                    </div>
-
-                  </div>
-
-
-                  <div class="amount">
-                    Bs
-                    {{
-                      Number(
-                        compra.monto_estimado || 0
-                      ).toFixed(2)
-                    }}
-                  </div>
-
-
-                  <div class="card-footer">
-
-                    <div>
-                      <span>
-                        Solicitante
-                      </span>
-
-                      <strong>
-                        {{
-                          compra.solicitante_nombre
-                          || compra.solicitante_email
-                          || 'Sin información'
-                        }}
-                      </strong>
-                    </div>
-
-                    <span class="state-badge">
-                      {{
-                        compra.estado_nombre
-                        || nombreEstado(compra.estado)
-                      }}
-                    </span>
-
-                  </div>
-
-                </article>
-
-
-                <div
-                  v-if="comprasPorEstado(columna.codigo).length === 0"
-                  class="empty-column"
-                >
-                  Sin solicitudes
-                </div>
-
-              </div>
-
-            </section>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- =================================================
            SIN REGISTROS
       ================================================== -->
       <div
-        v-if="
-          !cargando
-          && compras.length === 0
-        "
+        v-else-if="compras.length === 0"
         class="empty"
       >
         No existen solicitudes de compra registradas.
       </div>
 
+
+      <div
+        v-else-if="comprasFiltradas.length === 0"
+        class="empty"
+      >
+        No hay {{ etiquetaFiltroVacio(filtroEstado) }}.
+      </div>
+
+
+      <!-- =================================================
+           LISTADO
+      ================================================== -->
+      <section
+        v-else
+        class="requests-card"
+      >
+
+        <div class="request-list">
+
+          <article
+            v-for="compra in comprasFiltradas"
+            :key="compra.id"
+            class="request"
+          >
+
+            <div class="request-main">
+
+              <div class="request-code">
+                <strong>
+                  {{ compra.codigo }}
+                </strong>
+
+                <small>
+                  {{ compra.area_nombre || 'Área no indicada' }}
+                </small>
+              </div>
+
+
+              <div class="request-info">
+
+                <h3>
+                  {{
+                    compra.titulo
+                    || compra.descripcion
+                    || 'Solicitud de compra'
+                  }}
+                </h3>
+
+                <div class="meta">
+
+                  <span>
+                    {{
+                      compra.solicitante_nombre
+                      || compra.solicitante_email
+                      || 'Sin información'
+                    }}
+                  </span>
+
+                  <span>
+                    {{
+                      compra.via_nombre
+                      || 'Vía no indicada'
+                    }}
+                  </span>
+
+                  <span v-if="compra.creado_en">
+                    {{ formatearFecha(compra.creado_en) }}
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <div class="request-side">
+
+              <span
+                :class="['status', claseBucket(bucketEstado(compra.estado))]"
+              >
+                {{ etiquetaBucket(bucketEstado(compra.estado)) }}
+              </span>
+
+              <button
+                class="view"
+                @click="verDetalle(compra)"
+              >
+                Ver detalle
+              </button>
+
+            </div>
+
+          </article>
+
+        </div>
+
+      </section>
+
     </main>
+
+
+    <!-- =================================================
+         DOCUMENTO DE DETALLE
+    ================================================== -->
+
+    <div
+      v-if="mostrarDetalle"
+      class="detalle-modal-backdrop"
+      @click.self="cerrarDetalle"
+    >
+      <div class="detalle-modal documento-modal">
+
+        <div class="detalle-modal-header">
+          <div>
+            <h3>{{ compraSeleccionada?.codigo }}</h3>
+            <small>{{ compraSeleccionada?.titulo }}</small>
+          </div>
+
+          <button
+            class="detalle-modal-close"
+            @click="cerrarDetalle"
+          >✕</button>
+        </div>
+
+        <div class="documento-body">
+
+          <div
+            :class="['estado-banner', claseBucket(bucketEstado(compraSeleccionada?.estado))]"
+          >
+            {{ etiquetaBucket(bucketEstado(compraSeleccionada?.estado)) }}
+          </div>
+
+
+          <div class="documento-seccion">
+
+            <span class="documento-titulo">
+              Producto o servicio a comprar
+            </span>
+
+            <h4>{{ compraSeleccionada?.titulo || 'Sin título' }}</h4>
+
+            <p>{{ compraSeleccionada?.descripcion || 'Sin descripción registrada.' }}</p>
+
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Tipo</b>
+                <span>{{ compraSeleccionada?.tipo_nombre || compraSeleccionada?.tipo || 'No indicado' }}</span>
+              </div>
+
+              <div>
+                <b>Cantidad</b>
+                <span>{{ compraSeleccionada?.cantidad || 1 }}</span>
+              </div>
+
+              <div>
+                <b>Monto estimado</b>
+                <span>
+                  {{
+                    compraSeleccionada?.monto_estimado
+                      ? `Bs ${Number(compraSeleccionada.monto_estimado).toFixed(2)}`
+                      : 'No indicado'
+                  }}
+                </span>
+              </div>
+
+            </div>
+
+
+            <b>Especificaciones</b>
+            <p>{{ compraSeleccionada?.especificaciones || 'No registradas.' }}</p>
+
+            <b>Justificación</b>
+            <p>{{ compraSeleccionada?.justificacion || 'No registrada.' }}</p>
+
+          </div>
+
+
+          <div class="documento-seccion">
+
+            <span class="documento-titulo">
+              Datos del expediente
+            </span>
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Solicitante</b>
+                <span>
+                  {{
+                    compraSeleccionada?.solicitante_nombre
+                    || compraSeleccionada?.solicitante_email
+                    || 'Sin información'
+                  }}
+                </span>
+              </div>
+
+              <div>
+                <b>Área</b>
+                <span>{{ compraSeleccionada?.area_nombre || 'No indicada' }}</span>
+              </div>
+
+              <div>
+                <b>Vía de adquisición</b>
+                <span>{{ compraSeleccionada?.via_nombre || 'No indicada' }}</span>
+              </div>
+
+            </div>
+
+            <div class="documento-fila">
+
+              <div>
+                <b>Fecha de registro</b>
+                <span>{{ formatearFecha(compraSeleccionada?.creado_en) }}</span>
+              </div>
+
+              <div v-if="compraSeleccionada?.monto_desembolsado">
+                <b>Monto desembolsado</b>
+                <span>Bs {{ Number(compraSeleccionada.monto_desembolsado).toFixed(2) }}</span>
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div
+            class="documento-seccion motivo-rechazo"
+            v-if="compraSeleccionada?.motivo_rechazo"
+          >
+            <span class="documento-titulo">
+              Motivo de rechazo
+            </span>
+
+            <p>{{ compraSeleccionada.motivo_rechazo }}</p>
+          </div>
+
+
+          <!-- ACCIONES -->
+
+          <div
+            v-if="bucketEstado(compraSeleccionada?.estado) === 'EN_ESPERA'"
+            class="documento-acciones"
+          >
+
+            <template v-if="puedeDecidir(compraSeleccionada)">
+
+              <p
+                v-if="errorAccion"
+                class="accion-error"
+              >
+                {{ errorAccion }}
+              </p>
+
+              <div
+                v-if="!mostrarFormRechazo"
+                class="acciones-botones"
+              >
+                <button
+                  class="btn-aprobar"
+                  :disabled="procesando"
+                  @click="aprobarCompra"
+                >
+                  Aprobar
+                </button>
+
+                <button
+                  class="btn-rechazar"
+                  :disabled="procesando"
+                  @click="abrirFormRechazo"
+                >
+                  Rechazar
+                </button>
+              </div>
+
+              <div
+                v-else
+                class="form-rechazo"
+              >
+                <label>
+                  Motivo del rechazo
+                  <span>*</span>
+                </label>
+
+                <textarea
+                  v-model="motivoRechazoTexto"
+                  rows="3"
+                  placeholder="Explique por qué se rechaza esta solicitud..."
+                ></textarea>
+
+                <div class="acciones-botones">
+
+                  <button
+                    class="btn-cancelar"
+                    :disabled="procesando"
+                    @click="cancelarRechazo"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    class="btn-rechazar"
+                    :disabled="procesando"
+                    @click="confirmarRechazo"
+                  >
+                    Confirmar rechazo
+                  </button>
+
+                </div>
+              </div>
+
+            </template>
+
+            <p
+              v-else
+              class="nota-tramite"
+            >
+              Este expediente está en trámite interno (documentación de
+              DAF/Tesorería) y todavía no requiere una decisión de aprobación.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
 
   </div>
 </template>
@@ -398,72 +436,289 @@ const cargando =
 
 
 // ==========================================================
-// COLUMNAS DEL ESTADO ACTUAL DEL BACKEND
-// ==========================================================
-//
-// IMPORTANTE:
-// Se conservan los códigos existentes del modelo de Compras.
-// Solo se modifica el lenguaje visible de la interfaz.
-//
+// FILTRO
 // ==========================================================
 
-const columnas = [
+const filtroEstado =
+  ref('')
 
-  {
-    codigo: 'NUEVO',
-    nombre: 'Solicitud registrada',
-    descripcion: 'Cargar expediente de compra',
-  },
+const comprasFiltradas =
+  computed(() => {
 
-  {
-    codigo: 'EN_COTIZACION',
-    nombre: 'En cotización',
-    descripcion: 'Preparación del expediente',
-  },
+    if (!filtroEstado.value) {
+      return compras.value
+    }
 
-  {
-    codigo: 'EN_APROBACION',
-    nombre: 'En aprobación',
-    descripcion: 'Autorizar gasto',
-  },
+    return compras.value.filter(
+      compra =>
+        bucketEstado(compra.estado)
+        === filtroEstado.value
+    )
+  })
 
-  {
-    codigo: 'APROBADO',
-    nombre: 'Aprobado',
-    descripcion: 'Presupuesto autorizado',
-  },
 
-  {
-    codigo: 'ORDEN_EMITIDA',
-    nombre: 'Orden emitida',
-    descripcion: 'Derivar trámite',
-  },
+// ==========================================================
+// DETALLE (DOCUMENTO)
+// ==========================================================
 
-  {
-    codigo: 'EN_TRANSITO',
-    nombre: 'En proceso de compra',
-    descripcion: 'Adquisición / desembolso',
-  },
+const mostrarDetalle =
+  ref(false)
 
-  {
-    codigo: 'RECIBIDO',
-    nombre: 'Recibido',
-    descripcion: 'Registrar ingreso al almacén',
-  },
+const compraSeleccionada =
+  ref(null)
 
-  {
-    codigo: 'EN_VERIFICACION',
-    nombre: 'En verificación',
-    descripcion: 'Verificar componentes',
-  },
+const procesando =
+  ref(false)
 
-  {
-    codigo: 'CERRADO',
-    nombre: 'Cerrado',
-    descripcion: 'Registrar despacho desde almacén',
-  },
+const mostrarFormRechazo =
+  ref(false)
 
-]
+const motivoRechazoTexto =
+  ref('')
+
+const errorAccion =
+  ref('')
+
+
+function verDetalle(
+  compra
+) {
+
+  compraSeleccionada.value =
+    compra
+
+  mostrarDetalle.value =
+    true
+
+  mostrarFormRechazo.value =
+    false
+
+  motivoRechazoTexto.value =
+    ''
+
+  errorAccion.value =
+    ''
+}
+
+
+function cerrarDetalle() {
+
+  mostrarDetalle.value =
+    false
+
+  compraSeleccionada.value =
+    null
+
+  mostrarFormRechazo.value =
+    false
+
+  motivoRechazoTexto.value =
+    ''
+
+  errorAccion.value =
+    ''
+}
+
+
+// ==========================================================
+// DECISIÓN (APROBAR / RECHAZAR)
+// ==========================================================
+//
+// Solo hay una decisión simple de sí/no en dos momentos del
+// flujo: la evaluación inicial de DAF (CREADO_PENDIENTE_DAF)
+// y el visto bueno final del Director (VERIFICADO_PENDIENTE_
+// AUTORIZACION). Los pasos intermedios (certificación DAF con
+// PDF, verificación de Tesorería con 5 documentos) requieren
+// más que un botón y se completan en sus propios flujos.
+// ==========================================================
+
+function puedeDecidir(
+  compra
+) {
+
+  const estado =
+    compra?.estado
+
+  return (
+    estado === 'CREADO_PENDIENTE_DAF'
+    ||
+    estado === 'VERIFICADO_PENDIENTE_AUTORIZACION'
+  )
+}
+
+
+function abrirFormRechazo() {
+
+  mostrarFormRechazo.value =
+    true
+
+  motivoRechazoTexto.value =
+    ''
+
+  errorAccion.value =
+    ''
+}
+
+
+function cancelarRechazo() {
+
+  mostrarFormRechazo.value =
+    false
+
+  motivoRechazoTexto.value =
+    ''
+
+  errorAccion.value =
+    ''
+}
+
+
+async function aprobarCompra() {
+
+  if (!compraSeleccionada.value) {
+    return
+  }
+
+  const confirmar =
+    window.confirm(
+      `¿Confirma aprobar la solicitud ${compraSeleccionada.value.codigo}?`
+    )
+
+  if (!confirmar) {
+    return
+  }
+
+  const estado =
+    compraSeleccionada.value.estado
+
+  const endpoint =
+    estado === 'CREADO_PENDIENTE_DAF'
+      ? 'evaluar-daf'
+      : 'visto-bueno-director'
+
+  const body =
+    estado === 'CREADO_PENDIENTE_DAF'
+      ? { califica: true }
+      : {}
+
+  await ejecutarAccion(
+    endpoint,
+    body,
+    'aprobar'
+  )
+}
+
+
+async function confirmarRechazo() {
+
+  const motivo =
+    motivoRechazoTexto.value.trim()
+
+  if (!motivo) {
+
+    errorAccion.value =
+      'Debe indicar el motivo del rechazo.'
+
+    return
+  }
+
+  const estado =
+    compraSeleccionada.value.estado
+
+  const endpoint =
+    estado === 'CREADO_PENDIENTE_DAF'
+      ? 'evaluar-daf'
+      : 'rechazar'
+
+  const body =
+    estado === 'CREADO_PENDIENTE_DAF'
+      ? { califica: false, motivo }
+      : { motivo }
+
+  await ejecutarAccion(
+    endpoint,
+    body,
+    'rechazar'
+  )
+}
+
+
+async function ejecutarAccion(
+  endpoint,
+  body,
+  tipo
+) {
+
+  procesando.value =
+    true
+
+  errorAccion.value =
+    ''
+
+  try {
+
+    const respuesta =
+      await fetch(
+        `/api/compras/solicitudes/${compraSeleccionada.value.id}/${endpoint}/`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Token ${token()}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(body),
+        }
+      )
+
+    let datos = {}
+
+    try {
+      datos = await respuesta.json()
+    } catch {
+      datos = {}
+    }
+
+    if (
+      respuesta.status === 401
+      ||
+      respuesta.status === 403
+    ) {
+
+      cerrarSesion()
+
+      return
+    }
+
+    if (!respuesta.ok) {
+
+      errorAccion.value =
+        datos.detalle
+        || `No fue posible ${tipo === 'aprobar' ? 'aprobar' : 'rechazar'} la solicitud.`
+
+      return
+    }
+
+    cerrarDetalle()
+
+    await cargarCompras()
+
+  } catch (error) {
+
+    console.error(
+      'Error ejecutando la decisión:',
+      error
+    )
+
+    errorAccion.value =
+      'No fue posible comunicarse con el servidor.'
+
+  } finally {
+
+    procesando.value =
+      false
+  }
+}
 
 
 // ==========================================================
@@ -591,6 +846,18 @@ async function cargarCompras() {
       normalizarLista(
         datos
       )
+      .sort(
+        (a, b) => {
+
+          const fechaA =
+            new Date(a.creado_en || 0).getTime()
+
+          const fechaB =
+            new Date(b.creado_en || 0).getTime()
+
+          return fechaB - fechaA
+        }
+      )
 
 
   } catch (error) {
@@ -612,212 +879,139 @@ async function cargarCompras() {
 
 
 // ==========================================================
-// INDICADORES
+// ESTADO (AGRUPACIÓN VISUAL SIMPLIFICADA)
+// ==========================================================
+//
+// Estados reales del modelo SolicitudCompra (flujo de Caja
+// Chica): CREADO_PENDIENTE_DAF, EVALUADO_PENDIENTE_CERTIFICACION,
+// CERTIFICADO_PENDIENTE_VERIFICACION, VERIFICADO_PENDIENTE_AUTORIZACION,
+// APROBADO_PARA_DESEMBOLSO, FONDOS_DESEMBOLSADOS, COMPRA_REGISTRADA,
+// COMPRADO_Y_ENTREGADO, DESCARGO_PENDIENTE_LIQUIDACION,
+// CERRADO_ARCHIVADO, RECHAZADO, ANULADO.
+//
+// Se agrupan en 3 buckets para el solicitante/administrador:
+// EN_ESPERA, APROBADA, RECHAZADA.
 // ==========================================================
 
-const cajaChica =
-  computed(() => {
-
-    return compras.value.filter(
-      compra => {
-
-        if (
-          compra.via_adquisicion
-          ===
-          'CAJA_CHICA'
-        ) {
-
-          return true
-        }
-
-
-        return Number(
-          compra.monto_estimado
-          || 0
-        ) <= 1500
-      }
-    ).length
-  })
-
-
-const fueraCaja =
-  computed(() => {
-
-    return compras.value.filter(
-      compra => {
-
-        if (
-          compra.via_adquisicion
-          ===
-          'FINANZAS'
-        ) {
-
-          return true
-        }
-
-
-        return Number(
-          compra.monto_estimado
-          || 0
-        ) > 1500
-      }
-    ).length
-  })
-
-
-const cerradas =
-  computed(() => {
-
-    return compras.value.filter(
-      compra =>
-        compra.estado
-        ===
-        'CERRADO'
-    ).length
-  })
-
-
-// ==========================================================
-// ESTADOS
-// ==========================================================
-
-function comprasPorEstado(
+function bucketEstado(
   estado
 ) {
 
-  return compras.value.filter(
-    compra =>
-      String(
-        compra.estado
-        || ''
-      )
-        .trim()
-        .toUpperCase()
-      ===
+  const codigo =
+    String(
       estado
-  )
+      || ''
+    )
+      .trim()
+      .toUpperCase()
+
+
+  if (
+    codigo === 'RECHAZADO'
+    ||
+    codigo === 'ANULADO'
+  ) {
+
+    return 'RECHAZADA'
+  }
+
+
+  if (
+    codigo === 'APROBADO_PARA_DESEMBOLSO'
+    ||
+    codigo === 'FONDOS_DESEMBOLSADOS'
+    ||
+    codigo === 'COMPRA_REGISTRADA'
+    ||
+    codigo === 'COMPRADO_Y_ENTREGADO'
+    ||
+    codigo === 'DESCARGO_PENDIENTE_LIQUIDACION'
+    ||
+    codigo === 'CERRADO_ARCHIVADO'
+  ) {
+
+    return 'APROBADA'
+  }
+
+
+  return 'EN_ESPERA'
 }
 
 
-function nombreEstado(
-  estado
+function etiquetaBucket(
+  bucket
 ) {
-
-  const nombres = {
-
-    NUEVO:
-      'Solicitud registrada',
-
-    EN_COTIZACION:
-      'En cotización',
-
-    EN_APROBACION:
-      'En aprobación',
-
-    APROBADO:
-      'Aprobado',
-
-    ORDEN_EMITIDA:
-      'Orden emitida',
-
-    EN_TRANSITO:
-      'En proceso de compra',
-
-    RECIBIDO:
-      'Recibido',
-
-    EN_VERIFICACION:
-      'En verificación',
-
-    CERRADO:
-      'Cerrado',
-
-    RECHAZADO:
-      'Rechazado',
-
-    ANULADO:
-      'Anulado',
-  }
-
 
   return (
-    nombres[estado]
-    ||
-    estado
-    ||
-    'Sin estado'
+    {
+      EN_ESPERA: 'Aprobación en espera',
+      APROBADA: 'Aprobada',
+      RECHAZADA: 'Rechazada',
+    }[bucket]
+    || bucket
+  )
+}
+
+
+function etiquetaFiltroVacio(
+  bucket
+) {
+
+  return (
+    {
+      APROBADA: 'solicitudes aprobadas',
+      RECHAZADA: 'solicitudes rechazadas',
+    }[bucket]
+    || 'solicitudes'
+  )
+}
+
+
+function claseBucket(
+  bucket
+) {
+
+  return (
+    {
+      EN_ESPERA: 'working',
+      APROBADA: 'closed',
+      RECHAZADA: 'cancelled',
+    }[bucket]
+    || 'working'
   )
 }
 
 
 // ==========================================================
-// VÍA DE ADQUISICIÓN
+// FECHA
 // ==========================================================
 
-function textoVia(
-  compra
+function formatearFecha(
+  fecha
 ) {
 
-  if (
-    compra.via_nombre
-  ) {
+  if (!fecha) {
 
-    return compra.via_nombre
+    return ''
   }
 
 
-  if (
-    compra.via_adquisicion
-    ===
-    'CAJA_CHICA'
-  ) {
+  try {
 
-    return 'Caja Chica'
+    return new Date(
+      fecha
+    ).toLocaleString(
+      'es-BO',
+      {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }
+    )
+
+  } catch {
+
+    return ''
   }
-
-
-  if (
-    compra.via_adquisicion
-    ===
-    'FINANZAS'
-  ) {
-
-    return 'Finanzas'
-  }
-
-
-  return Number(
-    compra.monto_estimado
-    || 0
-  ) <= 1500
-    ? 'Caja Chica'
-    : 'Finanzas'
-}
-
-
-function claseVia(
-  via
-) {
-
-  if (
-    via ===
-    'CAJA_CHICA'
-  ) {
-
-    return 'small-purchase'
-  }
-
-
-  if (
-    via ===
-    'FINANZAS'
-  ) {
-
-    return 'finance'
-  }
-
-
-  return 'pending'
 }
 
 
@@ -883,36 +1077,48 @@ function cerrarSesion() {
 }
 
 
-.breadcrumb {
-  display: block;
-  margin-bottom: 6px;
-  color: #8594a1;
-  font-size: 9px;
-}
-
-
 .page-header h1 {
   margin: 0;
   color: #17324a;
-  font-size: 27px;
+  font-size: 33px;
 }
 
 
 .page-header p {
   margin: 5px 0 0;
   color: #718294;
-  font-size: 11px;
+  font-size: 17px;
+}
+
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+.filtro-estado {
+  min-height: 41px;
+  padding: 0 12px;
+  border: 1px solid #d0dae2;
+  border-radius: 7px;
+  background: white;
+  color: #17324a;
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
 }
 
 
 .refresh-button {
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 41px;
+  padding: 0 15px;
   border: 1px solid #073b6f;
   border-radius: 7px;
   background: white;
   color: #073b6f;
-  font-size: 9px;
+  font-size: 15px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -925,358 +1131,134 @@ function cerrarSesion() {
 
 
 /* =========================================================
-   MÉTRICAS
+   LISTADO
 ========================================================= */
 
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(4,1fr);
-  gap: 13px;
-  margin-bottom: 17px;
-}
-
-
-.metrics article {
-  min-height: 105px;
-  padding: 17px;
-  border-top: 4px solid #f2c400;
-  border-radius: 9px;
-  background: white;
-  box-shadow: 0 3px 12px rgba(0,0,0,.05);
-}
-
-
-.metrics span,
-.metrics small {
-  display: block;
-}
-
-
-.metrics span {
-  color: #718294;
-  font-size: 8px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-
-.metrics strong {
-  display: block;
-  margin: 7px 0 4px;
-  color: #073b6f;
-  font-size: 26px;
-}
-
-
-.metrics small {
-  color: #8593a0;
-  font-size: 8px;
-}
-
-
-/* =========================================================
-   FLUJO
-========================================================= */
-
-.flow-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 17px;
-  padding: 15px 17px;
-  border-left: 4px solid #f2c400;
-  border-radius: 8px;
-  background: white;
-}
-
-
-.section-label {
-  display: block;
-  margin-bottom: 4px;
-  color: #07518d;
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: .8px;
-}
-
-
-.flow-summary strong {
-  color: #17324a;
-  font-size: 11px;
-}
-
-
-.flow-summary p {
-  margin: 4px 0 0;
-  color: #778895;
-  font-size: 8px;
-}
-
-
-.flow-steps {
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-
-.flow-steps span {
-  padding: 5px 7px;
-  border-radius: 5px;
-  background: #edf3f7;
-  color: #557185;
-  font-size: 7px;
-}
-
-
-/* =========================================================
-   TABLERO
-========================================================= */
-
-.board-section {
-  padding: 17px;
-  border-radius: 9px;
+.requests-card {
+  overflow: hidden;
+  border-radius: 10px;
   background: white;
   box-shadow: 0 4px 14px rgba(0,0,0,.05);
 }
 
 
-.board-header {
+.request-list {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.request {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 13px;
+  gap: 20px;
+  padding: 17px 20px;
+  border-bottom: 1px solid #edf0f2;
 }
 
 
-.board-header h2 {
-  margin: 0;
-  color: #17324a;
-  font-size: 16px;
+.request:last-child {
+  border-bottom: none;
 }
 
 
-.result-count {
-  padding: 5px 8px;
-  border-radius: 20px;
-  background: #edf4fa;
+.request-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 155px 1fr;
+  gap: 15px;
+}
+
+
+.request-code strong {
+  display: block;
   color: #07518d;
-  font-size: 7px;
-  font-weight: 800;
+  font-size: 15px;
 }
 
 
-.board-scroll {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 12px;
-}
-
-
-.board-scroll::-webkit-scrollbar {
-  height: 11px;
-}
-
-
-.board-scroll::-webkit-scrollbar-track {
-  background: #dfe6ed;
-  border-radius: 10px;
-}
-
-
-.board-scroll::-webkit-scrollbar-thumb {
-  background: #66819c;
-  border-radius: 10px;
-}
-
-
-.kanban {
-  width: max-content;
-  min-width: max-content;
-  display: flex;
-  gap: 10px;
-}
-
-
-.column {
-  width: 225px;
-  min-width: 225px;
-  flex-shrink: 0;
-}
-
-
-.column-header {
-  min-height: 57px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 10px;
-  border-radius: 7px 7px 0 0;
-  background: #dce8f5;
-}
-
-
-.column-header strong {
+.request-code small {
   display: block;
-  color: #173a5b;
-  font-size: 9px;
+  margin-top: 4px;
+  color: #81909c;
+  font-size: 13px;
 }
 
 
-.column-header small {
-  display: block;
-  margin-top: 3px;
-  color: #72889a;
-  font-size: 7px;
+.request-info h3 {
+  margin: 0 0 5px;
+  color: #29475e;
+  font-size: 18px;
 }
 
 
-.column-header > span {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
+.meta {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #073b6f;
-  color: white;
-  font-size: 8px;
-  font-weight: 900;
-}
-
-
-.column-body {
-  min-height: 440px;
-  padding: 8px;
-  border-radius: 0 0 7px 7px;
-  background: #e9eef5;
-}
-
-
-/* =========================================================
-   TARJETA
-========================================================= */
-
-.card {
-  margin-bottom: 8px;
-  padding: 11px;
-  border-left: 3px solid #073b6f;
-  border-radius: 7px;
-  background: white;
-  box-shadow: 0 2px 7px rgba(0,0,0,.06);
-}
-
-
-.card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
 
-.code {
-  color: #07518d;
-  font-size: 8px;
+.meta span {
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: #f3f6f8;
+  color: #687986;
+  font-size: 13px;
 }
 
 
-.card h3 {
-  margin: 8px 0;
-  color: #29475e;
-  font-size: 10px;
-  line-height: 1.4;
-}
-
-
-.card-info {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-
-.card-info span,
-.card-footer span {
-  display: block;
-  color: #93a0aa;
-  font-size: 6px;
-}
-
-
-.card-info strong,
-.card-footer strong {
-  display: block;
-  margin-top: 2px;
-  color: #607587;
-  font-size: 7px;
-}
-
-
-.amount {
-  margin: 10px 0;
-  padding: 8px;
-  border-radius: 5px;
-  background: #f4f7f9;
-  color: #073b6f;
-  font-size: 10px;
-  font-weight: 900;
-}
-
-
-.card-footer {
+.request-side {
+  flex-shrink: 0;
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #edf0f3;
+  flex-direction: column;
+  gap: 9px;
 }
 
 
 /* =========================================================
-   VÍA
+   ESTADO
 ========================================================= */
 
-.via-badge,
-.state-badge {
+.status {
   display: inline-block;
-  padding: 4px 6px;
-  border-radius: 5px;
-  font-size: 6px;
+  padding: 5px 8px;
+  border-radius: 20px;
+  font-size: 13px;
   font-weight: 800;
 }
 
 
-.via-badge.small-purchase {
-  background: #fff5d4;
-  color: #765a00;
+.status.working {
+  background: #fff6d9;
+  color: #866400;
 }
 
 
-.via-badge.finance {
-  background: #e8f2fa;
-  color: #07518d;
+.status.closed {
+  background: #e8f6ee;
+  color: #237345;
 }
 
 
-.via-badge.pending {
-  background: #edf0f2;
-  color: #687986;
+.status.cancelled {
+  background: #fdeaea;
+  color: #a53232;
 }
 
 
-.state-badge {
-  flex-shrink: 0;
-  background: #edf3f7;
-  color: #587183;
+.view {
+  padding: 6px 8px;
+  border: none;
+  border-radius: 5px;
+  background: #edf3f8;
+  color: #435a6e;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 
@@ -1285,44 +1267,258 @@ function cerrarSesion() {
 ========================================================= */
 
 .loading,
-.empty,
-.empty-column {
-  padding: 28px 8px;
-  color: #93a0ac;
+.empty {
+  padding: 45px 20px;
   text-align: center;
-  font-size: 8px;
+  color: #798793;
+  font-size: 16px;
 }
 
 
 .empty {
-  margin-top: 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: white;
+}
+
+
+/* =========================================================
+   DOCUMENTO DE DETALLE
+========================================================= */
+
+.documento-modal {
+  max-width: 620px;
+}
+
+
+.documento-body {
+  padding: 18px 22px 22px;
+}
+
+
+.estado-banner {
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+
+.estado-banner.working {
+  background: #fff6d9;
+  color: #866400;
+}
+
+
+.estado-banner.closed {
+  background: #e8f6ee;
+  color: #237345;
+}
+
+
+.estado-banner.cancelled {
+  background: #fdeaea;
+  color: #a53232;
+}
+
+
+.documento-seccion {
+  padding: 16px 0;
+  border-top: 1px solid #edf0f2;
+}
+
+
+.documento-seccion:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+
+.documento-titulo {
+  display: block;
+  margin-bottom: 8px;
+  color: #8592a0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+
+.documento-seccion h4 {
+  margin: 0 0 6px;
+  color: #17324a;
+  font-size: 18px;
+}
+
+
+.documento-seccion > p {
+  margin: 0 0 10px;
+  color: #354d60;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+
+.documento-seccion b {
+  display: block;
+  margin-bottom: 4px;
+  color: #8592a0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+
+.documento-fila {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+
+.documento-fila > div span {
+  display: block;
+  color: #26333f;
+  font-size: 14px;
+}
+
+
+.motivo-rechazo {
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: #fdecec;
+}
+
+
+.motivo-rechazo .documento-titulo {
+  color: #a53232;
+}
+
+
+.motivo-rechazo p {
+  margin: 0;
+  color: #7a2828;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   ACCIONES DE DECISIÓN
+========================================================= */
+
+.documento-acciones {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #edf0f2;
+}
+
+
+.nota-tramite {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 7px;
+  background: #eef3f8;
+  color: #536575;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+.accion-error {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #fdecec;
+  color: #a53232;
+  font-size: 14px;
+}
+
+
+.acciones-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+
+.btn-aprobar,
+.btn-rechazar,
+.btn-cancelar {
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+
+.btn-aprobar {
+  background: #237345;
+  color: white;
+}
+
+
+.btn-rechazar {
+  background: #a53232;
+  color: white;
+}
+
+
+.btn-cancelar {
+  background: #edf0f2;
+  color: #435a6e;
+}
+
+
+.btn-aprobar:disabled,
+.btn-rechazar:disabled,
+.btn-cancelar:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+
+.form-rechazo label {
+  display: block;
+  margin-bottom: 6px;
+  color: #344a5d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+.form-rechazo label span {
+  color: #a53232;
+}
+
+
+.form-rechazo textarea {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #d0dae2;
+  border-radius: 7px;
+  background: white;
+  color: #26333f;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
 }
 
 
 /* =========================================================
    RESPONSIVE
 ========================================================= */
-
-@media (max-width: 1000px) {
-
-  .metrics {
-    grid-template-columns: repeat(2,1fr);
-  }
-
-
-  .flow-summary {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-
-  .flow-steps {
-    justify-content: flex-start;
-  }
-}
-
 
 @media (max-width: 760px) {
 
@@ -1342,9 +1538,37 @@ function cerrarSesion() {
   }
 
 
-  .metrics {
+  .header-actions {
+    width: 100%;
+  }
+
+
+  .filtro-estado {
+    flex: 1;
+  }
+
+
+  .request {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+
+  .request-main {
     grid-template-columns: 1fr;
   }
+
+
+  .request-side {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+
+  .documento-fila {
+    grid-template-columns: 1fr;
+  }
+
 }
 
 </style>

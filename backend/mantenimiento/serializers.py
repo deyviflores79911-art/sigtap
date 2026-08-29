@@ -1,6 +1,8 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from usuarios.models import Area
+
 from .models import (
     EstadoMantenimiento,
     RequerimientoMantenimiento,
@@ -80,6 +82,37 @@ class RequerimientoMantenimientoSerializer(
     )
 
 
+    # ======================================================
+    # CAMPOS QUE EL PORTAL SOLICITANTE YA NO PIDE
+    # ======================================================
+    #
+    # El formulario simplificado del solicitante solo
+    # captura título, descripción, categoría y foto. Estos
+    # campos se completan con un valor por defecto en la
+    # vista (RequerimientoMantenimientoViewSet.create)
+    # cuando no llegan en el payload.
+    # ======================================================
+
+    area = serializers.PrimaryKeyRelatedField(
+        queryset=Area.objects.all(),
+        required=False
+    )
+
+    ubicacion = serializers.CharField(
+        required=False,
+        allow_blank=True
+    )
+
+    tipo = serializers.ChoiceField(
+        choices=RequerimientoMantenimiento.TIPOS_MANTENIMIENTO,
+        required=False
+    )
+
+    compra_vinculada = (
+        serializers.SerializerMethodField()
+    )
+
+
     class Meta:
 
         model = RequerimientoMantenimiento
@@ -127,6 +160,8 @@ class RequerimientoMantenimientoSerializer(
             "auxiliar_asignado",
 
             "auxiliar_asignado_nombre",
+
+            "compra_vinculada",
 
             "requiere_reposicion",
 
@@ -262,6 +297,26 @@ class RequerimientoMantenimientoSerializer(
             obj.auxiliar_asignado
             .nombre_completo
         )
+
+
+    def get_compra_vinculada(
+        self,
+        obj
+    ):
+
+        solicitud = (
+            obj.compras_generadas
+            .filter(activo=True)
+            .order_by("-creado_en")
+            .first()
+        )
+
+        if not solicitud:
+            return None
+
+        from compras.serializers import SolicitudCompraResumenSerializer
+
+        return SolicitudCompraResumenSerializer(solicitud).data
 
 
     def get_evidencia_archivo_url(

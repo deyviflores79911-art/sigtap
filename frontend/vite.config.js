@@ -17,6 +17,9 @@ export default defineConfig({
   },
 
   server: {
+    // Permite el host publico del tunel (cloudflared/localtunnel);
+    // sin esto Vite rechaza cualquier Host que no sea localhost.
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

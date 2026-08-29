@@ -316,6 +316,30 @@ class Command(BaseCommand):
             "modulo": "SOPORTE",
         },
 
+        {
+            "codigo": "SOLICITAR_REQUERIMIENTO_COMPONENTE",
+            "nombre": "Solicitar requerimiento de componente",
+            "descripcion": (
+                "Permite al Especialista pedir la compra de un "
+                "componente (con cotización) cuando el ticket "
+                "lo requiere, para que Jefe UTIC evalúe si es "
+                "viable."
+            ),
+            "modulo": "SOPORTE",
+        },
+
+        {
+            "codigo": "AUTORIZAR_SOLICITUD_COMPRA_TI",
+            "nombre": "Evaluar viabilidad de compra de TI",
+            "descripcion": (
+                "Permite al Jefe de UTIC evaluar si el "
+                "requerimiento de componente de un ticket es "
+                "viable y, de serlo, derivarlo al subproceso "
+                "de Compra Caja Chica."
+            ),
+            "modulo": "SOPORTE",
+        },
+
         # ==================================================
         # MANTENIMIENTO
         # ==================================================
@@ -399,6 +423,16 @@ class Command(BaseCommand):
             "descripcion": (
                 "Permite derivar el requerimiento "
                 "al subproceso de Compra Caja Chica."
+            ),
+            "modulo": "MANTENIMIENTO",
+        },
+
+        {
+            "codigo": "RECIBIR_REPORTE_MENSUAL_MANTENIMIENTO",
+            "nombre": "Recibir reporte mensual de mantenimiento",
+            "descripcion": (
+                "Permite al Director tomar conocimiento del "
+                "consolidado mensual de mantenimientos finalizados."
             ),
             "modulo": "MANTENIMIENTO",
         },
@@ -515,6 +549,16 @@ class Command(BaseCommand):
             "modulo": "COMPRAS",
         },
 
+        {
+            "codigo": "CERRAR_ARCHIVAR_EXPEDIENTE",
+            "nombre": "Cerrar y archivar expediente",
+            "descripcion": (
+                "Permite a Tesorería verificar el descargo final "
+                "y archivar el expediente de forma inmutable."
+            ),
+            "modulo": "COMPRAS",
+        },
+
         # ==================================================
         # ADMINISTRACIÓN
         # ==================================================
@@ -611,6 +655,19 @@ class Command(BaseCommand):
             "CONSULTAR_BITACORA",
         ],
 
+        # AGENTE (rol heredado, formalizado: equivalente a
+        # ESPECIALISTA para efectos de visibilidad de Soporte;
+        # sigue siendo elegible como técnico asignado).
+        "AGENTE": [
+            "VER_SOPORTE_TECNICO",
+        ],
+
+        # SUPERVISOR_AREA (rol heredado, formalizado: acceso de
+        # solo visibilidad a Soporte, ya no por bypass de código).
+        "SUPERVISOR_AREA": [
+            "VER_SOPORTE_TECNICO",
+        ],
+
         # SOLICITANTE
         "SOLICITANTE": [
             "VER_PORTAL_SOLICITANTE",
@@ -621,6 +678,7 @@ class Command(BaseCommand):
             "INFORMAR_CONFORMIDAD",
             "REGISTRAR_REQUERIMIENTO_MANTENIMIENTO",
             "CARGAR_EXPEDIENTE",
+            "REGISTRAR_DESCARGO",
         ],
 
         # JEFE UTIC
@@ -629,6 +687,7 @@ class Command(BaseCommand):
             "RECIBIR_VALIDAR_TICKET",
             "CLASIFICAR_PRIORIDAD_SLA",
             "DESIGNAR_REVISION",
+            "AUTORIZAR_SOLICITUD_COMPRA_TI",
             "VERIFICAR_FUNCIONAMIENTO",
             "ELABORAR_VALIDAR_INFORME_FINAL",
             "CONSULTAR_TICKETS",
@@ -638,6 +697,7 @@ class Command(BaseCommand):
         "ESPECIALISTA": [
             "VER_SOPORTE_TECNICO",
             "REALIZAR_INSPECCION_DIAGNOSTICO",
+            "SOLICITAR_REQUERIMIENTO_COMPONENTE",
             "REALIZAR_REPARACION_INSTALACION",
             "REALIZAR_PRUEBAS_TECNICAS",
         ],
@@ -646,6 +706,7 @@ class Command(BaseCommand):
         "SERVICIOS_GENERALES": [
             "VER_MANTENIMIENTO",
             "DERIVAR_A_AUXILIAR",
+            "RECIBIR_REPORTE_MENSUAL_MANTENIMIENTO",
         ],
 
         # AUXILIAR DE SERVICIOS GENERALES
@@ -669,12 +730,16 @@ class Command(BaseCommand):
             "VER_COMPRAS",
             "VERIFICAR_EXPEDIENTE_TESORERIA",
             "REGISTRAR_DESEMBOLSO",
+            "CERRAR_ARCHIVAR_EXPEDIENTE",
         ],
 
         # DIRECTOR
         "DIRECTOR": [
             "VER_COMPRAS",
             "DAR_VISTO_BUENO",
+            "VER_MANTENIMIENTO",
+            "RECIBIR_REPORTE_MENSUAL_MANTENIMIENTO",
+            "VER_SOPORTE_TECNICO",
         ],
 
         # ENCARGADO DE COMPRAS Y ALMACÉN

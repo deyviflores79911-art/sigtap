@@ -2,25 +2,50 @@
   <aside class="sidebar">
 
     <!-- =====================================================
-         MARCA
+         MARCA + BOTÓN DESPLEGABLE (móvil)
     ====================================================== -->
 
-    <div class="brand">
+    <div class="brand-row">
 
-      <div class="logo">
-        EMI
+      <div class="brand">
+
+        <div class="logo">
+          <img src="/img/emi.jpg" alt="EMI" class="logo-img">
+        </div>
+
+        <div class="brand-text">
+          <h2>SIGTA</h2>
+
+          <span>
+            Sistema Integral de Gestión
+          </span>
+        </div>
+
       </div>
 
-      <div class="brand-text">
-        <h2>SIGTA</h2>
-
-        <span>
-          Sistema Integral de Gestión
-        </span>
-      </div>
+      <button
+        type="button"
+        class="menu-toggle"
+        :aria-expanded="menuAbierto"
+        aria-label="Mostrar opciones del menú"
+        @click="menuAbierto = !menuAbierto"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
 
     </div>
 
+
+    <!-- =====================================================
+         CONTENIDO DESPLEGABLE
+    ====================================================== -->
+
+    <div
+      class="sidebar-body"
+      :class="{ abierto: menuAbierto }"
+    >
 
     <!-- =====================================================
          USUARIO AUTENTICADO
@@ -52,16 +77,16 @@
 
 
     <!-- =====================================================
-         OPERACIÓN
+         MI PORTAL
     ====================================================== -->
 
     <div class="section-title">
-      OPERACIÓN
+      MI PORTAL
     </div>
 
-    <nav>
+    <nav @click="menuAbierto = false">
 
-      <!-- DASHBOARD -->
+      <!-- PANEL -->
 
       <router-link
         v-if="puede('VER_DASHBOARD_ADMIN')"
@@ -69,50 +94,38 @@
         class="menu-item"
       >
         <span class="icon">
-          ▦
+          📊
         </span>
 
         <span>
-          Dashboard
+          Panel
         </span>
       </router-link>
 
 
-      <!-- SOPORTE TÉCNICO -->
+      <!-- BITÁCORA -->
 
       <router-link
-        v-if="puede('VER_SOPORTE_TECNICO')"
-        to="/admin/soporte"
+        v-if="puede('CONSULTAR_BITACORA')"
+        to="/admin/bitacora"
         class="menu-item"
       >
         <span class="icon">
-          ST
+          📜
         </span>
 
         <span>
-          Soporte Técnico
+          Bitácora
         </span>
       </router-link>
 
 
-      <!-- MANTENIMIENTO -->
-
-      <router-link
-        v-if="puede('VER_MANTENIMIENTO')"
-        to="/admin/mantenimiento"
-        class="menu-item"
-      >
-        <span class="icon">
-          MT
-        </span>
-
-        <span>
-          Mantenimiento
-        </span>
-      </router-link>
-
-
-      <!-- COMPRAS -->
+      <!--
+        SOLICITUDES: reutiliza la pantalla de Compras
+        (Caja Chica). Ahí llega el expediente evaluado
+        y certificado por la DAF para dar (o no) el visto
+        bueno al desembolso.
+      -->
 
       <router-link
         v-if="puede('VER_COMPRAS')"
@@ -120,200 +133,15 @@
         class="menu-item"
       >
         <span class="icon">
-          CP
+          🛒
         </span>
 
         <span>
-          Compras
+          Solicitudes
         </span>
       </router-link>
 
     </nav>
-
-
-    <!-- =====================================================
-         AUTOSERVICIO
-    ====================================================== -->
-
-    <template
-      v-if="puede('VER_PORTAL_SOLICITANTE')"
-    >
-
-      <div class="section-title">
-        AUTOSERVICIO
-      </div>
-
-
-      <nav>
-
-        <router-link
-          to="/admin/portal-solicitante"
-          class="menu-item"
-        >
-          <span class="icon">
-            PS
-          </span>
-
-          <span>
-            Portal Solicitante
-          </span>
-        </router-link>
-
-      </nav>
-
-    </template>
-
-
-    <!-- =====================================================
-         ADMINISTRACIÓN
-    ====================================================== -->
-
-    <template
-      v-if="mostrarAdministracion"
-    >
-
-      <div class="section-title">
-        ADMINISTRACIÓN
-      </div>
-
-
-      <nav>
-
-        <!-- USUARIOS -->
-
-        <router-link
-          v-if="puede('GESTIONAR_USUARIOS')"
-          to="/admin/usuarios"
-          class="menu-item"
-        >
-          <span class="icon">
-            U
-          </span>
-
-          <span>
-            Usuarios
-          </span>
-        </router-link>
-
-
-        <!-- ROLES / PERMISOS / ÁREAS -->
-
-        <router-link
-          v-if="puede('GESTIONAR_ROLES_PERMISOS')"
-          to="/admin/roles-areas"
-          class="menu-item"
-        >
-          <span class="icon">
-            RP
-          </span>
-
-          <span>
-            Roles, permisos y áreas
-          </span>
-        </router-link>
-
-
-        <!--
-          Conservamos la ruta existente para no romper
-          la pantalla que ya tienes.
-
-          Después revisaremos AdminTicketsView.vue para
-          determinar si debe quedar como consulta general
-          de tickets de Soporte Técnico.
-        -->
-
-        <router-link
-          v-if="puede('CONSULTAR_TICKETS')"
-          to="/admin/tickets"
-          class="menu-item"
-        >
-          <span class="icon">
-            T
-          </span>
-
-          <span>
-            Consulta de tickets
-          </span>
-        </router-link>
-
-
-        <!-- BITÁCORA -->
-
-        <router-link
-          v-if="puede('CONSULTAR_BITACORA')"
-          to="/admin/bitacora"
-          class="menu-item"
-        >
-          <span class="icon">
-            B
-          </span>
-
-          <span>
-            Bitácora
-          </span>
-        </router-link>
-
-
-        <!-- SMTP -->
-
-        <router-link
-          v-if="puede('CONFIGURAR_SMTP')"
-          to="/admin/smtp"
-          class="menu-item"
-        >
-          <span class="icon">
-            @
-          </span>
-
-          <span>
-            Correo SMTP
-          </span>
-        </router-link>
-
-
-        <!-- PREFERENCIAS -->
-
-        <router-link
-          v-if="puede('CONFIGURAR_PREFERENCIAS')"
-          to="/admin/preferencias"
-          class="menu-item"
-        >
-          <span class="icon">
-            P
-          </span>
-
-          <span>
-            Preferencias
-          </span>
-        </router-link>
-
-      </nav>
-
-    </template>
-
-
-    <!-- =====================================================
-         INFORMACIÓN DE SEGURIDAD
-    ====================================================== -->
-
-    <div class="access-box">
-
-      <div class="access-title">
-
-        <span class="status-dot"></span>
-
-        <strong>
-          CONTROL DE ACCESO ACTIVO
-        </strong>
-
-      </div>
-
-      <small>
-        Las opciones visibles dependen del rol
-        y sus permisos.
-      </small>
-
-    </div>
 
 
     <!-- =====================================================
@@ -327,6 +155,8 @@
     >
       Cerrar sesión
     </button>
+
+    </div>
 
   </aside>
 </template>
@@ -346,6 +176,14 @@ import {
 
 const router =
   useRouter()
+
+
+/* =========================================================
+   MENÚ MÓVIL (desplegable)
+========================================================= */
+
+const menuAbierto =
+  ref(false)
 
 
 /* =========================================================
@@ -611,52 +449,6 @@ function puede(
 
 
 /* =========================================================
-   MOSTRAR BLOQUE ADMINISTRACIÓN
-========================================================= */
-
-const mostrarAdministracion =
-  computed(() => {
-
-    return (
-
-      puede(
-        'GESTIONAR_USUARIOS'
-      )
-
-      ||
-
-      puede(
-        'GESTIONAR_ROLES_PERMISOS'
-      )
-
-      ||
-
-      puede(
-        'CONSULTAR_TICKETS'
-      )
-
-      ||
-
-      puede(
-        'CONSULTAR_BITACORA'
-      )
-
-      ||
-
-      puede(
-        'CONFIGURAR_SMTP'
-      )
-
-      ||
-
-      puede(
-        'CONFIGURAR_PREFERENCIAS'
-      )
-    )
-  })
-
-
-/* =========================================================
    CERRAR SESIÓN
 ========================================================= */
 
@@ -710,7 +502,7 @@ function cerrarSesion() {
   overflow-y: auto;
   overflow-x: hidden;
 
-  background: #123f73;
+  background: #6576B4;
 
   color: #ffffff;
 
@@ -745,12 +537,11 @@ function cerrarSesion() {
    MARCA
 ========================================================= */
 
-.brand {
+.brand-row {
 
   display: flex;
   align-items: center;
-
-  gap: 12px;
+  justify-content: space-between;
 
   padding:
     0
@@ -768,6 +559,15 @@ function cerrarSesion() {
 }
 
 
+.brand {
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+}
+
+
 .logo {
 
   width: 48px;
@@ -782,13 +582,16 @@ function cerrarSesion() {
 
   border-radius: 10px;
 
-  background: #f2c400;
+  overflow: hidden;
 
-  color: #073b6f;
+  background: #FFFF00;
+}
 
-  font-size: 13px;
 
-  font-weight: 900;
+.logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 
@@ -813,7 +616,7 @@ function cerrarSesion() {
 
   color: #c4d2df;
 
-  font-size: 9px;
+  font-size: 11px;
 
   line-height: 1.3;
 }
@@ -852,11 +655,11 @@ function cerrarSesion() {
 
   border-radius: 50%;
 
-  background: #f2c400;
+  background: #FFFF00;
 
-  color: #073b6f;
+  color: #6576B4;
 
-  font-size: 10px;
+  font-size: 12px;
 
   font-weight: 900;
 }
@@ -881,7 +684,7 @@ function cerrarSesion() {
 
   color: #ffffff;
 
-  font-size: 10px;
+  font-size: 13px;
 
   text-overflow: ellipsis;
 
@@ -895,7 +698,7 @@ function cerrarSesion() {
 
   color: #d1dce6;
 
-  font-size: 8px;
+  font-size: 10px;
 }
 
 
@@ -905,7 +708,7 @@ function cerrarSesion() {
 
   color: #94afc7;
 
-  font-size: 8px;
+  font-size: 10px;
 }
 
 
@@ -922,7 +725,7 @@ function cerrarSesion() {
 
   color: #82a5c6;
 
-  font-size: 8px;
+  font-size: 10px;
 
   font-weight: 800;
 
@@ -948,13 +751,13 @@ nav {
 
   position: relative;
 
-  min-height: 42px;
+  min-height: 46px;
 
   display: flex;
 
   align-items: center;
 
-  gap: 9px;
+  gap: 11px;
 
   padding:
     0
@@ -966,7 +769,7 @@ nav {
 
   text-decoration: none;
 
-  font-size: 10px;
+  font-size: 13px;
 
   transition:
     background .2s,
@@ -977,17 +780,16 @@ nav {
 
 .icon {
 
-  width: 25px;
+  width: 27px;
 
   flex-shrink: 0;
 
-  color: #aac0d3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-  font-size: 8px;
-
-  font-weight: 900;
-
-  text-align: center;
+  font-size: 18px;
+  line-height: 1;
 }
 
 
@@ -1010,7 +812,7 @@ nav {
   padding-left: 8px;
 
   border-left:
-    3px solid #f2c400;
+    3px solid #FFFF00;
 
   background:
     rgba(
@@ -1020,7 +822,7 @@ nav {
       .13
     );
 
-  color: #f5d532;
+  color: #FFFF00;
 
   font-weight: 700;
 }
@@ -1029,83 +831,7 @@ nav {
 .menu-item.router-link-active
 .icon {
 
-  color: #f2c400;
-}
-
-
-/* =========================================================
-   CONTROL DE ACCESO
-========================================================= */
-
-.access-box {
-
-  margin-top: 20px;
-
-  padding: 10px;
-
-  border:
-    1px solid
-    rgba(
-      255,
-      255,
-      255,
-      .16
-    );
-
-  border-radius: 7px;
-
-  background:
-    rgba(
-      255,
-      255,
-      255,
-      .06
-    );
-}
-
-
-.access-title {
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 6px;
-}
-
-
-.status-dot {
-
-  width: 7px;
-  height: 7px;
-
-  flex-shrink: 0;
-
-  border-radius: 50%;
-
-  background: #37c56a;
-}
-
-
-.access-title strong {
-
-  color: #f2d334;
-
-  font-size: 7px;
-}
-
-
-.access-box small {
-
-  display: block;
-
-  margin-top: 5px;
-
-  color: #a8bed0;
-
-  font-size: 7px;
-
-  line-height: 1.45;
+  color: #FFFF00;
 }
 
 
@@ -1117,56 +843,114 @@ nav {
 
   width: 100%;
 
-  min-height: 43px;
+  min-height: 54px;
 
   flex-shrink: 0;
 
-  margin-top: 12px;
+  position: sticky;
 
-  border:
-    1px solid
-    rgba(
-      255,
-      255,
-      255,
-      .3
-    );
+  bottom: 0;
+
+  margin-top: auto;
+
+  border: none;
 
   border-radius: 7px;
 
-  background: transparent;
+  background: #FFFF00;
 
-  color: #ffffff;
+  color: #17324a;
 
-  font-size: 10px;
+  font-size: 16px;
 
-  font-weight: 700;
+  font-weight: 800;
 
   cursor: pointer;
 
   transition:
-    background .2s,
-    border-color .2s;
+    transform .15s ease,
+    box-shadow .15s ease;
 }
 
 
 .logout:hover {
 
-  background:
-    rgba(
-      255,
-      255,
-      255,
-      .1
-    );
+  transform: scale(1.05);
 
-  border-color:
-    rgba(
-      255,
-      255,
-      255,
-      .45
-    );
+  box-shadow:
+    0
+    4px
+    12px
+    rgba(0,0,0,.18);
+}
+
+
+/* =========================================================
+   BOTÓN DESPLEGABLE (solo móvil)
+========================================================= */
+
+.menu-toggle {
+
+  display: none;
+
+  flex-shrink: 0;
+
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  width: 34px;
+  height: 34px;
+
+  border: none;
+  border-radius: 7px;
+
+  background:
+    rgba(255, 255, 255, .1);
+
+  cursor: pointer;
+}
+
+
+.menu-toggle span {
+
+  width: 16px;
+  height: 2px;
+
+  border-radius: 2px;
+
+  background: #ffffff;
+
+  transition:
+    transform .2s ease,
+    opacity .2s ease;
+}
+
+
+.menu-toggle[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.menu-toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+
+/* =========================================================
+   CUERPO DESPLEGABLE
+========================================================= */
+
+.sidebar-body {
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 
@@ -1188,6 +972,35 @@ nav {
     height: auto;
 
     min-height: auto;
+
+    overflow-y: visible;
+  }
+
+
+  .menu-toggle {
+
+    display: flex;
+  }
+
+
+  .sidebar-body {
+
+    max-height: 0;
+
+    overflow: hidden;
+
+    transition:
+      max-height .25s ease;
+  }
+
+
+  .sidebar-body.abierto {
+
+    max-height: min(65vh, 460px);
+
+    overflow-y: auto;
+
+    -webkit-overflow-scrolling: touch;
   }
 
 

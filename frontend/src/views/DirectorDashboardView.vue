@@ -1,10 +1,13 @@
 <template>
   <div class="shell sigta-role-layout">
-    <aside>
-      <div class="brand"><span>EMI</span><div><b>SIGTA</b><small>Dirección institucional</small></div></div>
+    <aside :class="{ abierto: menuAbierto }">
+      <div class="brand-row">
+        <div class="brand"><span><img src="/img/emi.jpg" alt="EMI"></span><div><b>SIGTA</b><small>Dirección institucional</small></div></div>
+        <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
+      </div>
       <div class="user"><i>{{ iniciales }}</i><div><strong>{{ nombre }}</strong><small>Director</small></div></div>
       <p>APROBACIÓN Y RECEPCIÓN</p>
-      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id"><em>{{ m.icono }}</em>{{ m.nombre }}<b v-if="m.total!==undefined">{{ m.total }}</b></button>
+      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id; menuAbierto=false"><em>{{ m.icono }}</em>{{ m.nombre }}<b v-if="m.total!==undefined">{{ m.total }}</b></button>
       <div class="logout"><button @click="salir"><em>↪</em>Cerrar sesión</button></div>
     </aside>
 
@@ -29,12 +32,16 @@
         </section>
       </section>
 
+      <section v-else-if="vista==='delegar'">
+        <DelegacionesPanel rol-codigo="DIRECTOR" rol-nombre="Director" />
+      </section>
+
       <section v-else>
         <div class="notice"><b>{{ instruccion.titulo }}</b><span>{{ instruccion.texto }}</span></div>
-        <div class="toolbar"><div><button class="active">Pendientes</button><button>Procesados</button></div><label>⌕ <input v-model="busqueda" placeholder="Buscar código o asunto"></label></div>
+        <div class="toolbar"><div><button class="active">{{ soloLectura?'Consulta':'Pendientes' }}</button></div><label>⌕ <input v-model="busqueda" placeholder="Buscar código o asunto"></label></div>
         <div v-if="cargando" class="empty">Actualizando bandeja…</div>
         <div v-else-if="filtrados.length" class="cards">
-          <article v-for="item in filtrados" :key="item.id"><div class="top"><span>{{ codigo(item) }}</span><em>{{ estado(item) }}</em></div><h3>{{ asunto(item) }}</h3><p>{{ detalle(item) }}</p><dl><div><dt>Origen</dt><dd>{{ origen }}</dd></div><div><dt>Fecha</dt><dd>{{ fecha(item) }}</dd></div></dl><div class="actions"><button @click="verExpediente(item)">Ver expediente</button><button class="primary" @click="ejecutar(item)">{{ instruccion.accion }}</button></div></article>
+          <article v-for="item in filtrados" :key="item.id"><div class="top"><span>{{ codigo(item) }}</span><em>{{ estado(item) }}</em></div><h3>{{ asunto(item) }}</h3><p>{{ detalle(item) }}</p><dl><div><dt>Origen</dt><dd>{{ origen }}</dd></div><div><dt>Fecha</dt><dd>{{ fecha(item) }}</dd></div></dl><div class="actions"><button @click="verExpediente(item)">Ver expediente</button><button v-if="!soloLectura" class="primary" @click="ejecutar(item)">{{ instruccion.accion }}</button></div></article>
         </div>
         <div v-else class="empty"><span>✓</span><h3>Sin asuntos pendientes</h3><p>La bandeja de {{ titulo.toLowerCase() }} está al día.</p></div>
       </section>
@@ -44,26 +51,31 @@
 
 <script setup>
 import {computed,onMounted,ref} from 'vue'; import {useRouter} from 'vue-router'
+import DelegacionesPanel from '../components/DelegacionesPanel.vue'
 const router=useRouter(), usuario=ref(JSON.parse(localStorage.getItem('sigta_usuario')||'{}'))
-const vista=ref('resumen'),compras=ref([]),soporte=ref([]),mantenimiento=ref([]),cargando=ref(false),busqueda=ref('')
+const vista=ref('resumen'),menuAbierto=ref(false),compras=ref([]),soporte=ref([]),mantenimiento=ref([]),cargando=ref(false),busqueda=ref('')
 const nombre=computed(()=>usuario.value.nombre||usuario.value.nombre_completo||'Director');const primerNombre=computed(()=>nombre.value.split(' ')[0]);const iniciales=computed(()=>nombre.value.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase())
 const saludo=computed(()=>new Date().getHours()<12?'Buenos días':new Date().getHours()<19?'Buenas tardes':'Buenas noches')
 const textEstado=x=>String(x.estado_nombre||x.estado?.nombre||x.estado||'Pendiente')
-const comprasPendientes=computed(()=>compras.value.filter(x=>x.estado==='VERIFICADO_PENDIENTE_AUTORIZACION'))
-const soporteCompra=computed(()=>soporte.value.filter(x=>/compra|repuesto|viabilidad/i.test(`${textEstado(x)} ${x.descripcion||''} ${x.asunto||''}`)))
-const reportesMantenimiento=computed(()=>mantenimiento.value.filter(x=>/final|cerrado|complet|informe/i.test(`${textEstado(x)} ${x.descripcion||''}`)))
-const informesSoporte=computed(()=>soporte.value.filter(x=>/final|cerrado|conformidad|informe/i.test(`${textEstado(x)} ${x.descripcion||''}`)))
-const totalPendiente=computed(()=>comprasPendientes.value.length+soporteCompra.value.length+reportesMantenimiento.value.length+informesSoporte.value.length)
-const menu=computed(()=>[{id:'resumen',icono:'⌂',nombre:'Resumen'},{id:'caja',icono:'VB',nombre:'Vistos buenos',total:comprasPendientes.value.length},{id:'compras-ti',icono:'AC',nombre:'Compras técnicas',total:soporteCompra.value.length},{id:'mantenimiento',icono:'RM',nombre:'Reportes mensuales',total:reportesMantenimiento.value.length},{id:'informes',icono:'IF',nombre:'Informes de soporte',total:informesSoporte.value.length}])
+// Un mismo expediente (SolicitudCompra) puede venir de una solicitud
+// directa, de Mantenimiento o de Soporte (origen_modulo). "Caja" agrupa
+// las dos primeras; "compras-ti" muestra solo las derivadas de Soporte.
+const comprasPendientes=computed(()=>compras.value.filter(x=>x.estado==='VERIFICADO_PENDIENTE_AUTORIZACION'&&x.origen_modulo!=='SOPORTE'))
+const soporteCompra=computed(()=>compras.value.filter(x=>x.estado==='VERIFICADO_PENDIENTE_AUTORIZACION'&&x.origen_modulo==='SOPORTE'))
+const reportesMantenimiento=computed(()=>mantenimiento.value.filter(x=>x.estado_codigo==='FINALIZADO'))
+const informesSoporte=computed(()=>soporte.value.filter(x=>x.estado_codigo==='CERRADO'&&!!x.informe_final))
+const totalPendiente=computed(()=>comprasPendientes.value.length+soporteCompra.value.length)
+const soloLectura=computed(()=>vista.value==='mantenimiento'||vista.value==='informes')
+const menu=computed(()=>[{id:'resumen',icono:'⌂',nombre:'Resumen'},{id:'caja',icono:'VB',nombre:'Vistos buenos',total:comprasPendientes.value.length},{id:'compras-ti',icono:'AC',nombre:'Compras técnicas',total:soporteCompra.value.length},{id:'mantenimiento',icono:'RM',nombre:'Reportes mensuales',total:reportesMantenimiento.value.length},{id:'informes',icono:'IF',nombre:'Informes de soporte',total:informesSoporte.value.length},{id:'delegar',icono:'DL',nombre:'Delegar aprobación'}])
 const titulo=computed(()=>({resumen:'Panel del Director',caja:'Visto bueno de Caja Chica','compras-ti':'Autorización de compra técnica',mantenimiento:'Reportes mensuales de mantenimiento',informes:'Informes finales de soporte'})[vista.value])
-const instruccion=computed(()=>({caja:{titulo:'Decisión requerida',texto:'Confirme el visto bueno para devolver el expediente a Tesorería y habilitar el desembolso.',accion:'Dar visto bueno'},'compras-ti':{titulo:'Autorización técnica-financiera',texto:'Revise el informe de viabilidad antes de continuar la gestión de compra de activos fijos.',accion:'Autorizar y continuar'},mantenimiento:{titulo:'Recepción institucional',texto:'Registre la recepción del reporte consolidado mensual. Esta acción finaliza el flujo.',accion:'Registrar recepción'},informes:{titulo:'Cierre informativo',texto:'Reciba el informe final elaborado y validado por el Jefe de UTIC.',accion:'Recibir informe'}})[vista.value]||{})
+const instruccion=computed(()=>({caja:{titulo:'Decisión requerida',texto:'Confirme el visto bueno para devolver el expediente a Tesorería y habilitar el desembolso.',accion:'Dar visto bueno'},'compras-ti':{titulo:'Autorización técnica-financiera',texto:'Revise el expediente derivado desde un ticket de Soporte antes de continuar la gestión de compra.',accion:'Dar visto bueno'},mantenimiento:{titulo:'Recepción institucional (solo lectura)',texto:'Consolidado de mantenimientos finalizados. Servicios Generales ya archivó estos expedientes.',accion:''},informes:{titulo:'Cierre informativo (solo lectura)',texto:'Informes finales ya elaborados y validados por el Jefe de UTIC.',accion:''}})[vista.value]||{})
 const lista=computed(()=>vista.value==='caja'?comprasPendientes.value:vista.value==='compras-ti'?soporteCompra.value:vista.value==='mantenimiento'?reportesMantenimiento.value:informesSoporte.value)
 const filtrados=computed(()=>lista.value.filter(x=>JSON.stringify(x).toLowerCase().includes(busqueda.value.toLowerCase())))
-const origen=computed(()=>vista.value==='caja'?'Tesorería':vista.value==='mantenimiento'?'Servicios Generales':'Jefe de UTIC')
-const codigo=x=>x.codigo||x.numero_ticket||x.numero_solicitud||`#${x.id}`;const asunto=x=>x.asunto||x.titulo||x.descripcion_corta||'Expediente institucional';const detalle=x=>String(x.descripcion||x.justificacion||'Documento remitido para conocimiento y decisión de Dirección.').slice(0,135);const estado=x=>textEstado(x);const fecha=x=>{const v=x.created_at||x.fecha_solicitud||x.fecha_creacion;if(!v)return 'Sin fecha';return new Intl.DateTimeFormat('es-BO').format(new Date(v))}
+const origen=computed(()=>(vista.value==='caja'||vista.value==='compras-ti')?'Tesorería':vista.value==='mantenimiento'?'Servicios Generales':'Jefe de UTIC')
+const codigo=x=>x.codigo||x.numero_ticket||x.numero_solicitud||`#${x.id}`;const asunto=x=>x.asunto||x.titulo||x.descripcion_corta||'Expediente institucional';const detalle=x=>String(x.descripcion||x.justificacion||'Documento remitido para conocimiento y decisión de Dirección.').slice(0,135);const estado=x=>textEstado(x);const fecha=x=>{const v=x.created_at||x.fecha_solicitud||x.fecha_creacion||x.finalizado_en||x.cerrado_en;if(!v)return 'Sin fecha';return new Intl.DateTimeFormat('es-BO').format(new Date(v))}
 async function obtener(url,destino){const r=await fetch(url,{headers:{Authorization:`Token ${localStorage.getItem('sigta_token')}`}});if(!r.ok)throw 0;const d=await r.json();destino.value=Array.isArray(d)?d:(d.results||[])}
 async function cargarTodo(){cargando.value=true;await Promise.allSettled([obtener('/api/compras/solicitudes/',compras),obtener('/api/soporte/tickets/',soporte),obtener('/api/mantenimiento/requerimientos/',mantenimiento)]);cargando.value=false}
-async function ejecutar(item){if(vista.value!=='caja')return alert('Esta recepción quedará disponible cuando el flujo técnico emita el informe correspondiente.');if(!confirm(`¿Dar visto bueno a ${item.codigo} y devolverlo a Tesorería?`))return;try{const r=await fetch(`/api/compras/solicitudes/${item.id}/visto-bueno-director/`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Token ${localStorage.getItem('sigta_token')}`},body:'{}'});const d=await r.json();if(!r.ok)throw new Error(d.detalle||'No fue posible autorizar.');await cargarTodo();alert('Visto bueno registrado. El expediente fue enviado a Tesorería.')}catch(e){alert(e.message)}}
+async function ejecutar(item){if(vista.value!=='caja'&&vista.value!=='compras-ti')return;if(!confirm(`¿Dar visto bueno a ${item.codigo} y devolverlo a Tesorería?`))return;try{const r=await fetch(`/api/compras/solicitudes/${item.id}/visto-bueno-director/`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Token ${localStorage.getItem('sigta_token')}`},body:'{}'});const d=await r.json();if(!r.ok)throw new Error(d.detalle||'No fue posible autorizar.');await cargarTodo();alert('Visto bueno registrado. El expediente fue enviado a Tesorería.')}catch(e){alert(e.message)}}
 function verExpediente(item){const archivo=item.certificacion_presupuestaria||item.informe||item.poa||item.pedido||item.proforma;if(archivo)window.open(archivo,'_blank');else alert('No existe un documento disponible para abrir.')}
 function salir(){localStorage.removeItem('sigta_token');localStorage.removeItem('sigta_usuario');router.push('/login')} onMounted(cargarTodo)
 </script>

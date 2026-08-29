@@ -1,7 +1,7 @@
 from rest_framework import status
 
-from rest_framework.authentication import (
-    TokenAuthentication,
+from usuarios.authentication import (
+    ExpiringTokenAuthentication as TokenAuthentication,
 )
 
 from rest_framework.decorators import (

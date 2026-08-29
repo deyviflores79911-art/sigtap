@@ -7,7 +7,7 @@
       =========================== -->
       <div class="brand">
         <div class="logo-placeholder">
-          EMI
+          <img src="/img/emi.jpg" alt="EMI" class="logo-img">
         </div>
 
         <div class="brand-text">
@@ -414,6 +414,16 @@ async function iniciarSesion() {
       return
     }
 
+    if (codigosRoles.includes('SERVICIOS_GENERALES')) {
+      router.push('/servicios-generales/dashboard')
+      return
+    }
+
+    if (codigosRoles.includes('AUXILIAR_SERVICIOS_GENERALES')) {
+      router.push('/auxiliar-servicios-generales/dashboard')
+      return
+    }
+
     if (codigosRoles.includes('TESORERIA')) {
       router.push('/tesoreria/dashboard')
       return
@@ -583,7 +593,7 @@ if (emailRecordado) {
     20px;
 
   border-top:
-    4px solid #f2c400;
+    4px solid #FFFF00;
 
   box-shadow:
     0 20px 50px
@@ -621,10 +631,10 @@ if (emailRecordado) {
 
   border-radius: 13px;
 
-  background: #0a437c;
+  background: #6576B4;
 
   border:
-    3px solid #f2c400;
+    3px solid #FFFF00;
 
   color: #ffffff;
 
@@ -633,6 +643,18 @@ if (emailRecordado) {
   font-weight: 800;
 
   letter-spacing: 0.5px;
+
+  overflow: hidden;
+}
+
+
+.logo-img {
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: contain;
 }
 
 
@@ -697,7 +719,7 @@ if (emailRecordado) {
 
   border-radius: 10px;
 
-  background: #f2c400;
+  background: #FFFF00;
 }
 
 
@@ -907,7 +929,7 @@ if (emailRecordado) {
 
   height: 16px;
 
-  accent-color: #0a437c;
+  accent-color: #6576B4;
 }
 
 
@@ -997,7 +1019,7 @@ if (emailRecordado) {
 
   border-radius: 8px;
 
-  background: #0a437c;
+  background: #6576B4;
 
   color: #ffffff;
 

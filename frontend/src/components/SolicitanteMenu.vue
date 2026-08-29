@@ -3,61 +3,54 @@
   <aside class="sidebar">
 
     <!-- =====================================================
-         MARCA
+         MARCA + BOTÓN DESPLEGABLE (móvil)
     ====================================================== -->
 
-    <div class="brand">
+    <div class="brand-row">
 
-      <div class="logo">
-        EMI
+      <div class="brand">
+
+        <div class="logo">
+          <img src="/img/emi.jpg" alt="EMI" class="logo-img">
+        </div>
+
+        <div>
+
+          <h2>
+            SIGTA
+          </h2>
+
+          <span>
+            Sistema Integral de Gestión
+          </span>
+
+        </div>
+
       </div>
 
-      <div>
-
-        <h2>
-          SIGTA
-        </h2>
-
-        <span>
-          Sistema Integral de Gestión
-        </span>
-
-      </div>
+      <button
+        type="button"
+        class="menu-toggle"
+        :aria-expanded="menuAbierto"
+        aria-label="Mostrar opciones del menú"
+        @click="menuAbierto = !menuAbierto"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
 
     </div>
 
 
     <!-- =====================================================
-         USUARIO
+         CONTENIDO DESPLEGABLE
     ====================================================== -->
 
-    <div class="user-box">
-
-      <div class="avatar">
-        {{ iniciales }}
-      </div>
-
-
-      <div class="user-data">
-
-        <strong>
-          {{
-            usuario?.nombre
-            ||
-            usuario?.nombre_completo
-            ||
-            'Usuario solicitante'
-          }}
-        </strong>
-
-        <span>
-          {{ areaUsuario }}
-        </span>
-
-      </div>
-
-    </div>
-
+    <div
+      class="sidebar-body"
+      :class="{ abierto: menuAbierto }"
+    >
 
     <!-- =====================================================
          MENÚ
@@ -68,7 +61,7 @@
     </div>
 
 
-    <nav>
+    <nav @click="menuAbierto = false">
 
       <!-- INICIO -->
 
@@ -78,58 +71,10 @@
       >
 
         <span class="icon">
-          ▦
+          🏠
         </span>
 
         Inicio
-
-      </router-link>
-
-
-      <!-- SOPORTE TÉCNICO -->
-
-      <router-link
-        to="/usuario/soporte"
-        class="menu-item"
-      >
-
-        <span class="icon">
-          ST
-        </span>
-
-        Soporte Técnico
-
-      </router-link>
-
-
-      <!-- MANTENIMIENTO -->
-
-      <router-link
-        to="/usuario/mantenimiento"
-        class="menu-item"
-      >
-
-        <span class="icon">
-          MT
-        </span>
-
-        Mantenimiento
-
-      </router-link>
-
-
-      <!-- COMPRAS -->
-
-      <router-link
-        to="/usuario/compras"
-        class="menu-item"
-      >
-
-        <span class="icon">
-          CP
-        </span>
-
-        Compras
 
       </router-link>
 
@@ -142,26 +87,10 @@
       >
 
         <span class="icon">
-          ≡
+          📋
         </span>
 
         Mis solicitudes
-
-      </router-link>
-
-
-      <!-- NOTIFICACIONES -->
-
-      <router-link
-        to="/usuario/notificaciones"
-        class="menu-item"
-      >
-
-        <span class="icon">
-          N
-        </span>
-
-        Notificaciones
 
       </router-link>
 
@@ -174,7 +103,7 @@
       >
 
         <span class="icon">
-          P
+          👤
         </span>
 
         Mi perfil
@@ -182,30 +111,6 @@
       </router-link>
 
     </nav>
-
-
-    <!-- =====================================================
-         INFORMACIÓN DEL SISTEMA
-    ====================================================== -->
-
-    <div class="system-card">
-
-      <div class="status-row">
-
-        <span class="status-dot"></span>
-
-        <strong>
-          SIGTA ACTIVO
-        </strong>
-
-      </div>
-
-
-      <small>
-        Sistema Integral de Gestión
-      </small>
-
-    </div>
 
 
     <!-- =====================================================
@@ -219,6 +124,8 @@
       Cerrar sesión
     </button>
 
+    </div>
+
   </aside>
 
 </template>
@@ -227,7 +134,6 @@
 <script setup>
 
 import {
-  computed,
   ref
 } from 'vue'
 
@@ -238,6 +144,14 @@ import {
 
 const router =
   useRouter()
+
+
+// ==========================================================
+// MENÚ MÓVIL (hamburguesa)
+// ==========================================================
+
+const menuAbierto =
+  ref(false)
 
 
 // ==========================================================
@@ -271,87 +185,6 @@ if (guardado) {
     )
   }
 }
-
-
-// ==========================================================
-// INICIALES
-// ==========================================================
-
-const iniciales =
-  computed(() => {
-
-    const nombre =
-      usuario.value?.nombre
-      ||
-      usuario.value?.nombre_completo
-      ||
-      'Usuario'
-
-
-    return nombre
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map(
-        parte =>
-          parte
-            .charAt(0)
-            .toUpperCase()
-      )
-      .join('')
-  })
-
-
-// ==========================================================
-// ÁREA DEL USUARIO
-// ==========================================================
-
-const areaUsuario =
-  computed(() => {
-
-    const roles =
-      usuario.value?.roles
-
-
-    if (
-      Array.isArray(roles)
-      &&
-      roles.length > 0
-    ) {
-
-      const primerRol =
-        roles[0]
-
-
-      if (
-        typeof primerRol?.area
-        ===
-        'object'
-      ) {
-
-        return (
-          primerRol.area?.nombre
-          ||
-          primerRol.nombre
-          ||
-          'Solicitante'
-        )
-      }
-
-
-      return (
-        primerRol?.area
-        ||
-        primerRol?.nombre
-        ||
-        'Solicitante'
-      )
-    }
-
-
-    return 'Solicitante'
-  })
 
 
 // ==========================================================
@@ -395,7 +228,13 @@ function cerrarSesion() {
 
   min-width: 235px;
 
-  min-height: 100vh;
+  height: 100vh;
+
+  position: sticky;
+
+  top: 0;
+
+  overflow-y: auto;
 
 
   display: flex;
@@ -409,7 +248,7 @@ function cerrarSesion() {
 
 
   background:
-    #153f73;
+    #6576B4;
 
   color:
     #ffffff;
@@ -426,14 +265,13 @@ function cerrarSesion() {
    MARCA
 ========================================================= */
 
-.brand {
+.brand-row {
 
   display: flex;
 
   align-items: center;
 
-
-  gap: 10px;
+  justify-content: space-between;
 
 
   padding:
@@ -450,6 +288,17 @@ function cerrarSesion() {
       255,
       .16
     );
+}
+
+
+.brand {
+
+  display: flex;
+
+  align-items: center;
+
+
+  gap: 10px;
 }
 
 
@@ -472,17 +321,21 @@ function cerrarSesion() {
 
   border-radius: 8px;
 
+  overflow: hidden;
+
 
   background:
-    #f2c400;
-
-  color:
-    #073b6f;
+    #FFFF00;
+}
 
 
-  font-size: 12px;
+.logo-img {
 
-  font-weight: 900;
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: contain;
 }
 
 
@@ -507,104 +360,7 @@ function cerrarSesion() {
     #afc2d4;
 
 
-  font-size: 8px;
-}
-
-
-/* =========================================================
-   USUARIO
-========================================================= */
-
-.user-box {
-
-  display: flex;
-
-  align-items: center;
-
-
-  gap: 9px;
-
-
-  padding:
-    18px
-    7px;
-}
-
-
-.avatar {
-
-  width: 34px;
-
-  height: 34px;
-
-
-  flex-shrink: 0;
-
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-
-  border-radius: 50%;
-
-
-  background:
-    #f2c400;
-
-  color:
-    #073b6f;
-
-
   font-size: 10px;
-
-  font-weight: 900;
-}
-
-
-.user-data {
-
-  min-width: 0;
-}
-
-
-.user-data strong,
-.user-data span {
-
-  display: block;
-}
-
-
-.user-data strong {
-
-  overflow: hidden;
-
-
-  color:
-    #ffffff;
-
-
-  font-size: 10px;
-
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-}
-
-
-.user-data span {
-
-  margin-top: 2px;
-
-
-  color:
-    #afc2d4;
-
-
-  font-size: 8px;
 }
 
 
@@ -624,7 +380,7 @@ function cerrarSesion() {
     #82a5c6;
 
 
-  font-size: 8px;
+  font-size: 10px;
 
   font-weight: 800;
 
@@ -650,7 +406,7 @@ nav {
 
 .menu-item {
 
-  min-height: 42px;
+  min-height: 48px;
 
 
   display: flex;
@@ -658,7 +414,7 @@ nav {
   align-items: center;
 
 
-  gap: 9px;
+  gap: 11px;
 
 
   padding:
@@ -676,7 +432,7 @@ nav {
   text-decoration: none;
 
 
-  font-size: 10px;
+  font-size: 20px;
 
 
   transition:
@@ -687,19 +443,22 @@ nav {
 
 .icon {
 
-  width: 25px;
+  width: 28px;
 
 
   flex-shrink: 0;
 
 
-  color:
-    #abc0d3;
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
 
 
-  font-size: 8px;
+  font-size: 20px;
 
-  font-weight: 900;
+  line-height: 1;
 }
 
 
@@ -726,7 +485,7 @@ nav {
 
   border-left:
     3px solid
-    #f2c400;
+    #FFFF00;
 
 
   background:
@@ -739,7 +498,7 @@ nav {
 
 
   color:
-    #f4d52f;
+    #FFFF00;
 
 
   font-weight: 700;
@@ -750,94 +509,7 @@ nav {
 .icon {
 
   color:
-    #f2c400;
-}
-
-
-/* =========================================================
-   ESTADO DEL SISTEMA
-========================================================= */
-
-.system-card {
-
-  margin-top: auto;
-
-
-  padding: 11px;
-
-
-  border:
-    1px solid
-    rgba(
-      255,
-      255,
-      255,
-      .18
-    );
-
-
-  border-radius: 7px;
-
-
-  background:
-    rgba(
-      255,
-      255,
-      255,
-      .07
-    );
-}
-
-
-.status-row {
-
-  display: flex;
-
-  align-items: center;
-
-
-  gap: 6px;
-}
-
-
-.status-dot {
-
-  width: 7px;
-
-  height: 7px;
-
-
-  border-radius: 50%;
-
-
-  background:
-    #38c66b;
-}
-
-
-.system-card strong {
-
-  color:
-    #f2d334;
-
-
-  font-size: 8px;
-}
-
-
-.system-card small {
-
-  display: block;
-
-
-  margin-top: 4px;
-
-
-  color:
-    #9db5ca;
-
-
-  font-size: 7px;
+    #FFFF00;
 }
 
 
@@ -849,51 +521,142 @@ nav {
 
   width: 100%;
 
-  min-height: 40px;
+  min-height: 54px;
+
+  flex-shrink: 0;
 
 
-  margin-top: 9px;
+  position: sticky;
+
+  bottom: 0;
 
 
-  border:
-    1px solid
-    rgba(
-      255,
-      255,
-      255,
-      .27
-    );
+  margin-top: auto;
 
 
-  border-radius: 6px;
+  border: none;
+
+
+  border-radius: 7px;
 
 
   background:
-    transparent;
+    #FFFF00;
 
 
   color:
-    white;
+    #17324a;
 
 
-  font-size: 9px;
+  font-size: 16px;
 
-  font-weight: 700;
+  font-weight: 800;
+
+
+  cursor: pointer;
+
+  transition:
+    transform .15s ease,
+    box-shadow .15s ease;
+}
+
+
+.logout:hover {
+
+  transform: scale(1.05);
+
+  box-shadow:
+    0
+    4px
+    12px
+    rgba(0,0,0,.18);
+}
+
+
+/* =========================================================
+   BOTÓN DESPLEGABLE (solo móvil)
+========================================================= */
+
+.menu-toggle {
+
+  display: none;
+
+  flex-shrink: 0;
+
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 4px;
+
+
+  width: 34px;
+
+  height: 34px;
+
+
+  border: none;
+
+  border-radius: 7px;
+
+
+  background:
+    rgba(255, 255, 255, .1);
 
 
   cursor: pointer;
 }
 
 
-.logout:hover {
+.menu-toggle span {
+
+  width: 16px;
+
+  height: 2px;
+
+
+  border-radius: 2px;
+
 
   background:
-    rgba(
-      255,
-      255,
-      255,
-      .08
-    );
+    #ffffff;
+
+
+  transition:
+    transform .2s ease,
+    opacity .2s ease;
+}
+
+
+.menu-toggle[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.menu-toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+
+/* =========================================================
+   CUERPO DESPLEGABLE (contenido del menú)
+========================================================= */
+
+.sidebar-body {
+
+  display: flex;
+
+  flex: 1;
+
+  flex-direction: column;
+
+  min-height: 0;
 }
 
 
@@ -911,15 +674,47 @@ nav {
 
     min-width: 100%;
 
-    min-height: auto;
+    height: auto;
+
+    position: static;
+
+    top: auto;
+
+
+    padding-bottom: 12px;
   }
 
 
-  .system-card {
+  .menu-toggle {
 
-    margin-top: 18px;
+    display: flex;
+  }
+
+
+  .sidebar-body {
+
+    max-height: 0;
+
+
+    overflow: hidden;
+
+
+    transition:
+      max-height .25s ease;
+  }
+
+
+  .sidebar-body.abierto {
+
+    max-height: min(65vh, 460px);
+
+
+    overflow-y: auto;
+
+    -webkit-overflow-scrolling: touch;
   }
 
 }
+
 
 </style>

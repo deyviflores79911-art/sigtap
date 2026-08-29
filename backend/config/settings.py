@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 
@@ -23,15 +24,44 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ==========================================================
 # SEGURIDAD
 # ==========================================================
+#
+# SECRET_KEY se toma de la variable de entorno DJANGO_SECRET_KEY
+# en producción. El valor "django-insecure-..." solo se usa como
+# respaldo para desarrollo local y NUNCA debe usarse en un
+# entorno real: cualquiera con este código podría forjar
+# sesiones, tokens de reseteo de contraseña y firmas.
+#
+# DEBUG, ALLOWED_HOSTS y las banderas SECURE_*/SESSION_*/CSRF_*
+# de más abajo dependen de la infraestructura real (dominio,
+# si TLS se termina en un proxy, etc.), así que se activan por
+# variable de entorno en vez de forzarse aquí — hacerlo a
+# ciegas rompería `manage.py runserver` en desarrollo.
+#
+# ==========================================================
 
-SECRET_KEY = (
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
     'django-insecure-)e4t9-69@ib29ztry+0_'
-    'fz6ru-=snb4b0)ynx+wtkj^(c9n0ng'
+    'fz6ru-=snb4b0)ynx+wtkj^(c9n0ng',
 )
 
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+    if host.strip()
+]
+
+if not DEBUG:
+    # Solo se activan bajo HTTPS real; en desarrollo (DEBUG=True)
+    # forzarlas rompería el servidor local por HTTP.
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 
 # ==========================================================
@@ -74,6 +104,8 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
 
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+
+    'usuarios.middleware.CambioPasswordObligatorioMiddleware',
 
     'django.contrib.messages.middleware.MessageMiddleware',
 
@@ -137,6 +169,27 @@ DATABASES = {
 
 
 # ==========================================================
+# HASH DE CONTRASEÑAS
+# ==========================================================
+#
+# Argon2id (ganador del Password Hashing Competition, y el
+# algoritmo que Django recomienda como más fuerte) queda como
+# hasher principal. Se conservan los hashers PBKDF2 solo para
+# poder seguir leyendo/verificando contraseñas ya existentes
+# en la base de datos; cualquier login exitoso las re-encripta
+# automáticamente con Argon2id (comportamiento estándar de
+# Django: check_password migra el hash al hasher preferido).
+#
+# ==========================================================
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+]
+
+
+# ==========================================================
 # VALIDACIÓN DE CONTRASEÑAS
 # ==========================================================
 
@@ -152,6 +205,9 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME':
             'django.contrib.auth.password_validation.'
             'MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        },
     },
 
     {
@@ -165,7 +221,30 @@ AUTH_PASSWORD_VALIDATORS = [
             'django.contrib.auth.password_validation.'
             'NumericPasswordValidator',
     },
+
+    {
+        'NAME':
+            'usuarios.validators.ComplejidadPasswordValidator',
+    },
 ]
+
+
+# ==========================================================
+# SESIÓN Y FUERZA BRUTA
+# ==========================================================
+#
+# Umbrales usados por usuarios/views.py::login_view para el
+# bloqueo temporal de cuentas (HU de seguridad). Centralizados
+# aquí para no tener el número "mágico" repartido en el código.
+#
+# ==========================================================
+
+LOGIN_MAX_INTENTOS_FALLIDOS = 5
+LOGIN_MINUTOS_BLOQUEO = 15
+
+# El token de DRF no expira por sí solo: se fuerza una vida
+# máxima de sesión para reducir la ventana de un token robado.
+SESION_TOKEN_HORAS_VALIDEZ = 12
 
 
 # ==========================================================
@@ -203,7 +282,7 @@ AUTH_USER_MODEL = 'usuarios.Usuario'
 REST_FRAMEWORK = {
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'usuarios.authentication.ExpiringTokenAuthentication',
     ],
 
     'DEFAULT_PERMISSION_CLASSES': [

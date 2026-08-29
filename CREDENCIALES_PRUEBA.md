@@ -12,10 +12,18 @@
 | Director      | `director@emi.edu.bo` | `SIGTA_Director#2026!` | `/director/dashboard` |
 | Encargado de Compras y Almacén | `almacen@emi.edu.bo` | `SIGTA_Almacen#2026!` | `/almacen/dashboard`      |
 | DAF | `daf@emi.edu.bo` | `SIGTA_DAF#2026!` | `/daf/dashboard` |
+| Servicios Generales | `servicios.generales@emi.edu.bo` | `SIGTA_ServiciosGrales#2026!` | `/servicios-generales/dashboard` |
+| Auxiliar de Servicios Generales | `auxiliar.sg@emi.edu.bo` | `SIGTA_AuxiliarSG#2026!` | `/auxiliar-servicios-generales/dashboard` |
+
+### Cuenta para probar HU-01 / HU-02 (cambio obligatorio de contraseña)
+
+| Rol | Correo | Contraseña temporal | Comportamiento esperado |
+|---|---|---|---|
+| Solicitante (recién creado) | `nuevo.ingreso@emi.edu.bo` | `SIGTA_Temporal#2026!` | `must_change_password=true`: al iniciar sesión, el sistema exige cambiar la contraseña antes de permitir cualquier otra acción (bloqueado también en el backend, no solo en el redireccionamiento del frontend). |
 
 ## Observaciones
 
-- Las cuentas están activas en la base de datos local `backend/db.sqlite3`.
+- Las cuentas están activas en la base de datos local `backend/db.sqlite3`. Se generan/actualizan con `python manage.py cargar_usuarios_prueba` (además de `cargar_permisos_sigta` para roles y permisos).
 - Las contraseñas fueron configuradas para pruebas y deben cambiarse antes de una implementación real.
-- Si la base de datos no se copia a otra instalación, estas cuentas no existirán automáticamente.
-- Los roles `SERVICIOS_GENERALES` y `AUXILIAR_SERVICIOS_GENERALES` todavía no tienen cuentas de prueba creadas.
+- Si la base de datos no se copia a otra instalación, estas cuentas no existirán automáticamente hasta correr los comandos de carga.
+- Las contraseñas se almacenan con Argon2id (no en texto plano); este archivo es solo para pruebas locales.

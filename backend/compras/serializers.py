@@ -1,4 +1,3 @@
-from django.utils import timezone
 from rest_framework import serializers
 
 from .models import SolicitudCompra
@@ -69,6 +68,9 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "estado",
             "estado_nombre",
 
+            "origen_modulo",
+            "ticket_soporte",
+            "requerimiento_mantenimiento",
             "ticket_soporte_vinculado",
 
             "observaciones",
@@ -77,6 +79,8 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "factura", "acta_conformidad", "fotograma",
             "motivo_rechazo", "monto_desembolsado",
             "responsable_adquisicion", "monto_real", "proveedor",
+            "componente_verificado", "observacion_verificacion",
+            "fecha_ingreso_almacen", "fecha_despacho_almacen",
             "cerrado_inmutable",
 
             "activo",
@@ -90,11 +94,18 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "solicitante",
             "estado",
             "via_adquisicion",
+            "origen_modulo",
+            "ticket_soporte",
+            "requerimiento_mantenimiento",
+            "ticket_soporte_vinculado",
             "observaciones",
             "certificacion_presupuestaria", "factura",
             "acta_conformidad", "fotograma", "motivo_rechazo",
             "monto_desembolsado", "responsable_adquisicion",
-            "monto_real", "proveedor", "cerrado_inmutable",
+            "monto_real", "proveedor",
+            "componente_verificado", "observacion_verificacion",
+            "fecha_ingreso_almacen", "fecha_despacho_almacen",
+            "cerrado_inmutable",
             "creado_en",
             "actualizado_en",
         ]
@@ -105,43 +116,8 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
 
         usuario = request.user
 
-        anio = timezone.now().year
-
-        prefijo = f"CMP-{anio}-"
-
-        ultimo = (
-            SolicitudCompra.objects
-            .filter(
-                codigo__startswith=prefijo
-            )
-            .order_by("-codigo")
-            .first()
-        )
-
-        numero = 1
-
-        if ultimo:
-
-            try:
-                numero = (
-                    int(
-                        ultimo.codigo.split("-")[-1]
-                    )
-                    + 1
-                )
-
-            except ValueError:
-                numero = (
-                    SolicitudCompra.objects.count()
-                    + 1
-                )
-
-        codigo = (
-            f"{prefijo}{numero:04d}"
-        )
-
         return SolicitudCompra.objects.create(
-            codigo=codigo,
+            codigo=SolicitudCompra.generar_codigo(),
             solicitante=usuario,
             estado="CREADO_PENDIENTE_DAF",
             **validated_data
@@ -158,3 +134,16 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
                     "documentos": "Debe adjuntar Informe, POA, Pedido y Proforma. Faltan: " + ", ".join(faltantes)
                 })
         return attrs
+
+
+class SolicitudCompraResumenSerializer(serializers.ModelSerializer):
+    """Resumen liviano usado por Mantenimiento/Soporte para
+    mostrar el estado de una compra vinculada sin exponer todos
+    los campos ni requerir permiso de Compras."""
+
+    estado_nombre = serializers.CharField(source="get_estado_display", read_only=True)
+
+    class Meta:
+        model = SolicitudCompra
+        fields = ["id", "codigo", "titulo", "estado", "estado_nombre", "creado_en", "actualizado_en"]
+        read_only_fields = fields
