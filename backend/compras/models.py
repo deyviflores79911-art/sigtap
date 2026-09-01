@@ -7,6 +7,13 @@ from usuarios.models import Area
 
 class SolicitudCompra(models.Model):
 
+    PRIORIDADES = [
+        ("BAJA", "Baja"),
+        ("MEDIA", "Media"),
+        ("ALTA", "Alta"),
+        ("URGENTE", "Urgente"),
+    ]
+
     # Estados vigentes del flujo real de Caja Chica (único
     # flujo implementado hoy). Los estados de un diseño
     # "Finanzas" anterior (NUEVO, EN_COTIZACION, EN_APROBACION,
@@ -63,6 +70,32 @@ class SolicitudCompra(models.Model):
         on_delete=models.PROTECT,
         related_name="compras_solicitadas"
     )
+
+    tecnico_daf = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="expedientes_daf_asignados",
+    )
+
+    validado_por_jefe_daf = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="expedientes_daf_validados",
+    )
+
+    prioridad_daf = models.CharField(
+        max_length=10,
+        choices=PRIORIDADES,
+        blank=True,
+    )
+
+    criterio_prioridad_daf = models.TextField(blank=True)
+
+    asignado_daf_en = models.DateTimeField(null=True, blank=True)
 
     area = models.ForeignKey(
         Area,

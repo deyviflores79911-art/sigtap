@@ -23,10 +23,10 @@
           <span>SG</span>
         </div>
         <div class="stats">
-          <article><i class="blue">DR</i><div><small>Por derivar</small><b>{{ porDerivar.length }}</b><p>a un auxiliar</p></div></article>
-          <article><i class="gold">EC</i><div><small>En curso</small><b>{{ enCurso.length }}</b><p>ya derivados</p></div></article>
-          <article><i class="green">FI</i><div><small>Por finalizar</small><b>{{ porFinalizar.length }}</b><p>informe registrado</p></div></article>
-          <article><i class="navy">FZ</i><div><small>Finalizados este mes</small><b>{{ finalizadosMes.length }}</b><p>archivados</p></div></article>
+          <article @click="vista='derivar'"><i class="blue">DR</i><div><small>Por derivar</small><b>{{ porDerivar.length }}</b><p>a un auxiliar</p></div></article>
+          <article @click="vista='compra'"><i class="gold">CO</i><div><small>Compras por validar</small><b>{{ comprasPorValidar.length }}</b><p>para elevar a DAF</p></div></article>
+          <article @click="vista='finalizar'"><i class="green">FI</i><div><small>Por finalizar</small><b>{{ porFinalizar.length }}</b><p>informe registrado</p></div></article>
+          <article @click="vista='seguimiento'"><i class="navy">EC</i><div><small>En curso</small><b>{{ enCurso.length }}</b><p>ver seguimiento</p></div></article>
         </div>
         <div class="panels">
           <section class="panel">
@@ -50,7 +50,7 @@
             <div class="top"><span>{{ r.codigo }}</span><em>{{ r.estado_codigo }}</em></div>
             <h3>{{ r.titulo }}</h3>
             <p>{{ (r.descripcion||'').slice(0,130) }}</p>
-            <div class="actions"><button @click="verItem(r)">Ver detalle</button><button class="primary" @click="itemActivo=r;formDerivar.auxiliar_id=''">Derivar</button></div>
+            <div class="actions"><button @click="verItem(r)">Ver detalle</button><button class="primary" @click="abrirDerivacion(r)">Derivar</button></div>
           </article>
           <div v-if="!porDerivar.length" class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay requerimientos pendientes de derivación.</p></div>
         </div>
@@ -63,7 +63,19 @@
             </select>
           </label>
           <small v-if="!auxiliares.length">No hay auxiliares activos disponibles.</small>
-          <div class="actions"><button @click="itemActivo=null">Cancelar</button><button class="primary" :disabled="procesando||!formDerivar.auxiliar_id" @click="derivarAuxiliar">Derivar requerimiento</button></div>
+          <label class="campo">Prioridad
+            <select v-model="formDerivar.prioridad">
+              <option value="">Seleccione…</option>
+              <option value="BAJA">Baja</option>
+              <option value="MEDIA">Media</option>
+              <option value="ALTA">Alta</option>
+              <option value="URGENTE">Urgente</option>
+            </select>
+          </label>
+          <label class="campo">Criterio de prioridad
+            <textarea v-model.trim="formDerivar.criterio_prioridad" rows="3" placeholder="Explique por qué se asigna esta prioridad"></textarea>
+          </label>
+          <div class="actions"><button @click="itemActivo=null">Cancelar</button><button class="primary" :disabled="procesando||!formDerivar.auxiliar_id||!formDerivar.prioridad||!formDerivar.criterio_prioridad" @click="derivarAuxiliar">Derivar requerimiento</button></div>
         </div>
       </section>
 
@@ -77,6 +89,19 @@
             <div class="actions"><button @click="verItem(r)">Ver detalle</button><button class="primary" @click="finalizarRequerimiento(r)">Finalizar y archivar</button></div>
           </article>
           <div v-if="!porFinalizar.length" class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay expedientes pendientes de archivar.</p></div>
+        </div>
+      </section>
+
+      <section v-else-if="vista==='compra'">
+        <div class="instruction"><b>Validar y elevar compra</b><span>Revise el requerimiento preparado por el técnico y, si corresponde, elévelo a DAF.</span></div>
+        <div class="cards">
+          <article v-for="r in comprasPorValidar" :key="r.id">
+            <div class="top"><span>{{ r.codigo }}</span><em>PENDIENTE</em></div>
+            <h3>{{ r.producto_requerido || r.titulo }}</h3>
+            <p>Cantidad: {{ r.cantidad_requerida || 1 }}<br>{{ r.especificacion_producto || 'Sin especificaciones adicionales.' }}</p>
+            <div class="actions"><button @click="verItem(r)">Ver documentación</button><button class="primary" :disabled="procesando" @click="elevarCompra(r)">Validar y elevar a DAF</button></div>
+          </article>
+          <div v-if="!comprasPorValidar.length" class="empty"><span>✓</span><h3>Sin compras pendientes</h3><p>No existen solicitudes esperando validación de la jefatura.</p></div>
         </div>
       </section>
 
@@ -163,22 +188,25 @@ const saludo = computed(() => new Date().getHours() < 12 ? 'Buenos días' : new 
 const porDerivar = computed(() => requerimientos.value.filter(r => r.estado_codigo === 'RECIBIDO'))
 const enCurso = computed(() => requerimientos.value.filter(r => ['DERIVADO', 'REVISION_ALMACEN', 'EN_ESPERA_COMPRA', 'EN_MANTENIMIENTO', 'INFORME_REGISTRADO'].includes(r.estado_codigo)))
 const porFinalizar = computed(() => requerimientos.value.filter(r => r.estado_codigo === 'INFORME_REGISTRADO'))
+const comprasPorValidar = computed(() => requerimientos.value.filter(r => r.estado_codigo === 'EN_ESPERA_COMPRA' && !r.derivado_compra))
 const finalizadosMes = computed(() => {
   const ahora = new Date()
   return requerimientos.value.filter(r => r.estado_codigo === 'FINALIZADO' && r.finalizado_en && new Date(r.finalizado_en).getMonth() === ahora.getMonth() && new Date(r.finalizado_en).getFullYear() === ahora.getFullYear())
 })
 
 const menu = computed(() => [
-  { id: 'resumen', icono: '⌂', nombre: 'Resumen' },
+  { id: 'resumen', icono: '⌂', nombre: 'Dashboard' },
   { id: 'derivar', icono: 'DR', nombre: 'Derivar a auxiliar', total: porDerivar.value.length },
+  { id: 'compra', icono: 'CO', nombre: 'Validar y elevar compra', total: comprasPorValidar.value.length },
   { id: 'seguimiento', icono: 'EC', nombre: 'En curso', total: enCurso.value.length },
   { id: 'finalizar', icono: 'FI', nombre: 'Finalizar y archivar', total: porFinalizar.value.length },
   { id: 'reporte', icono: 'RM', nombre: 'Reporte mensual' },
 ])
 
 const titulo = computed(() => ({
-  resumen: 'Panel de Servicios Generales',
+  resumen: 'Dashboard de Mantenimiento',
   derivar: 'Derivar a auxiliar',
+  compra: 'Validar y elevar compra',
   seguimiento: 'Requerimientos en curso',
   finalizar: 'Finalizar y archivar',
   reporte: 'Reporte mensual',
@@ -232,9 +260,19 @@ async function postAccion(item, endpoint, body) {
   }
 }
 
-const formDerivar = reactive({ auxiliar_id: '' })
+const formDerivar = reactive({ auxiliar_id: '', prioridad: 'MEDIA', criterio_prioridad: '' })
+function abrirDerivacion(item) {
+  itemActivo.value = item
+  Object.assign(formDerivar, { auxiliar_id: '', prioridad: 'MEDIA', criterio_prioridad: '' })
+}
 async function derivarAuxiliar() {
-  try { await postAccion(itemActivo.value, 'derivar-auxiliar', { auxiliar_id: Number(formDerivar.auxiliar_id) }) }
+  try { await postAccion(itemActivo.value, 'derivar-auxiliar', { auxiliar_id: Number(formDerivar.auxiliar_id), prioridad: formDerivar.prioridad, criterio_prioridad: formDerivar.criterio_prioridad }) }
+  catch (e) { alert(e.message) }
+}
+
+async function elevarCompra(item) {
+  if (!confirm(`¿Validar y elevar a DAF la compra de ${item.producto_requerido || item.titulo}?`)) return
+  try { const data = await postAccion(item, 'validar-elevar-compra', {}); alert(data?.mensaje || 'Solicitud elevada a DAF correctamente.') }
   catch (e) { alert(e.message) }
 }
 

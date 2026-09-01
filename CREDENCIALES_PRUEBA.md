@@ -2,18 +2,36 @@
 
 > **Uso exclusivo para desarrollo local.** Este archivo contiene contraseñas en texto visible. No debe incluirse en un repositorio público ni utilizarse en producción.
 
-| Rol               | Correo          | Contraseña | Ruta principal |
+### Administración
+
+| Rol | Correo | Contraseña | Ruta principal |
 |---|---|---|---|
-| Administrador (Director) | `admin@emi.edu.bo` | `SIGTA_Admin#2026!` | `/admin/dashboard` |
-| Superusuario | `superuser@emi.edu.bo` | `SIGTA_Superuser#2026!` | `/superuser/dashboard` |
-| Solicitante   | `solicitante@emi.edu.bo` | `SIGTA_Usuario#2026!` | `/usuario/dashboard` |
-| Jefe de UTIC  | `jefe.utic@emi.edu.bo` | `SIGTA_JefeUTIC#2026!` | `/jefe-utic/dashboard` |
-| Especialista  | `especialista@emi.edu.bo` | `SIGTA_Especialista#2026!` | `/especialista/dashboard`      |
-| Tesorería     | `tesoreria@emi.edu.bo` | `SIGTA_Tesoreria#2026!` | `/tesoreria/dashboard` |
-| Encargado de Compras y Almacén | `almacen@emi.edu.bo` | `SIGTA_Almacen#2026!` | `/almacen/dashboard`      |
-| DAF | `daf@emi.edu.bo` | `SIGTA_DAF#2026!` | `/daf/dashboard` |
-| Servicios Generales | `servicios.generales@emi.edu.bo` | `SIGTA_ServiciosGrales#2026!` | `/servicios-generales/dashboard` |
-| Auxiliar de Servicios Generales | `auxiliar.sg@emi.edu.bo` | `SIGTA_AuxiliarSG#2026!` | `/auxiliar-servicios-generales/dashboard` |
+| Admin (superuser) | `superuser@emi.edu.bo` | `SIGTA_Superuser#2026!` | `/superuser/dashboard` |
+| Director | `admin@emi.edu.bo` | `SIGTA_Admin#2026!` | `/admin/dashboard` |
+
+### Jefes
+
+| Rol | Correo | Contraseña | Ruta principal |
+|---|---|---|---|
+| Jefe UTIC  | `jefe.utic@emi.edu.bo` | `SIGTA_JefeUTIC#2026!` | `/jefe-utic/dashboard` |
+| Jefe DAF | `jefe.daf@emi.edu.bo` | `SIGTA_JefeDAF#2026!` | `/daf/dashboard` |
+| Jefe Mantenimiento | `servicios.generales@emi.edu.bo` | `SIGTA_ServiciosGrales#2026!` | `/servicios-generales/dashboard` |
+
+### Técnicos
+
+| Dependencia | Rol | Correo | Contraseña | Ruta principal |
+|---|---|---|---|---|
+| Jefe DAF | Técnico de la DAF | `daf@emi.edu.bo` | `SIGTA_DAF#2026!` | `/daf/dashboard` |
+| Jefe DAF | Técnico de Almacén y Compras | `almacen@emi.edu.bo` | `SIGTA_Almacen#2026!` | `/almacen/dashboard` |
+| Jefe DAF | Técnico de Tesorería | `tesoreria@emi.edu.bo` | `SIGTA_Tesoreria#2026!` | `/tesoreria/dashboard` |
+| Jefe UTIC | Técnico de Soporte Técnico | `especialista@emi.edu.bo` | `SIGTA_Especialista#2026!` | `/especialista/dashboard` |
+| Jefe Mantenimiento | Técnico de Mantenimiento | `auxiliar.sg@emi.edu.bo` | `SIGTA_AuxiliarSG#2026!` | `/auxiliar-servicios-generales/dashboard` |
+
+### Usuario
+
+| Rol | Correo | Contraseña | Ruta principal |
+|---|---|---|---|
+| Usuario | `solicitante@emi.edu.bo` | `SIGTA_Usuario#2026!` | `/usuario/dashboard` |
 
 ### Cuenta para probar HU-01 / HU-02 (cambio obligatorio de contraseña)
 

@@ -15,6 +15,7 @@ from .views import (
     PermisoViewSet,
     RolPermisoViewSet,
     DelegacionAprobacionViewSet,
+    InformeJefaturaViewSet,
     login_view,
     mi_contexto,
     usuarios_por_rol,
@@ -104,6 +105,12 @@ router.register(
     r"delegaciones",
     DelegacionAprobacionViewSet,
     basename="delegacion-aprobacion"
+)
+
+router.register(
+    r"informes-jefatura",
+    InformeJefaturaViewSet,
+    basename="informe-jefatura"
 )
 
 

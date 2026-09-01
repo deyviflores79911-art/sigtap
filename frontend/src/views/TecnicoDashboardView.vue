@@ -97,7 +97,7 @@ const saludo = computed(() => new Date().getHours() < 12 ? 'Buenos días' : new 
 const acciones = computed(() => esJefe.value ? [
   {icono:'✓',color:'blue',titulo:'Validar nuevos requerimientos',texto:'Revise procedencia técnica, prioridad y SLA.',estado:`${conteos.value.soporte} tickets`},
   {icono:'↗',color:'amber',titulo:'Asignar especialista',texto:'Distribuya órdenes según especialidad y carga.',estado:'Coordinar'},
-  {icono:'▣',color:'green',titulo:'Revisar informes finales',texto:'Valide bitácoras, firmas y fotogramas.',estado:'Control'}
+  {icono:'▣',color:'green',titulo:'Revisar informes finales',texto:'Valide registros, firmas y fotogramas.',estado:'Control'}
 ] : [
   {icono:'↓',color:'blue',titulo:'Registrar recepción',texto:'Confirme el inicio de atención de sus órdenes.',estado:'Pendiente'},
   {icono:'⌕',color:'amber',titulo:'Inspección y diagnóstico',texto:'Documente daños y materiales necesarios.',estado:'Campo'},

@@ -74,7 +74,7 @@ import AdminPortalSolicitanteView
 ========================================================= */
 
 import SolicitanteDashboardView
-  from '../views/SolicitanteDashboardView.vue'
+  from '../views/UsuarioDashboardKanbanView.vue'
 
 import SolicitanteSoporteView
   from '../views/SolicitanteSoporteView.vue'
@@ -96,6 +96,9 @@ import PerfilView
 
 import JefeUticDashboardView
   from '../views/JefeUticDashboardView.vue'
+
+import JefeDafDashboardView
+  from '../views/JefeDafDashboardView.vue'
 
 import EspecialistaDashboardView
   from '../views/EspecialistaDashboardView.vue'
@@ -262,8 +265,8 @@ const router = createRouter({
     ----------------------------------------------------- */
 
     {
-      path: '/admin/bitacora',
-      name: 'admin-bitacora',
+      path: '/admin/auditoria',
+      name: 'admin-auditoria',
       component: AdminBitacoraView,
       meta: {
         requiereAuth: true,
@@ -272,8 +275,8 @@ const router = createRouter({
     },
 
     {
-      path: '/superuser/bitacora',
-      name: 'superuser-bitacora',
+      path: '/superuser/auditoria',
+      name: 'superuser-auditoria',
       component: AdminBitacoraView,
       meta: {
         requiereAuth: true,
@@ -410,6 +413,15 @@ const router = createRouter({
     },
 
     {
+      path: '/usuario/configuracion',
+      name: 'usuario-configuracion',
+      component: CambiarPasswordView,
+      meta: {
+        requiereAuth: true,
+      },
+    },
+
+    {
       path: '/jefe-utic/dashboard',
       name: 'jefe-utic-dashboard',
       component: JefeUticDashboardView,
@@ -456,6 +468,13 @@ const router = createRouter({
       name: 'almacen-requerimientos',
       component: AlmacenDashboardView,
       meta: { requiereAuth: true, roles: ['ENCARGADO_COMPRAS_ALMACEN'] },
+    },
+
+    {
+      path: '/jefe-daf/dashboard',
+      name: 'jefe-daf-dashboard',
+      component: JefeDafDashboardView,
+      meta: { requiereAuth: true, roles: ['JEFE_DAF'] },
     },
 
     {
@@ -559,6 +578,7 @@ router.beforeEach(
         if (roles.includes('AUXILIAR_SERVICIOS_GENERALES')) return '/auxiliar-servicios-generales/dashboard'
         if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
         if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'
+        if (roles.includes('JEFE_DAF')) return '/jefe-daf/dashboard'
         if (roles.includes('DAF')) return '/daf/dashboard'
       }
     }
@@ -634,6 +654,7 @@ router.beforeEach(
       if (roles.includes('AUXILIAR_SERVICIOS_GENERALES')) return '/auxiliar-servicios-generales/dashboard'
       if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
       if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'
+      if (roles.includes('JEFE_DAF')) return '/jefe-daf/dashboard'
       if (roles.includes('DAF')) return '/daf/dashboard'
     }
 

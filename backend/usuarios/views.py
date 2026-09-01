@@ -36,6 +36,7 @@ from rest_framework.permissions import (
 )
 
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 
 
 from auditoria.utils import registrar_bitacora
@@ -49,6 +50,7 @@ from .models import (
     Permiso,
     RolPermiso,
     DelegacionAprobacion,
+    InformeJefatura,
     obtener_codigos_rol_efectivos,
 )
 
@@ -60,6 +62,7 @@ from .serializers import (
     PermisoSerializer,
     RolPermisoSerializer,
     DelegacionAprobacionSerializer,
+    InformeJefaturaSerializer,
 )
 
 
@@ -1101,6 +1104,34 @@ class UsuarioRolViewSet(
 #
 # ==========================================================
 
+class InformeJefaturaViewSet(viewsets.ModelViewSet):
+    serializer_class = InformeJefaturaSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    MAPA_JEFATURA = {
+        "JEFE_UTIC": "UTIC",
+        "SERVICIOS_GENERALES": "MANTENIMIENTO",
+        "JEFE_DAF": "DAF",
+    }
+
+    def get_queryset(self):
+        queryset = InformeJefatura.objects.select_related("jefe")
+        if usuario_es_admin(self.request.user):
+            return queryset
+        return queryset.filter(jefe=self.request.user)
+
+    def perform_create(self, serializer):
+        roles = obtener_codigos_rol_efectivos(self.request.user)
+        jefatura = next((area for rol, area in self.MAPA_JEFATURA.items() if rol in roles), None)
+        if not jefatura:
+            raise PermissionDenied("Solo una jefatura puede elaborar informes para el Director.")
+        tipo = serializer.validated_data.get("tipo", "ACTIVIDADES")
+        if tipo == "APROBACION_DAF" and jefatura != "DAF":
+            raise PermissionDenied("El informe de aprobación corresponde únicamente al Jefe DAF.")
+        serializer.save(jefe=self.request.user, jefatura=jefatura)
+
+
 class DelegacionAprobacionViewSet(
     viewsets.ModelViewSet
 ):
@@ -1685,6 +1716,7 @@ MAPA_ROLES_CONSULTABLES = {
     "AUXILIAR_SERVICIOS_GENERALES": ["SERVICIOS_GENERALES"],
     "ESPECIALISTA": ["JEFE_UTIC"],
     "AGENTE": ["JEFE_UTIC"],
+    "DAF": ["JEFE_DAF"],
 }
 
 

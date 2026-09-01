@@ -575,7 +575,7 @@
                 </label>
 
                 <select
-                  v-model="form.rol_id"
+                  v-model="form.tipo_usuario"
                   required
                   @change="cambioRol"
                 >
@@ -584,17 +584,15 @@
                     value=""
                     disabled
                   >
-                    Seleccione rol
+                    Seleccione tipo
                   </option>
 
 
-                  <option
-                    v-for="rol in roles"
-                    :key="rol.id"
-                    :value="rol.id"
-                  >
-                    {{ rol.nombre }}
-                  </option>
+                  <option value="JEFE">Jefe</option>
+                  <option value="TECNICO">Técnico</option>
+                  <option value="DIRECTOR">Director</option>
+                  <option value="USUARIO">Usuario</option>
+                  <option value="SUPERUSER">Superuser</option>
 
                 </select>
 
@@ -603,43 +601,29 @@
 
               <!-- ÁREA -->
 
-              <div class="field">
+              <div v-if="requiereArea" class="field">
 
                 <label>
                   Área
-                  <span
-                    v-if="
-                      !rolSeleccionadoGlobal
-                    "
-                  >
-                    *
-                  </span>
+                  <span>*</span>
                 </label>
 
 
                 <select
                   v-model="form.area_id"
-                  :disabled="
-                    rolSeleccionadoGlobal
-                  "
-                  :required="
-                    !rolSeleccionadoGlobal
-                  "
+                  required
+                  @change="form.especialidad = ''"
                 >
 
                   <option value="">
 
-                    {{
-                      rolSeleccionadoGlobal
-                        ? 'Rol global'
-                        : 'Seleccione área'
-                    }}
+                    Seleccione área
 
                   </option>
 
 
                   <option
-                    v-for="area in areas"
+                    v-for="area in areasFormulario"
                     :key="area.id"
                     :value="area.id"
                   >
@@ -649,15 +633,16 @@
                 </select>
 
 
-                <small
-                  v-if="
-                    rolSeleccionadoGlobal
-                  "
-                >
-                  Los roles globales no requieren
-                  un área específica.
-                </small>
+              </div>
 
+              <div v-if="form.tipo_usuario === 'TECNICO' && form.area_id" class="field">
+                <label>Especialidad <span>*</span></label>
+                <select v-model="form.especialidad" required>
+                  <option value="" disabled>Seleccione especialidad</option>
+                  <option v-for="opcion in especialidadesDisponibles" :key="opcion.valor" :value="opcion.valor">
+                    {{ opcion.nombre }}
+                  </option>
+                </select>
               </div>
 
 
@@ -851,9 +836,13 @@ const form =
 
     password: '',
 
+    tipo_usuario: '',
+
     rol_id: '',
 
     area_id: '',
+
+    especialidad: '',
   })
 
 
@@ -1000,22 +989,52 @@ const usuariosFiltrados =
    ROL GLOBAL
 ========================================================= */
 
-const rolSeleccionadoGlobal =
-  computed(() => {
+const requiereArea = computed(() => ['JEFE', 'TECNICO'].includes(form.tipo_usuario))
 
-    const rol =
-      roles.value.find(
-        item =>
-          Number(item.id)
-          ===
-          Number(form.rol_id)
-      )
+const areasFormulario = computed(() => {
+  const oficiales = ['DAF', 'MANTENIMIENTO', 'UTIC']
+  return areas.value.filter(area => oficiales.includes(String(area.codigo).toUpperCase()))
+})
 
+const areaSeleccionada = computed(() =>
+  areas.value.find(area => Number(area.id) === Number(form.area_id))
+)
 
-    return rol
-      ? Boolean(rol.es_global)
-      : false
-  })
+const especialidadesDisponibles = computed(() => {
+  const codigo = String(areaSeleccionada.value?.codigo || '').toUpperCase()
+  if (codigo === 'UTIC') return [
+    { valor: 'REDES', nombre: 'Redes' },
+    { valor: 'HARDWARE_COMPUTADORAS', nombre: 'Hardware y computadoras' },
+    { valor: 'SISTEMAS_CENTRALIZADOS_DATOS', nombre: 'Sistemas centralizados y datos' },
+    { valor: 'EQUIPOS_AUXILIARES', nombre: 'Equipos auxiliares' },
+  ]
+  if (codigo === 'MANTENIMIENTO') return [
+    { valor: 'CHOFER', nombre: 'Chofer' },
+    { valor: 'TECNICO_MANTENIMIENTO', nombre: 'Técnico' },
+  ]
+  if (codigo === 'DAF') return [
+    { valor: 'TECNICO_DAF', nombre: 'Técnico de la DAF' },
+    { valor: 'ALMACEN_COMPRAS', nombre: 'Técnico de Almacén y Compras' },
+    { valor: 'TESORERIA', nombre: 'Técnico de Tesorería' },
+  ]
+  return []
+})
+
+function codigoRolInterno() {
+  if (form.tipo_usuario === 'SUPERUSER') return 'SUPERUSER'
+  if (form.tipo_usuario === 'DIRECTOR') return 'ADMIN'
+  if (form.tipo_usuario === 'USUARIO') return 'SOLICITANTE'
+  const area = String(areaSeleccionada.value?.codigo || '').toUpperCase()
+  if (form.tipo_usuario === 'JEFE') {
+    return { UTIC: 'JEFE_UTIC', DAF: 'JEFE_DAF', MANTENIMIENTO: 'SERVICIOS_GENERALES' }[area]
+  }
+  if (form.tipo_usuario === 'TECNICO') {
+    if (area === 'UTIC') return 'ESPECIALISTA'
+    if (area === 'MANTENIMIENTO') return 'AUXILIAR_SERVICIOS_GENERALES'
+    return { TECNICO_DAF: 'DAF', ALMACEN_COMPRAS: 'ENCARGADO_COMPRAS_ALMACEN', TESORERIA: 'TESORERIA' }[form.especialidad]
+  }
+  return ''
+}
 
 
 /* =========================================================
@@ -1330,6 +1349,16 @@ function editarUsuario(
         )
       : ''
 
+  const asignacion = usuario.roles?.[0] || {}
+  const codigoRol = asignacion.rol_codigo
+  const mapaTipo = {
+    SUPERUSER: 'SUPERUSER', ADMIN: 'DIRECTOR', DIRECTOR: 'DIRECTOR', SOLICITANTE: 'USUARIO',
+    JEFE_UTIC: 'JEFE', JEFE_DAF: 'JEFE', SERVICIOS_GENERALES: 'JEFE',
+    ESPECIALISTA: 'TECNICO', AUXILIAR_SERVICIOS_GENERALES: 'TECNICO', DAF: 'TECNICO',
+    ENCARGADO_COMPRAS_ALMACEN: 'TECNICO', TESORERIA: 'TECNICO',
+  }
+  form.tipo_usuario = mapaTipo[codigoRol] || ''
+
 
   /*
    * Igual para Área.
@@ -1341,6 +1370,20 @@ function editarUsuario(
           usuario.roles[0].area_id
         )
       : ''
+
+  if (!form.area_id) {
+    const codigoArea = {
+      JEFE_UTIC: 'UTIC', ESPECIALISTA: 'UTIC',
+      JEFE_DAF: 'DAF', DAF: 'DAF', ENCARGADO_COMPRAS_ALMACEN: 'DAF', TESORERIA: 'DAF',
+      SERVICIOS_GENERALES: 'MANTENIMIENTO', AUXILIAR_SERVICIOS_GENERALES: 'MANTENIMIENTO',
+    }[codigoRol]
+    form.area_id = areas.value.find(area => area.codigo === codigoArea)?.id || ''
+  }
+
+  form.especialidad = asignacion.especialidad || ({
+    DAF: 'TECNICO_DAF', ENCARGADO_COMPRAS_ALMACEN: 'ALMACEN_COMPRAS', TESORERIA: 'TESORERIA',
+    AUXILIAR_SERVICIOS_GENERALES: 'TECNICO_MANTENIMIENTO',
+  }[codigoRol] || '')
 
 
   mensajeModal.value =
@@ -1364,9 +1407,13 @@ function limpiarFormulario() {
 
   form.password = ''
 
+  form.tipo_usuario = ''
+
   form.rol_id = ''
 
   form.area_id = ''
+
+  form.especialidad = ''
 
   mensajeModal.value = ''
 }
@@ -1390,11 +1437,9 @@ function cerrarModal() {
 ========================================================= */
 
 function cambioRol() {
-
-  if (
-    rolSeleccionadoGlobal.value
-  ) {
-
+  form.rol_id = ''
+  form.especialidad = ''
+  if (!requiereArea.value) {
     form.area_id = ''
   }
 }
@@ -1418,7 +1463,7 @@ async function guardarUsuario() {
     ||
     !form.email.trim()
     ||
-    !form.rol_id
+    !form.tipo_usuario
   ) {
 
     mensajeModal.value =
@@ -1453,7 +1498,7 @@ async function guardarUsuario() {
   ================================================ */
 
   if (
-    !rolSeleccionadoGlobal.value
+    requiereArea.value
     &&
     !form.area_id
   ) {
@@ -1461,6 +1506,11 @@ async function guardarUsuario() {
     mensajeModal.value =
       'Seleccione el área del usuario.'
 
+    return
+  }
+
+  if (form.tipo_usuario === 'TECNICO' && !form.especialidad) {
+    mensajeModal.value = 'Seleccione la especialidad del técnico.'
     return
   }
 
@@ -1488,6 +1538,13 @@ async function guardarUsuario() {
 
   try {
 
+    const codigoRol = codigoRolInterno()
+    const rolInterno = roles.value.find(rol => rol.codigo === codigoRol)
+    if (!rolInterno) {
+      mensajeModal.value = 'No se encontró el rol interno para la selección realizada.'
+      return
+    }
+
     const payload = {
 
       nombre_completo:
@@ -1498,13 +1555,14 @@ async function guardarUsuario() {
           .trim()
           .toLowerCase(),
 
-      rol_id:
-        Number(form.rol_id),
+      rol_id: Number(rolInterno.id),
 
       area_id:
         form.area_id
           ? Number(form.area_id)
           : null,
+
+      especialidad: form.especialidad || '',
     }
 
 

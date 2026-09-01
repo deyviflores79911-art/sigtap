@@ -28,7 +28,7 @@
         <div>
 
           <h1>
-            Bitácora del sistema
+            Auditoría del sistema
           </h1>
 
           <p>
@@ -304,7 +304,7 @@
             >
 
               <strong>
-                Cargando bitácora...
+                Cargando auditoría...
               </strong>
 
               <span>
@@ -619,7 +619,7 @@ async function cargar() {
     if (!respuesta.ok) {
 
       console.error(
-        'Bitácora:',
+        'Auditoría:',
         respuesta.status
       )
 
@@ -642,7 +642,7 @@ async function cargar() {
   } catch (error) {
 
     console.error(
-      'Error cargando bitácora:',
+      'Error cargando auditoría:',
       error
     )
 

@@ -160,6 +160,8 @@ class RequerimientoMantenimientoSerializer(
             "auxiliar_asignado",
 
             "auxiliar_asignado_nombre",
+            "prioridad_jefatura",
+            "criterio_prioridad",
 
             "compra_vinculada",
 

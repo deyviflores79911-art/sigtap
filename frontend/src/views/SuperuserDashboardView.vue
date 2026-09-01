@@ -71,7 +71,7 @@
         <button
           class="quick-card"
           type="button"
-          @click="router.push('/admin/bitacora')"
+          @click="router.push('/superuser/auditoria')"
         >
           <div class="quick-icon">
             📜
@@ -79,7 +79,7 @@
 
           <div>
             <strong>
-              Bitácora
+              Auditoría
             </strong>
 
             <span>

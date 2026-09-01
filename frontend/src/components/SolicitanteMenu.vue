@@ -110,6 +110,14 @@
 
       </router-link>
 
+      <router-link
+        to="/usuario/configuracion"
+        class="menu-item"
+      >
+        <span class="icon">⚙️</span>
+        Configuración
+      </router-link>
+
     </nav>
 
 

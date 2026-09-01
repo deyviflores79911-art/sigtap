@@ -5,6 +5,7 @@ from usuarios.models import (
     Rol,
     Permiso,
     RolPermiso,
+    Area,
 )
 
 
@@ -30,7 +31,7 @@ class Command(BaseCommand):
 
         {
             "codigo": "ADMIN",
-            "nombre": "Administrador SIGTA",
+            "nombre": "Director",
             "descripcion": (
                 "Administra usuarios, roles, permisos, áreas, "
                 "auditoría y configuración general de SIGTA."
@@ -40,10 +41,10 @@ class Command(BaseCommand):
 
         {
             "codigo": "SUPERUSER",
-            "nombre": "Superusuario",
+            "nombre": "Admin (superuser)",
             "descripcion": (
                 "Administración técnica del sistema: usuarios, "
-                "roles y permisos, bitácora, correo SMTP y "
+                "roles y permisos, auditoría, correo SMTP y "
                 "preferencias. No opera los procesos de negocio "
                 "(Soporte, Mantenimiento, Compras) que sí ve ADMIN."
             ),
@@ -52,7 +53,7 @@ class Command(BaseCommand):
 
         {
             "codigo": "SOLICITANTE",
-            "nombre": "Solicitante",
+            "nombre": "Usuario",
             "descripcion": (
                 "Registra y realiza seguimiento a sus "
                 "requerimientos institucionales."
@@ -62,7 +63,7 @@ class Command(BaseCommand):
 
         {
             "codigo": "JEFE_UTIC",
-            "nombre": "Jefe de UTIC",
+            "nombre": "Jefe UTIC",
             "descripcion": (
                 "Recibe y valida tickets, clasifica prioridad "
                 "y SLA y designa especialistas responsables."
@@ -72,7 +73,7 @@ class Command(BaseCommand):
 
         {
             "codigo": "ESPECIALISTA",
-            "nombre": "Especialista",
+            "nombre": "Técnico de Soporte Técnico",
             "descripcion": (
                 "Realiza inspección técnica, diagnóstico, "
                 "reparación, instalación y pruebas técnicas."
@@ -82,7 +83,7 @@ class Command(BaseCommand):
 
         {
             "codigo": "SERVICIOS_GENERALES",
-            "nombre": "Servicios Generales",
+            "nombre": "Jefe Mantenimiento",
             "descripcion": (
                 "Recibe los requerimientos de mantenimiento "
                 "y los deriva al auxiliar correspondiente."
@@ -92,7 +93,7 @@ class Command(BaseCommand):
 
         {
             "codigo": "AUXILIAR_SERVICIOS_GENERALES",
-            "nombre": "Auxiliar de Servicios Generales",
+            "nombre": "Técnico de Mantenimiento",
             "descripcion": (
                 "Ejecuta mantenimiento, verifica reposición "
                 "de almacén y realiza informe y fotograma."
@@ -101,8 +102,18 @@ class Command(BaseCommand):
         },
 
         {
+            "codigo": "JEFE_DAF",
+            "nombre": "Jefe DAF",
+            "descripcion": (
+                "Supervisa al personal técnico DAF, evalúa expedientes "
+                "de compra y registra la certificación presupuestaria."
+            ),
+            "es_global": True,
+        },
+
+        {
             "codigo": "DAF",
-            "nombre": "DAF",
+            "nombre": "Técnico de la DAF",
             "descripcion": (
                 "Evalúa expedientes de compra y registra "
                 "la certificación presupuestaria."
@@ -112,7 +123,7 @@ class Command(BaseCommand):
 
         {
             "codigo": "TESORERIA",
-            "nombre": "Tesorería",
+            "nombre": "Técnico de Tesorería",
             "descripcion": (
                 "Verifica expedientes y registra "
                 "el desembolso correspondiente."
@@ -132,7 +143,7 @@ class Command(BaseCommand):
 
         {
             "codigo": "ENCARGADO_COMPRAS_ALMACEN",
-            "nombre": "Encargado de Compras y Almacén",
+            "nombre": "Técnico de Almacén y Compras",
             "descripcion": (
                 "Realiza la compra, registra movimientos "
                 "de almacén y entrega los productos."
@@ -620,7 +631,7 @@ class Command(BaseCommand):
 
         {
             "codigo": "CONSULTAR_BITACORA",
-            "nombre": "Consultar bitácora",
+            "nombre": "Consultar auditoría",
             "descripcion": (
                 "Permite consultar el historial "
                 "de acciones de SIGTA."
@@ -740,7 +751,12 @@ class Command(BaseCommand):
             "DERIVAR_COMPRA_CAJA_CHICA",
         ],
 
-        # DAF
+        # JEFE DAF
+        "JEFE_DAF": [
+            "VER_COMPRAS",
+        ],
+
+        # TÉCNICO DAF
         "DAF": [
             "VER_COMPRAS",
             "EVALUAR_EXPEDIENTE",
@@ -825,11 +841,17 @@ class Command(BaseCommand):
 
                 # No destruimos ni reemplazamos
                 # configuraciones ya existentes.
+                campos_actualizados = []
+                if rol.nombre != datos["nombre"]:
+                    rol.nombre = datos["nombre"]
+                    campos_actualizados.append("nombre")
+
                 if not rol.activo:
                     rol.activo = True
-                    rol.save(
-                        update_fields=["activo"]
-                    )
+                    campos_actualizados.append("activo")
+
+                if campos_actualizados:
+                    rol.save(update_fields=campos_actualizados)
 
         self.stdout.write("")
 
@@ -840,6 +862,16 @@ class Command(BaseCommand):
         self.stdout.write(
             f"Roles ya existentes: {roles_existentes}"
         )
+
+        for codigo, nombre in (
+            ("DAF", "DAF"),
+            ("MANTENIMIENTO", "Mantenimiento"),
+            ("UTIC", "UTIC"),
+        ):
+            Area.objects.update_or_create(
+                codigo=codigo,
+                defaults={"nombre": nombre, "activo": True},
+            )
 
         # ==================================================
         # 2. CREAR / ACTUALIZAR PERMISOS
@@ -928,6 +960,13 @@ class Command(BaseCommand):
                         activo=True
                     )
                 )
+
+            RolPermiso.objects.filter(
+                rol=rol,
+                activo=True,
+            ).exclude(
+                permiso__in=permisos,
+            ).update(activo=False)
 
             for permiso in permisos:
 

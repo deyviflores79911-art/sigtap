@@ -434,6 +434,11 @@ async function iniciarSesion() {
       return
     }
 
+    if (codigosRoles.includes('JEFE_DAF')) {
+      router.push('/jefe-daf/dashboard')
+      return
+    }
+
     if (codigosRoles.includes('DAF')) {
       router.push('/daf/dashboard')
       return

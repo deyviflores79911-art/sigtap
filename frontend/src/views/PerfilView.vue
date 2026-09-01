@@ -1,5 +1,7 @@
 <template>
-  <main class="page">
+  <div class="layout">
+    <SolicitanteMenu />
+    <main class="page">
 
     <section class="profile">
 
@@ -10,7 +12,7 @@
       </div>
 
       <h1>
-        {{ usuario?.nombre }}
+        {{ usuario?.nombre_completo || usuario?.nombre }}
       </h1>
 
       <p class="email">
@@ -53,19 +55,10 @@
 
       </div>
 
-      <button
-        @click="
-          router.push(
-            '/usuario/dashboard'
-          )
-        "
-      >
-        Volver al inicio
-      </button>
-
     </section>
 
-  </main>
+    </main>
+  </div>
 </template>
 
 
@@ -75,12 +68,7 @@ import {
   ref
 } from 'vue'
 
-import {
-  useRouter
-} from 'vue-router'
-
-
-const router = useRouter()
+import SolicitanteMenu from '../components/SolicitanteMenu.vue'
 
 const usuario = ref(
   JSON.parse(
@@ -95,7 +83,8 @@ const usuario = ref(
 const iniciales = computed(() => {
 
   const nombre =
-    usuario.value?.nombre
+    usuario.value?.nombre_completo
+    || usuario.value?.nombre
     || 'Usuario'
 
   return nombre
@@ -109,8 +98,15 @@ const iniciales = computed(() => {
 
 
 <style scoped>
+.layout {
+  min-height: 100vh;
+  display: flex;
+  background: #f3f6fb;
+}
+
 .page {
   min-height: 100vh;
+  flex: 1;
 
   display: flex;
   align-items: center;
@@ -118,17 +114,16 @@ const iniciales = computed(() => {
 
   padding: 20px;
 
-  background:
-    linear-gradient(
-      135deg,
-      #0a2f54,
-      #1f628f
-    );
+  background: #f3f6fb;
 
   font-family:
     Arial,
     Helvetica,
     sans-serif;
+}
+
+@media (max-width: 760px) {
+  .layout { display: block; }
 }
 
 .profile {

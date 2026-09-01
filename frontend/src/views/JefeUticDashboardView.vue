@@ -23,10 +23,10 @@
           <span>UTIC</span>
         </div>
         <div class="stats">
-          <article><i class="blue">VA</i><div><small>Por validar</small><b>{{ porValidar.length }}</b><p>tickets nuevos</p></div></article>
-          <article><i class="gold">CL</i><div><small>Por clasificar</small><b>{{ porClasificar.length }}</b><p>prioridad / SLA</p></div></article>
-          <article><i class="green">AS</i><div><small>Por asignar</small><b>{{ porAsignar.length }}</b><p>especialista</p></div></article>
-          <article><i class="navy">VF</i><div><small>Por verificar</small><b>{{ porVerificar.length }}</b><p>funcionamiento</p></div></article>
+          <article @click="vista='validacion'"><i class="blue">VA</i><div><small>Por validar</small><b>{{ porValidar.length }}</b><p>tickets nuevos</p></div></article>
+          <article @click="vista='clasificacion'"><i class="gold">CL</i><div><small>Por clasificar</small><b>{{ porClasificar.length }}</b><p>prioridad / SLA</p></div></article>
+          <article @click="vista='asignacion'"><i class="green">AS</i><div><small>Por asignar</small><b>{{ porAsignar.length }}</b><p>especialista</p></div></article>
+          <article @click="vista='compra'"><i class="navy">CO</i><div><small>Compras por validar</small><b>{{ pendientesViabilidad.length }}</b><p>elevar a DAF</p></div></article>
         </div>
         <div class="panels">
           <section class="panel">
@@ -34,7 +34,7 @@
             <button class="flow" @click="vista='validacion'"><i class="blue">1</i><div><b>Recibir y validar ticket</b><small>Confirmar que el ticket es válido o devolverlo al solicitante</small></div><strong>›</strong></button>
             <button class="flow" @click="vista='clasificacion'"><i class="gold">2</i><div><b>Clasificar prioridad y SLA</b><small>Definir prioridad y calcular el tiempo de atención</small></div><strong>›</strong></button>
             <button class="flow" @click="vista='asignacion'"><i class="green">3</i><div><b>Asignar especialista responsable</b><small>Designar al técnico que atenderá el ticket</small></div><strong>›</strong></button>
-            <button class="flow" @click="vista='compra'"><i class="navy">4</i><div><b>Autorizar compra de componente TI</b><small>Cuando el diagnóstico determina que falta un componente</small></div><strong>›</strong></button>
+            <button class="flow" @click="vista='compra'"><i class="navy">4</i><div><b>Validar y elevar compra</b><small>Revisar el requerimiento del técnico y elevarlo a DAF</small></div><strong>›</strong></button>
             <button class="flow" @click="vista='verificacion'"><i class="blue">5</i><div><b>Verificar funcionamiento</b><small>Confirmar que la solución resolvió el problema</small></div><strong>›</strong></button>
             <button class="flow" @click="vista='informe'"><i class="gold">6</i><div><b>Elaborar informe final</b><small>Cerrar el expediente técnico del ticket</small></div><strong>›</strong></button>
           </section>
@@ -258,22 +258,22 @@ const porVerificar = computed(() => tickets.value.filter(t => t.estado_codigo ==
 const cerradosSinInforme = computed(() => tickets.value.filter(t => t.estado_codigo === 'CERRADO' && !t.informe_final))
 
 const menu = computed(() => [
-  { id: 'resumen', icono: '⌂', nombre: 'Resumen' },
+  { id: 'resumen', icono: '⌂', nombre: 'Dashboard' },
   { id: 'validacion', icono: 'VA', nombre: 'Validar tickets', total: porValidar.value.length },
   { id: 'clasificacion', icono: 'CL', nombre: 'Clasificar prioridad', total: porClasificar.value.length },
   { id: 'asignacion', icono: 'AS', nombre: 'Asignar especialista', total: porAsignar.value.length },
-  { id: 'compra', icono: 'CO', nombre: 'Compra de componentes', total: pendientesViabilidad.value.length },
+  { id: 'compra', icono: 'CO', nombre: 'Validar y elevar compra', total: pendientesViabilidad.value.length },
   { id: 'verificacion', icono: 'VF', nombre: 'Verificar funcionamiento', total: porVerificar.value.length },
   { id: 'informe', icono: 'IF', nombre: 'Informe final', total: cerradosSinInforme.value.length },
   { id: 'delegar', icono: 'DL', nombre: 'Delegar aprobación' },
 ])
 
 const titulo = computed(() => ({
-  resumen: 'Panel del Jefe de UTIC',
+  resumen: 'Dashboard del Jefe de UTIC',
   validacion: 'Validar tickets',
   clasificacion: 'Clasificar prioridad y SLA',
   asignacion: 'Asignar especialista',
-  compra: 'Autorizar compra de componentes',
+  compra: 'Validar y elevar compra',
   verificacion: 'Verificar funcionamiento',
   informe: 'Elaborar informe final',
   delegar: 'Delegar aprobación temporal',

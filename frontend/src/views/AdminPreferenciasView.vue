@@ -353,7 +353,7 @@
           <p>
             Los cambios efectuados en esta sección
             modifican parámetros generales del sistema
-            y deben quedar registrados en la bitácora.
+            y deben quedar registrados en la auditoría.
           </p>
 
         </div>

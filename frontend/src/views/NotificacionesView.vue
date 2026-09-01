@@ -5,7 +5,7 @@
       <div>
         <h1>Notificaciones</h1>
         <p>
-          Actividad reciente de sus solicitudes.
+          Acciones que requieren su intervención.
         </p>
       </div>
 
@@ -114,14 +114,16 @@ onMounted(async () => {
 
 
     const soporteNotif =
-      soporte.map(ticket => ({
+      soporte
+        .filter(ticket => (ticket.estado_codigo || ticket.estado) === 'PENDIENTE_CONFORMIDAD')
+        .map(ticket => ({
         id: `S-${ticket.id}`,
 
         titulo:
-          `${ticket.codigo} · ${ticket.estado_nombre}`,
+          `${ticket.codigo} · Validación pendiente`,
 
         mensaje:
-          ticket.titulo,
+          `Confirme el buen funcionamiento o reporte que el problema continúa: ${ticket.titulo}`,
 
         fecha:
           new Date(
@@ -131,7 +133,7 @@ onMounted(async () => {
 
 
     const comprasNotif =
-      compras.map(compra => ({
+      compras.filter(() => false).map(compra => ({
         id: `C-${compra.id}`,
 
         titulo:

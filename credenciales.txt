@@ -3,55 +3,65 @@ Credenciales de prueba de SIGTA
 Uso exclusivo para desarrollo local. Este archivo contiene contraseñas en texto visible. No debe incluirse en un repositorio público ni utilizarse en producción.
 
 
-Administrador (Director)
-Correo: admin@emi.edu.bo
-Contraseña: SIGTA_Admin#2026!
-Ruta: /admin/dashboard
-
-Superusuario
+Admin (superuser)
 Correo: superuser@emi.edu.bo
 Contraseña: SIGTA_Superuser#2026!
 Ruta: /superuser/dashboard
 
-Solicitante
-Correo: solicitante@emi.edu.bo
-Contraseña: SIGTA_Usuario#2026!
-Ruta: /usuario/dashboard
+Director
+Correo: admin@emi.edu.bo
+Contraseña: SIGTA_Admin#2026!
+Ruta: /admin/dashboard
 
-Jefe de UTIC
+Jefe UTIC
 Correo: jefe.utic@emi.edu.bo
 Contraseña: SIGTA_JefeUTIC#2026!
 Ruta: /jefe-utic/dashboard
 
-Especialista
-Correo: especialista@emi.edu.bo
-Contraseña: SIGTA_Especialista#2026!
-Ruta: /especialista/dashboard
-
-Tesorería
-Correo: tesoreria@emi.edu.bo
-Contraseña: SIGTA_Tesoreria#2026!
-Ruta: /tesoreria/dashboard
-
-Encargado de Compras y Almacén
-Correo: almacen@emi.edu.bo
-Contraseña: SIGTA_Almacen#2026!
-Ruta: /almacen/dashboard
-
-DAF
-Correo: daf@emi.edu.bo
-Contraseña: SIGTA_DAF#2026!
+Jefe DAF
+Correo: jefe.daf@emi.edu.bo
+Contraseña: SIGTA_JefeDAF#2026!
 Ruta: /daf/dashboard
 
-Servicios Generales
+Jefe Mantenimiento
 Correo: servicios.generales@emi.edu.bo
 Contraseña: SIGTA_ServiciosGrales#2026!
 Ruta: /servicios-generales/dashboard
 
-Auxiliar de Servicios Generales
+Técnico de la DAF
+Depende de: Jefe DAF
+Correo: daf@emi.edu.bo
+Contraseña: SIGTA_DAF#2026!
+Ruta: /daf/dashboard
+
+Técnico de Almacén y Compras
+Depende de: Jefe DAF
+Correo: almacen@emi.edu.bo
+Contraseña: SIGTA_Almacen#2026!
+Ruta: /almacen/dashboard
+
+Técnico de Tesorería
+Depende de: Jefe DAF
+Correo: tesoreria@emi.edu.bo
+Contraseña: SIGTA_Tesoreria#2026!
+Ruta: /tesoreria/dashboard
+
+Técnico de Soporte Técnico
+Depende de: Jefe UTIC
+Correo: especialista@emi.edu.bo
+Contraseña: SIGTA_Especialista#2026!
+Ruta: /especialista/dashboard
+
+Técnico de Mantenimiento
+Depende de: Jefe Mantenimiento
 Correo: auxiliar.sg@emi.edu.bo
 Contraseña: SIGTA_AuxiliarSG#2026!
 Ruta: /auxiliar-servicios-generales/dashboard
+
+Usuario
+Correo: solicitante@emi.edu.bo
+Contraseña: SIGTA_Usuario#2026!
+Ruta: /usuario/dashboard
 
 
 Cuenta para probar HU-01 / HU-02 (cambio obligatorio de contraseña)

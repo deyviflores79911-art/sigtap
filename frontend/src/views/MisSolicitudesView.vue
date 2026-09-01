@@ -26,15 +26,33 @@
 
         </div>
 
-
         <button
           class="btn-new"
-          @click="router.push('/usuario/dashboard')"
+          type="button"
+          @click="mostrarCrear = !mostrarCrear"
         >
-          Registrar nuevo requerimiento
+          ＋ Nueva solicitud
         </button>
 
       </header>
+
+      <section v-if="mostrarCrear" class="create-panel">
+        <button type="button" @click="router.push('/usuario/soporte')">
+          <span>🖥️</span>
+          <div>
+            <strong>Soporte Técnico</strong>
+            <small>Equipos, redes, sistemas y dispositivos.</small>
+          </div>
+        </button>
+
+        <button type="button" @click="router.push('/usuario/mantenimiento')">
+          <span>🛠️</span>
+          <div>
+            <strong>Mantenimiento</strong>
+            <small>Infraestructura, instalaciones y servicios.</small>
+          </div>
+        </button>
+      </section>
 
 
       <!-- ============================================
@@ -221,13 +239,9 @@
           </p>
 
           <button
-            @click="
-              router.push(
-                '/usuario/dashboard'
-              )
-            "
+            @click="mostrarCrear = true"
           >
-            Registrar requerimiento
+            Nueva solicitud
           </button>
 
         </div>
@@ -365,11 +379,11 @@
 
 
                 <button
-                  v-if="puedeEditarSoporte(item)"
+                  v-if="puedeCancelar(item)"
                   class="cancel"
-                  @click="anularSoporte(item)"
+                  @click="anularSolicitud(item)"
                 >
-                  Anular
+                  Cancelar
                 </button>
 
 
@@ -462,6 +476,17 @@
             }}
           </span>
 
+        </div>
+
+        <div class="timeline">
+          <div
+            v-for="(paso, indice) in pasosSolicitud(solicitudSeleccionada)"
+            :key="paso.nombre"
+            :class="['timeline-step', { completado: paso.completado, actual: paso.actual }]"
+          >
+            <span>{{ paso.completado ? '✓' : indice + 1 }}</span>
+            <small>{{ paso.nombre }}</small>
+          </div>
         </div>
 
 
@@ -997,6 +1022,9 @@ const cargando =
 const guardando =
   ref(false)
 
+const mostrarCrear =
+  ref(false)
+
 const busqueda =
   ref('')
 
@@ -1008,7 +1036,11 @@ const filtroProceso =
   )
 
 const filtroEstado =
-  ref('')
+  ref(
+    typeof route.query.estado === 'string'
+      ? route.query.estado
+      : ''
+  )
 
 const mensaje =
   ref('')
@@ -1095,6 +1127,14 @@ onMounted(
     await cargarCatalogos()
 
     await cargarTodo()
+
+    if (route.query.id && route.query.proceso) {
+      const item = solicitudes.value.find(solicitud =>
+        solicitud.proceso === route.query.proceso
+        && Number(solicitud.id) === Number(route.query.id)
+      )
+      if (item) verDetalle(item)
+    }
   }
 )
 
@@ -1436,11 +1476,15 @@ const solicitudesFiltradas =
 
 const estadosDisponibles = [
 
+  { valor: 'PENDIENTES', etiqueta: 'Pendientes' },
+
   { valor: 'EN_PROCESO', etiqueta: 'En proceso' },
 
-  { valor: 'FINALIZADO', etiqueta: 'Finalizado' },
+  { valor: 'POR_VALIDAR', etiqueta: 'Por validar' },
 
-  { valor: 'RECHAZADO', etiqueta: 'Rechazado' },
+  { valor: 'FINALIZADAS', etiqueta: 'Finalizadas' },
+
+  { valor: 'CANCELADAS', etiqueta: 'Canceladas / rechazadas' },
 ]
 
 
@@ -1461,6 +1505,12 @@ function bucketEstado(
 
 
   if (
+    estado === 'PENDIENTE_CONFORMIDAD'
+  ) {
+    return 'POR_VALIDAR'
+  }
+
+  if (
     estado.includes(
       'ANUL'
     )
@@ -1470,7 +1520,7 @@ function bucketEstado(
     )
   ) {
 
-    return 'RECHAZADO'
+    return 'CANCELADAS'
   }
 
 
@@ -1482,7 +1532,11 @@ function bucketEstado(
     estado === 'FINALIZADO'
   ) {
 
-    return 'FINALIZADO'
+    return 'FINALIZADAS'
+  }
+
+  if (['BORRADOR', 'NUEVO', 'RECIBIDO'].includes(estado)) {
+    return 'PENDIENTES'
   }
 
 
@@ -1665,6 +1719,24 @@ function puedeEditarSoporte(
   ].includes(
     item.estado_codigo
   )
+}
+
+function pasosSolicitud(item) {
+  const grupo = bucketEstado(item?.estado_codigo)
+  const indiceActual = { PENDIENTES: 1, EN_PROCESO: 2, POR_VALIDAR: 3, FINALIZADAS: 4, CANCELADAS: 1 }[grupo] || 1
+  const nombres = ['Creada', 'Recibida por jefatura', 'Técnico asignado', 'Validación del usuario', 'Cerrada']
+  return nombres.map((nombre, indice) => ({
+    nombre,
+    completado: grupo === 'FINALIZADAS' || indice < indiceActual,
+    actual: grupo !== 'FINALIZADAS' && indice === indiceActual,
+  }))
+}
+
+function puedeCancelar(item) {
+  if (!item) return false
+  if (item.proceso === 'SOPORTE') return ['BORRADOR', 'NUEVO'].includes(item.estado_codigo)
+  if (item.proceso === 'MANTENIMIENTO') return item.estado_codigo === 'RECIBIDO'
+  return false
 }
 
 
@@ -1986,13 +2058,13 @@ async function guardarEdicionSoporte() {
 // SOPORTE - ANULAR
 // ==========================================================
 
-async function anularSoporte(
+async function anularSolicitud(
   item
 ) {
 
   const confirmar =
     window.confirm(
-      `¿Confirma la anulación de ${item.codigo}?`
+      `¿Confirma la cancelación de ${item.codigo}? Esta acción quedará en el historial.`
     )
 
 
@@ -2004,9 +2076,13 @@ async function anularSoporte(
 
   try {
 
+    const endpoint = item.proceso === 'MANTENIMIENTO'
+      ? `/api/mantenimiento/requerimientos/${item.id}/`
+      : `/api/soporte/tickets/${item.id}/`
+
     const respuesta =
       await fetch(
-        `/api/soporte/tickets/${item.id}/`,
+        endpoint,
         {
 
           method:
@@ -2037,7 +2113,7 @@ async function anularSoporte(
       mostrarMensaje(
         datos.detalle
         ||
-        'No se pudo anular la solicitud de soporte.',
+        'No se pudo cancelar la solicitud.',
         true
       )
 
@@ -2047,7 +2123,7 @@ async function anularSoporte(
 
 
     mostrarMensaje(
-      'Solicitud de soporte anulada correctamente.'
+      'Solicitud cancelada correctamente.'
     )
 
 
@@ -2057,13 +2133,13 @@ async function anularSoporte(
   } catch (error) {
 
     console.error(
-      'Error anulando soporte:',
+      'Error cancelando solicitud:',
       error
     )
 
 
     mostrarMensaje(
-      'No fue posible anular la solicitud de soporte.',
+      'No fue posible cancelar la solicitud.',
       true
     )
   }
@@ -2865,6 +2941,60 @@ function cerrarSesion() {
 .detail-status {
   margin-bottom: 16px;
 }
+
+.create-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: -4px 0 20px;
+}
+
+.create-panel button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #dbe4eb;
+  border-radius: 12px;
+  background: white;
+  color: #17324a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.create-panel button:hover {
+  border-color: #f2c400;
+  box-shadow: 0 7px 18px rgba(23, 50, 74, .1);
+  transform: translateY(-1px);
+}
+
+.create-panel button > span {
+  font-size: 28px;
+}
+
+.create-panel strong,
+.create-panel small {
+  display: block;
+}
+
+.create-panel small {
+  margin-top: 4px;
+  color: #71818f;
+}
+
+@media (max-width: 760px) {
+  .create-panel { grid-template-columns: 1fr; }
+}
+
+.timeline { display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:4px 0 22px; }
+.timeline-step { position:relative;text-align:center;color:#8a98a5; }
+.timeline-step::before { content:'';position:absolute;top:14px;left:-50%;width:100%;height:3px;background:#dce4ea; }
+.timeline-step:first-child::before { display:none; }
+.timeline-step span { position:relative;z-index:1;display:grid;place-items:center;width:30px;height:30px;margin:auto auto 7px;border-radius:50%;background:#e4eaf0;font-weight:800; }
+.timeline-step small { font-size:10px; }
+.timeline-step.completado span,.timeline-step.actual span { background:#0d5c91;color:white; }
+.timeline-step.completado::before,.timeline-step.actual::before { background:#0d5c91; }
+.timeline-step.actual small { color:#17324a;font-weight:800; }
 
 
 .detail-grid {

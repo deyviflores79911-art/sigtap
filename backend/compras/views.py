@@ -18,7 +18,7 @@ from django.utils import timezone
 from decimal import Decimal, InvalidOperation
 
 
-from usuarios.models import UsuarioRol, RolPermiso, obtener_codigos_rol_efectivos
+from usuarios.models import Usuario, UsuarioRol, RolPermiso, obtener_codigos_rol_efectivos
 
 from auditoria.utils import registrar_bitacora
 
@@ -132,6 +132,9 @@ class SolicitudCompraViewSet(
 
         # Actores del BPMN consultan la bandeja institucional.
         if tiene_permiso(usuario, "VER_COMPRAS"):
+            roles = obtener_roles(usuario)
+            if "DAF" in roles and "JEFE_DAF" not in roles and not es_admin(usuario):
+                return queryset.filter(tecnico_daf=usuario)
             return queryset
 
 
@@ -403,6 +406,33 @@ class SolicitudCompraViewSet(
         registrar_bitacora(request=request, accion=accion, modulo="Compras", detalle=f"{solicitud.codigo}: {detalle}", nivel="INFO")
         return Response(self.get_serializer(solicitud).data)
 
+    @action(detail=True, methods=["post"], url_path="validar-asignar-daf")
+    def validar_asignar_daf(self, request, pk=None):
+        solicitud = self.get_object()
+        if "JEFE_DAF" not in obtener_roles(request.user) and not es_admin(request.user):
+            return Response({"detalle": "Solo el Jefe DAF puede validar y asignar el expediente."}, status=403)
+        if solicitud.estado != "CREADO_PENDIENTE_DAF":
+            return Response({"detalle": "El expediente ya no está pendiente de validación."}, status=409)
+        prioridad = str(request.data.get("prioridad", "")).upper()
+        criterio = str(request.data.get("criterio_prioridad", "")).strip()
+        tecnico_id = request.data.get("tecnico_daf_id")
+        if prioridad not in dict(SolicitudCompra.PRIORIDADES):
+            return Response({"prioridad": "Seleccione una prioridad válida."}, status=400)
+        if not criterio:
+            return Response({"criterio_prioridad": "Explique el criterio de prioridad."}, status=400)
+        try:
+            tecnico = Usuario.objects.get(id=tecnico_id, is_active=True, roles_asignados__rol__codigo="DAF", roles_asignados__activo=True)
+        except (Usuario.DoesNotExist, TypeError, ValueError):
+            return Response({"tecnico_daf_id": "Seleccione un Técnico DAF activo."}, status=400)
+        solicitud.tecnico_daf = tecnico
+        solicitud.validado_por_jefe_daf = request.user
+        solicitud.prioridad_daf = prioridad
+        solicitud.criterio_prioridad_daf = criterio
+        solicitud.asignado_daf_en = timezone.now()
+        solicitud.save(update_fields=["tecnico_daf", "validado_por_jefe_daf", "prioridad_daf", "criterio_prioridad_daf", "asignado_daf_en", "actualizado_en"])
+        registrar_bitacora(request=request, accion="VALIDAR_ASIGNAR_DAF", modulo="Compras", detalle=f"{solicitud.codigo} asignado a {tecnico.email} con prioridad {prioridad}.", nivel="INFO")
+        return Response(self.get_serializer(solicitud).data)
+
     @action(detail=True, methods=["post"], url_path="evaluar-daf")
     def evaluar_daf(self, request, pk=None):
         solicitud = self.get_object()
@@ -410,6 +440,8 @@ class SolicitudCompraViewSet(
             return respuesta_sin_permiso("EVALUAR_EXPEDIENTE")
         if solicitud.estado != "CREADO_PENDIENTE_DAF":
             return Response({"detalle": "El expediente no está pendiente de evaluación DAF."}, status=409)
+        if not es_admin(request.user) and solicitud.tecnico_daf_id != request.user.id:
+            return Response({"detalle": "El expediente debe estar asignado a este Técnico DAF."}, status=403)
         califica = str(request.data.get("califica", "")).lower() in ("true", "1", "si", "sí")
         if not califica:
             motivo = str(request.data.get("motivo", "")).strip()

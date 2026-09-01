@@ -108,7 +108,7 @@
       <!-- BITÁCORA (comparte la misma pantalla que usa el Director) -->
 
       <router-link
-        to="/superuser/bitacora"
+        to="/superuser/auditoria"
         class="menu-item"
       >
         <span class="icon">
@@ -116,7 +116,7 @@
         </span>
 
         <span>
-          Bitácora
+          Auditoría
         </span>
       </router-link>
 

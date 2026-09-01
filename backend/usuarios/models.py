@@ -332,6 +332,12 @@ class UsuarioRol(models.Model):
         related_name="usuarios_roles"
     )
 
+    especialidad = models.CharField(
+        max_length=80,
+        blank=True,
+        default=""
+    )
+
     activo = models.BooleanField(
         default=True
     )
@@ -374,6 +380,28 @@ class UsuarioRol(models.Model):
 
 
 # ==========================================================
+# INFORMES DE JEFATURA AL DIRECTOR
+# ==========================================================
+
+class InformeJefatura(models.Model):
+    JEFATURAS = [("UTIC", "UTIC"), ("MANTENIMIENTO", "Mantenimiento"), ("DAF", "DAF")]
+    TIPOS = [("ACTIVIDADES", "Informe de actividades"), ("APROBACION_DAF", "Informe de aprobación DAF")]
+
+    jefe = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="informes_jefatura")
+    jefatura = models.CharField(max_length=20, choices=JEFATURAS)
+    tipo = models.CharField(max_length=20, choices=TIPOS, default="ACTIVIDADES")
+    titulo = models.CharField(max_length=200)
+    periodo = models.CharField(max_length=30)
+    contenido = models.TextField()
+    enviado_director = models.BooleanField(default=False)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-creado_en"]
+
+
+# ==========================================================
 # DELEGACIÓN TEMPORAL DE APROBACIÓN
 # ==========================================================
 #
@@ -389,6 +417,7 @@ class DelegacionAprobacion(models.Model):
 
     ROLES_DELEGABLES = [
         "DIRECTOR",
+        "JEFE_DAF",
         "DAF",
         "TESORERIA",
         "JEFE_UTIC",

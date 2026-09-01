@@ -78,7 +78,7 @@
 
       <router-link
         v-if="puede('CONSULTAR_BITACORA')"
-        to="/admin/bitacora"
+        to="/admin/auditoria"
         class="menu-item"
       >
         <span class="icon">
@@ -86,7 +86,7 @@
         </span>
 
         <span>
-          Bitácora
+          Auditoría
         </span>
       </router-link>
 

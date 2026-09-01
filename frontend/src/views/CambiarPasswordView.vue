@@ -1,5 +1,7 @@
 <template>
-  <main class="password-page">
+  <div :class="['portal-layout', { 'con-menu': mostrarMenuUsuario }]">
+    <SolicitanteMenu v-if="mostrarMenuUsuario" />
+    <main class="password-page">
     <section class="password-card">
 
       <div class="brand">
@@ -15,11 +17,12 @@
       <div class="divider"></div>
 
       <div class="header">
-        <h2>Cambio obligatorio de contraseña</h2>
+        <h2>{{ mostrarMenuUsuario ? 'Cambiar contraseña' : 'Cambio obligatorio de contraseña' }}</h2>
 
         <p>
-          Por seguridad, debe cambiar su contraseña temporal
-          antes de continuar al sistema.
+          {{ mostrarMenuUsuario
+            ? 'Actualice la contraseña de acceso a su cuenta.'
+            : 'Por seguridad, debe cambiar su contraseña temporal antes de continuar al sistema.' }}
         </p>
       </div>
 
@@ -115,7 +118,7 @@
           type="submit"
           :disabled="cargando"
         >
-          {{ cargando ? 'Actualizando...' : 'Guardar y continuar' }}
+          {{ cargando ? 'Actualizando...' : (mostrarMenuUsuario ? 'Guardar contraseña' : 'Guardar y continuar') }}
         </button>
       </form>
 
@@ -130,14 +133,26 @@
       </footer>
 
     </section>
-  </main>
+    </main>
+  </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import SolicitanteMenu from '../components/SolicitanteMenu.vue'
 
 const router = useRouter()
+
+const usuarioActual = computed(() => {
+  try { return JSON.parse(localStorage.getItem('sigta_usuario') || '{}') }
+  catch { return {} }
+})
+
+const mostrarMenuUsuario = computed(() => {
+  const roles = (usuarioActual.value.roles || []).map(rol => rol.codigo)
+  return roles.includes('SOLICITANTE') && !usuarioActual.value.must_change_password
+})
 
 const passwordActual = ref('')
 const nuevaPassword = ref('')
@@ -283,6 +298,11 @@ function redirigirSegunRol() {
     return
   }
 
+  if (roles.includes('JEFE_DAF')) {
+    router.push('/jefe-daf/dashboard')
+    return
+  }
+
   if (roles.includes('DAF')) {
     router.push('/daf/dashboard')
     return
@@ -310,9 +330,19 @@ function redirigirSegunRol() {
   box-sizing: border-box;
 }
 
+.portal-layout {
+  min-height: 100vh;
+}
+
+.portal-layout.con-menu {
+  display: flex;
+  background: #f3f6fb;
+}
+
 .password-page {
   min-height: 100vh;
   width: 100%;
+  flex: 1;
 
   display: flex;
   align-items: center;
@@ -329,6 +359,14 @@ function redirigirSegunRol() {
     );
 
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.portal-layout.con-menu .password-page {
+  background: #f3f6fb;
+}
+
+@media (max-width: 760px) {
+  .portal-layout.con-menu { display: block; }
 }
 
 .password-card {

@@ -131,111 +131,6 @@
             <div>
 
               <h2>
-                Clasificación inicial
-              </h2>
-
-              <p>
-                Seleccione el área solicitante y el tipo
-                de incidencia.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          <div class="grid">
-
-
-            <!-- ÁREA -->
-
-            <div class="field">
-
-              <label>
-                Área solicitante
-                <span>*</span>
-              </label>
-
-              <select
-                v-model="form.area"
-                required
-              >
-
-                <option
-                  value=""
-                  disabled
-                >
-                  Seleccione un área
-                </option>
-
-
-                <option
-                  v-for="area in areas"
-                  :key="area.id"
-                  :value="area.id"
-                >
-                  {{ area.nombre }}
-                </option>
-
-              </select>
-
-            </div>
-
-
-            <!-- CATEGORÍA -->
-
-            <div class="field">
-
-              <label>
-                Categoría
-                <span>*</span>
-              </label>
-
-              <select
-                v-model="form.categoria"
-                required
-              >
-
-                <option
-                  value=""
-                  disabled
-                >
-                  Seleccione una categoría
-                </option>
-
-
-                <option
-                  v-for="categoria in categorias"
-                  :key="categoria.id"
-                  :value="categoria.id"
-                >
-                  {{ categoria.nombre }}
-                </option>
-
-              </select>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-        <!-- =================================================
-             PASO 3
-        ================================================== -->
-
-        <div class="form-section">
-
-          <div class="section-heading">
-
-            <span class="number">
-              3
-            </span>
-
-            <div>
-
-              <h2>
                 Ubicación y equipo afectado
               </h2>
 
@@ -304,7 +199,7 @@
           <div class="section-heading">
 
             <span class="number">
-              4
+              3
             </span>
 
             <div>
@@ -558,8 +453,8 @@
 
             {{
               guardando
-                ? 'Registrando...'
-                : 'Registrar solicitud de soporte'
+                ? 'Enviando...'
+                : 'Enviar solicitud'
             }}
 
           </button>
@@ -830,6 +725,16 @@ async function cargarCatalogos() {
       convertirLista(
         datosCategorias
       )
+
+    // La sección ya fue elegida en "Nueva solicitud". La
+    // clasificación técnica corresponde a UTIC, no al usuario.
+    form.area = areas.value.find(
+      area => String(area.codigo || '').toUpperCase() === 'UTIC'
+    )?.id || areas.value[0]?.id || ''
+
+    form.categoria = categorias.value.find(
+      categoria => String(categoria.codigo || '').toUpperCase() === 'OTRO'
+    )?.id || categorias.value[0]?.id || ''
 
 
   } catch (error) {
@@ -1438,10 +1343,6 @@ function limpiarFormulario() {
   form.titulo = ''
 
   form.descripcion = ''
-
-  form.area = ''
-
-  form.categoria = ''
 
   form.ubicacion = ''
 

@@ -26,6 +26,9 @@ CAMPOS_ARCHIVO = (
 
 class SolicitudCompraSerializer(serializers.ModelSerializer):
 
+    tecnico_daf_nombre = serializers.CharField(source="tecnico_daf.nombre_completo", read_only=True)
+    jefe_daf_nombre = serializers.CharField(source="validado_por_jefe_daf.nombre_completo", read_only=True)
+
     solicitante_nombre = serializers.CharField(
         source="solicitante.nombre_completo",
         read_only=True
@@ -69,6 +72,9 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "solicitante",
             "solicitante_nombre",
             "solicitante_email",
+            "tecnico_daf", "tecnico_daf_nombre",
+            "validado_por_jefe_daf", "jefe_daf_nombre",
+            "prioridad_daf", "criterio_prioridad_daf", "asignado_daf_en",
 
             "area",
             "area_nombre",
@@ -127,6 +133,8 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "componente_verificado", "observacion_verificacion",
             "fecha_ingreso_almacen", "fecha_despacho_almacen",
             "cerrado_inmutable",
+            "tecnico_daf", "validado_por_jefe_daf", "prioridad_daf",
+            "criterio_prioridad_daf", "asignado_daf_en",
             "creado_en",
             "actualizado_en",
         ]

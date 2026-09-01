@@ -169,6 +169,9 @@ class RequerimientoMantenimiento(models.Model):
         blank=True
     )
 
+    prioridad_jefatura = models.CharField(max_length=10, blank=True)
+    criterio_prioridad = models.TextField(blank=True)
+
 
     # ======================================================
     # REPOSICIÓN DE ALMACÉN

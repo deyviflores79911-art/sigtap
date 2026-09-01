@@ -13,6 +13,7 @@ from .models import (
     UsuarioRol,
     Permiso,
     RolPermiso,
+    InformeJefatura,
     DelegacionAprobacion,
 )
 
@@ -545,6 +546,13 @@ class UsuarioSerializer(serializers.ModelSerializer):
         allow_null=True
     )
 
+    especialidad = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        max_length=80,
+    )
+
 
     # ======================================================
     # INFORMACIÓN PARA FRONTEND
@@ -581,6 +589,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             # Datos usados por ADMIN
             "rol_id",
             "area_id",
+            "especialidad",
 
             # Información devuelta
             "roles",
@@ -665,6 +674,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
                     if asignacion.area
                     else None
                 ),
+
+                "especialidad": asignacion.especialidad,
             }
 
             for asignacion in asignaciones
@@ -889,7 +900,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         # ROL GLOBAL
         # --------------------------------------------------
 
-        if rol.es_global:
+        if rol.codigo in {"ADMIN", "SUPERUSER", "DIRECTOR", "SOLICITANTE"}:
 
             return None
 
@@ -910,26 +921,36 @@ class UsuarioSerializer(serializers.ModelSerializer):
                 }
             )
 
-
         try:
-
-            return Area.objects.get(
-                pk=area_id,
-                activo=True
-            )
-
-
+            return Area.objects.get(pk=area_id, activo=True)
         except Area.DoesNotExist:
+            raise serializers.ValidationError({
+                "area_id": "El área seleccionada no existe o está inactiva."
+            })
 
-            raise serializers.ValidationError(
-                {
-                    "area_id":
-                        (
-                            "El área seleccionada "
-                            "no existe o está inactiva."
-                        )
-                }
-            )
+
+    def validar_especialidad(self, rol, area, especialidad):
+        roles_tecnicos = {
+            "ESPECIALISTA",
+            "AUXILIAR_SERVICIOS_GENERALES",
+            "DAF",
+            "ENCARGADO_COMPRAS_ALMACEN",
+            "TESORERIA",
+        }
+        if rol.codigo not in roles_tecnicos:
+            return ""
+
+        permitidas = {
+            "UTIC": {"REDES", "HARDWARE_COMPUTADORAS", "SISTEMAS_CENTRALIZADOS_DATOS", "EQUIPOS_AUXILIARES"},
+            "MANTENIMIENTO": {"CHOFER", "TECNICO_MANTENIMIENTO"},
+            "DAF": {"TECNICO_DAF", "ALMACEN_COMPRAS", "TESORERIA"},
+        }.get(area.codigo if area else "", set())
+
+        if especialidad not in permitidas:
+            raise serializers.ValidationError({
+                "especialidad": "Seleccione una especialidad válida para el área indicada."
+            })
+        return especialidad
 
 
     # ======================================================
@@ -958,6 +979,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "area_id",
             None
         )
+
+        especialidad = validated_data.pop("especialidad", "").strip()
 
 
         # --------------------------------------------------
@@ -1008,6 +1031,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
             rol,
             area_id
         )
+
+        especialidad = self.validar_especialidad(rol, area, especialidad)
 
 
         # --------------------------------------------------
@@ -1093,6 +1118,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             usuario=usuario,
             rol=rol,
             area=area,
+            especialidad=especialidad,
             activo=True
         )
 
@@ -1128,6 +1154,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
             None
         )
 
+        especialidad = validated_data.pop("especialidad", "").strip()
+
 
         # --------------------------------------------------
         # SI SE ESTÁ CAMBIANDO EL ROL,
@@ -1150,6 +1178,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
                 rol,
                 area_id
             )
+
+            especialidad = self.validar_especialidad(rol, area, especialidad)
 
 
         # --------------------------------------------------
@@ -1222,10 +1252,12 @@ class UsuarioSerializer(serializers.ModelSerializer):
             if asignacion_existente:
 
                 asignacion_existente.activo = True
+                asignacion_existente.especialidad = especialidad
 
                 asignacion_existente.save(
                     update_fields=[
-                        "activo"
+                        "activo",
+                        "especialidad",
                     ]
                 )
 
@@ -1236,13 +1268,25 @@ class UsuarioSerializer(serializers.ModelSerializer):
                     usuario=instance,
                     rol=rol,
                     area=area,
+                    especialidad=especialidad,
                     activo=True
                 )
+
+        return instance
 
 
 # ==========================================================
 # DELEGACIÓN TEMPORAL DE APROBACIÓN
 # ==========================================================
+
+class InformeJefaturaSerializer(serializers.ModelSerializer):
+    jefe_nombre = serializers.CharField(source="jefe.nombre_completo", read_only=True)
+
+    class Meta:
+        model = InformeJefatura
+        fields = ["id", "jefe", "jefe_nombre", "jefatura", "tipo", "titulo", "periodo", "contenido", "enviado_director", "creado_en", "actualizado_en"]
+        read_only_fields = ["jefe", "creado_en", "actualizado_en"]
+
 
 class DelegacionAprobacionSerializer(serializers.ModelSerializer):
 

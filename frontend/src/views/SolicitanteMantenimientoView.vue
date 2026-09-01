@@ -99,7 +99,7 @@
 
 
         <!-- =================================================
-             2. TIPO Y ÁREA
+             2. UBICACIÓN
         ================================================== -->
 
         <div class="form-section">
@@ -108,104 +108,6 @@
 
             <span class="number">
               2
-            </span>
-
-            <div>
-
-              <h2>
-                Tipo y área solicitante
-              </h2>
-
-              <p>
-                Seleccione el tipo de mantenimiento
-                y el área que realiza el requerimiento.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          <div class="grid">
-
-            <div class="field">
-
-              <label>
-                Tipo de mantenimiento
-                <span>*</span>
-              </label>
-
-              <select
-                v-model="form.tipo"
-                required
-              >
-
-                <option
-                  value=""
-                  disabled
-                >
-                  Seleccione un tipo
-                </option>
-
-                <option value="PREVENTIVO">
-                  Preventivo
-                </option>
-
-                <option value="CORRECTIVO">
-                  Correctivo
-                </option>
-
-              </select>
-
-            </div>
-
-
-            <div class="field">
-
-              <label>
-                Área solicitante
-                <span>*</span>
-              </label>
-
-              <select
-                v-model="form.area"
-                required
-              >
-
-                <option
-                  value=""
-                  disabled
-                >
-                  Seleccione un área
-                </option>
-
-                <option
-                  v-for="area in areas"
-                  :key="area.id"
-                  :value="area.id"
-                >
-                  {{ area.nombre }}
-                </option>
-
-              </select>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-        <!-- =================================================
-             3. UBICACIÓN
-        ================================================== -->
-
-        <div class="form-section">
-
-          <div class="section-heading">
-
-            <span class="number">
-              3
             </span>
 
             <div>
@@ -253,7 +155,7 @@
           <div class="section-heading">
 
             <span class="number">
-              4
+              3
             </span>
 
             <div>
@@ -466,8 +368,8 @@
           >
             {{
               guardando
-                ? 'Registrando...'
-                : 'Registrar requerimiento'
+                ? 'Enviando...'
+                : 'Enviar solicitud'
             }}
           </button>
 
@@ -532,7 +434,7 @@ const form =
 
     descripcion: '',
 
-    tipo: '',
+    tipo: 'CORRECTIVO',
 
     area: '',
 
@@ -651,6 +553,12 @@ async function cargarAreas() {
       convertirLista(
         await respuesta.json()
       )
+
+    // La ruta ya identifica esta solicitud como Mantenimiento.
+    // La jefatura realizará después la clasificación técnica.
+    form.area = areas.value.find(
+      area => String(area.codigo || '').toUpperCase() === 'MANTENIMIENTO'
+    )?.id || areas.value[0]?.id || ''
 
 
   } catch (error) {
@@ -1116,9 +1024,7 @@ function limpiarFormulario() {
 
   form.descripcion = ''
 
-  form.tipo = ''
-
-  form.area = ''
+  form.tipo = 'CORRECTIVO'
 
   form.ubicacion = ''
 

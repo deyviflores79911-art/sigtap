@@ -710,6 +710,13 @@ class RequerimientoMantenimientoViewSet(
                     status.HTTP_400_BAD_REQUEST
             )
 
+        prioridad = str(request.data.get("prioridad", "")).strip().upper()
+        criterio_prioridad = str(request.data.get("criterio_prioridad", "")).strip()
+        if prioridad not in {"BAJA", "MEDIA", "ALTA", "URGENTE"}:
+            return Response({"prioridad": "Seleccione BAJA, MEDIA, ALTA o URGENTE."}, status=status.HTTP_400_BAD_REQUEST)
+        if not criterio_prioridad:
+            return Response({"criterio_prioridad": "Debe justificar la prioridad."}, status=status.HTTP_400_BAD_REQUEST)
+
 
         try:
 
@@ -790,6 +797,9 @@ class RequerimientoMantenimientoViewSet(
             auxiliar
         )
 
+        requerimiento.prioridad_jefatura = prioridad
+        requerimiento.criterio_prioridad = criterio_prioridad
+
         requerimiento.estado = (
             estado_derivado
         )
@@ -808,6 +818,8 @@ class RequerimientoMantenimientoViewSet(
             update_fields=[
                 "responsable_servicios_generales",
                 "auxiliar_asignado",
+                "prioridad_jefatura",
+                "criterio_prioridad",
                 "estado",
                 "recibido_en",
                 "derivado_en",
@@ -1372,54 +1384,11 @@ class RequerimientoMantenimientoViewSet(
             )
 
 
-        requerimiento.derivado_compra = (
-            True
-        )
+        requerimiento.derivado_compra = False
 
         requerimiento.estado = (
             estado_espera
         )
-
-
-        # Se crea el expediente real de Compra Caja Chica en vez
-        # de dejar solo la bandera derivado_compra encendida. El
-        # responsable (auxiliar o, en su defecto, Servicios
-        # Generales) queda como solicitante del expediente para
-        # poder completar Informe/POA/Pedido/Proforma.
-        from compras.models import SolicitudCompra
-
-        responsable_compra = (
-            requerimiento.auxiliar_asignado
-            or requerimiento.responsable_servicios_generales
-            or requerimiento.solicitante
-        )
-
-        solicitud_compra = SolicitudCompra.objects.create(
-            codigo=SolicitudCompra.generar_codigo(),
-            titulo=(
-                requerimiento.producto_requerido
-                or f"Reposición para mantenimiento {requerimiento.codigo}"
-            ),
-            descripcion=(
-                requerimiento.especificacion_producto
-                or requerimiento.producto_requerido
-                or ""
-            ),
-            solicitante=responsable_compra,
-            area=requerimiento.area,
-            tipo="COMPONENTE",
-            cantidad=requerimiento.cantidad_requerida or 1,
-            especificaciones=requerimiento.especificacion_producto,
-            justificacion=(
-                "Reposición de almacén requerida para atender "
-                f"el mantenimiento {requerimiento.codigo}."
-            ),
-            estado="CREADO_PENDIENTE_DAF",
-            origen_modulo="MANTENIMIENTO",
-            requerimiento_mantenimiento=requerimiento,
-        )
-
-        requerimiento.codigo_compra_vinculada = solicitud_compra.codigo
 
 
         requerimiento.save(
@@ -1427,7 +1396,6 @@ class RequerimientoMantenimientoViewSet(
                 "producto_disponible_almacen",
                 "observacion_almacen",
                 "derivado_compra",
-                "codigo_compra_vinculada",
                 "estado",
                 "actualizado_en",
             ]
@@ -1442,9 +1410,8 @@ class RequerimientoMantenimientoViewSet(
                 "Mantenimiento",
             detalle=(
                 f"No existe el producto requerido "
-                f"para {requerimiento.codigo}. "
-                f"Se generó el expediente {solicitud_compra.codigo} "
-                f"y se derivó a Compra Caja Chica."
+                f"para {requerimiento.codigo}. Queda pendiente de "
+                "validación por el Jefe de Mantenimiento."
             ),
             nivel=
                 "WARNING",
@@ -1454,12 +1421,41 @@ class RequerimientoMantenimientoViewSet(
         return respuesta_requerimiento(
             requerimiento,
             (
-                "No existe el producto en almacén. "
-                f"Se generó el expediente {solicitud_compra.codigo} "
-                "en Compra Caja Chica."
+                "No existe el producto en almacén. La solicitud de "
+                "compra fue enviada al Jefe de Mantenimiento para validación."
             ),
             request
         )
+
+    @action(detail=True, methods=["post"], url_path="validar-elevar-compra")
+    def validar_elevar_compra(self, request, pk=None):
+        if not (es_admin(request.user) or tiene_rol(request.user, "SERVICIOS_GENERALES")):
+            return Response({"detalle": "Solo el Jefe de Mantenimiento puede validar y elevar la compra."}, status=status.HTTP_403_FORBIDDEN)
+
+        requerimiento = self.get_object()
+        if requerimiento.estado.codigo != "EN_ESPERA_COMPRA" or requerimiento.derivado_compra:
+            return Response({"detalle": "La solicitud no está pendiente de validación o ya fue elevada."}, status=status.HTTP_409_CONFLICT)
+
+        from compras.models import SolicitudCompra
+        solicitud = SolicitudCompra.objects.create(
+            codigo=SolicitudCompra.generar_codigo(),
+            titulo=requerimiento.producto_requerido or f"Reposición para mantenimiento {requerimiento.codigo}",
+            descripcion=requerimiento.especificacion_producto or requerimiento.producto_requerido or "",
+            solicitante=request.user,
+            area=requerimiento.area,
+            tipo="COMPONENTE",
+            cantidad=requerimiento.cantidad_requerida or 1,
+            especificaciones=requerimiento.especificacion_producto,
+            justificacion=f"Reposición validada por Jefatura para atender {requerimiento.codigo}.",
+            estado="CREADO_PENDIENTE_DAF",
+            origen_modulo="MANTENIMIENTO",
+            requerimiento_mantenimiento=requerimiento,
+        )
+        requerimiento.derivado_compra = True
+        requerimiento.codigo_compra_vinculada = solicitud.codigo
+        requerimiento.save(update_fields=["derivado_compra", "codigo_compra_vinculada", "actualizado_en"])
+        registrar_bitacora(request=request, accion="VALIDAR_ELEVAR_COMPRA_MANTENIMIENTO", modulo="Mantenimiento", detalle=f"El Jefe de Mantenimiento validó {requerimiento.codigo} y elevó {solicitud.codigo} a DAF.", nivel="INFO")
+        return respuesta_requerimiento(requerimiento, f"Solicitud validada y elevada a DAF como {solicitud.codigo}.", request)
 
 
     # ======================================================
