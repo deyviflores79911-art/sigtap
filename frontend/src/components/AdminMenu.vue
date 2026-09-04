@@ -72,21 +72,6 @@
       </router-link>
 
 
-      <!-- BITÁCORA -->
-
-      <router-link
-        v-if="puede('CONSULTAR_BITACORA')"
-        to="/admin/auditoria"
-        class="menu-item"
-      >
-        <IconoSigta class="icon" nombre="auditoria" />
-
-        <span>
-          Auditoría
-        </span>
-      </router-link>
-
-
       <!--
         SOLICITUDES: reutiliza la pantalla de Compras
         (Caja Chica). Ahí llega el expediente evaluado
@@ -103,6 +88,25 @@
 
         <span>
           Solicitudes
+        </span>
+      </router-link>
+
+
+      <!--
+        HISTORIAL: misma pantalla que Solicitudes, pero
+        mostrando lo ya resuelto. Así la bandeja de
+        "Solicitudes" solo contiene lo que espera decisión.
+      -->
+
+      <router-link
+        v-if="puede('VER_COMPRAS')"
+        to="/admin/historial"
+        class="menu-item"
+      >
+        <IconoSigta class="icon" nombre="historial" />
+
+        <span>
+          Historial
         </span>
       </router-link>
 

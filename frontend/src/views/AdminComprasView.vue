@@ -12,23 +12,39 @@
 
         <div>
           <h1>
-            Solicitudes
+            {{
+              vista === 'PENDIENTES'
+                ? 'Solicitudes'
+                : 'Historial'
+            }}
           </h1>
 
-          <p>
-            Registros de solicitudes de compra y Caja Chica.
+          <p v-if="vista === 'PENDIENTES'">
+            {{ conteos.PENDIENTES }}
+            {{ conteos.PENDIENTES === 1 ? 'solicitud' : 'solicitudes' }}
+            de compra y Caja Chica pendientes de su decisión.
+          </p>
+
+          <p v-else>
+            {{ conteos.APROBADA }}
+            {{ conteos.APROBADA === 1 ? 'aprobada' : 'aprobadas' }}
+            y
+            {{ conteos.RECHAZADA }}
+            {{ conteos.RECHAZADA === 1 ? 'rechazada' : 'rechazadas' }}.
+            Solo consulta.
           </p>
         </div>
 
         <div class="header-actions">
 
           <select
-            v-model="filtroEstado"
+            v-if="vista === 'HISTORIAL'"
+            v-model="filtroHistorial"
             class="filtro-estado"
           >
-            <option value="">Todas las solicitudes</option>
-            <option value="APROBADA">Solicitudes aprobadas</option>
-            <option value="RECHAZADA">Solicitudes rechazadas</option>
+            <option value="">Aprobadas y rechazadas</option>
+            <option value="APROBADA">Solo aprobadas</option>
+            <option value="RECHAZADA">Solo rechazadas</option>
           </select>
 
           <button
@@ -75,7 +91,7 @@
         v-else-if="comprasFiltradas.length === 0"
         class="empty"
       >
-        No hay {{ etiquetaFiltroVacio(filtroEstado) }}.
+        {{ mensajeVacio }}
       </div>
 
 
@@ -141,6 +157,28 @@
 
                 </div>
 
+
+                <!--
+                  En el historial la fila debe explicar POR SÍ
+                  SOLA cómo terminó la solicitud, sin obligar a
+                  abrir el detalle de cada una.
+                -->
+
+                <p
+                  v-if="vista === 'HISTORIAL' && compra.motivo_rechazo"
+                  class="resolucion-motivo"
+                >
+                  <b>Motivo del rechazo:</b>
+                  {{ compra.motivo_rechazo }}
+                </p>
+
+                <p
+                  v-else-if="vista === 'HISTORIAL'"
+                  class="resolucion-estado"
+                >
+                  {{ compra.estado_nombre || 'Sin detalle de estado' }}
+                </p>
+
               </div>
 
             </div>
@@ -161,22 +199,6 @@
                   @click="verDetalle(compra)"
                 >
                   Ver detalle
-                </button>
-
-                <button
-                  v-if="puedeAprobar(compra)"
-                  class="row-aprobar"
-                  @click="aprobarDesdeLista(compra)"
-                >
-                  Aprobar
-                </button>
-
-                <button
-                  v-if="puedeRechazar(compra)"
-                  class="row-rechazar"
-                  @click="rechazarDesdeLista(compra)"
-                >
-                  Rechazar
                 </button>
 
               </div>
@@ -223,6 +245,48 @@
 
         <div class="documento-body">
 
+          <!--
+            CABECERA DE DECISIÓN: los tres datos con los que el
+            Director aprueba o rechaza (cuánto, por qué vía y si
+            el expediente está completo), antes del detalle.
+          -->
+
+          <div class="decision-header">
+
+            <div class="decision-dato">
+              <b>Monto</b>
+              <strong class="decision-monto">
+                {{
+                  compraSeleccionada?.monto_estimado
+                    ? `Bs ${Number(compraSeleccionada.monto_estimado).toFixed(2)}`
+                    : 'No indicado'
+                }}
+              </strong>
+            </div>
+
+            <div class="decision-dato">
+              <b>Vía de adquisición</b>
+              <strong>
+                {{ compraSeleccionada?.via_nombre || 'No indicada' }}
+              </strong>
+            </div>
+
+            <div class="decision-dato">
+              <b>Expediente</b>
+              <strong
+                :class="[
+                  'decision-expediente',
+                  resumenExpediente.completo ? 'ok' : 'falta'
+                ]"
+              >
+                {{ resumenExpediente.completo ? '✓' : '⚠' }}
+                {{ resumenExpediente.adjuntos }} de
+                {{ resumenExpediente.total }} documentos
+              </strong>
+            </div>
+
+          </div>
+
           <div
             :class="['estado-banner', claseBucket(bucketEstado(compraSeleccionada?.estado))]"
           >
@@ -253,7 +317,7 @@
             <p>{{ compraSeleccionada?.descripcion || 'Sin descripción registrada.' }}</p>
 
 
-            <div class="documento-fila documento-fila-5">
+            <div class="documento-fila documento-fila-2">
 
               <div>
                 <b>Tipo</b>
@@ -265,27 +329,19 @@
                 <span>{{ compraSeleccionada?.cantidad || 1 }}</span>
               </div>
 
-              <div>
-                <b>Monto estimado</b>
-                <span>
-                  {{
-                    compraSeleccionada?.monto_estimado
-                      ? `Bs ${Number(compraSeleccionada.monto_estimado).toFixed(2)}`
-                      : 'No indicado'
-                  }}
-                </span>
-              </div>
+            </div>
 
-              <div>
-                <b>Especificaciones</b>
-                <span>{{ compraSeleccionada?.especificaciones || 'No registradas.' }}</span>
-              </div>
+            <div
+              v-if="especificacionesDistintas"
+              class="documento-bloque"
+            >
+              <b>Especificaciones</b>
+              <span>{{ compraSeleccionada?.especificaciones }}</span>
+            </div>
 
-              <div>
-                <b>Justificación</b>
-                <span>{{ compraSeleccionada?.justificacion || 'No registrada.' }}</span>
-              </div>
-
+            <div class="documento-bloque">
+              <b>Justificación</b>
+              <span>{{ compraSeleccionada?.justificacion || 'No registrada.' }}</span>
             </div>
 
           </div>
@@ -326,11 +382,6 @@
               <div>
                 <b>Área</b>
                 <span>{{ compraSeleccionada?.area_nombre || 'No indicada' }}</span>
-              </div>
-
-              <div>
-                <b>Vía de adquisición</b>
-                <span>{{ compraSeleccionada?.via_nombre || 'No indicada' }}</span>
               </div>
 
             </div>
@@ -410,125 +461,100 @@
           </div>
 
 
-          <!-- ACCIONES -->
+        </div>
+
+
+        <!--
+          ACCIONES: viven FUERA de .documento-body (el que tiene
+          el scroll) para quedar ancladas al pie del modal. Así
+          la decisión está siempre visible y no hay que bajar
+          hasta el final del expediente para aprobar o rechazar.
+        -->
+
+        <div
+          v-if="bucketEstado(compraSeleccionada?.estado) === 'EN_ESPERA'"
+          class="documento-acciones"
+        >
+
+          <p
+            v-if="errorAccion"
+            class="accion-error"
+          >
+            {{ errorAccion }}
+          </p>
+
+          <!--
+            Mientras la DAF no emita la certificación
+            presupuestaria, el Director no tiene nada que
+            autorizar: la autorización es el paso siguiente.
+            Puede rechazar, eso sí, que es válido en este estado.
+          -->
+
+          <p
+            v-if="!mostrarFormRechazo && esperandoCertificacionDaf"
+            class="nota-tramite"
+          >
+            Este expediente espera la certificación
+            presupuestaria de la DAF. Podrá autorizarlo cuando
+            la DAF la emita.
+          </p>
 
           <div
-            v-if="bucketEstado(compraSeleccionada?.estado) === 'EN_ESPERA'"
-            class="documento-acciones"
+            v-if="!mostrarFormRechazo"
+            class="acciones-botones"
           >
-
-            <p
-              v-if="errorAccion"
-              class="accion-error"
+            <button
+              v-if="!esperandoCertificacionDaf"
+              class="btn-aprobar"
+              :disabled="procesando"
+              @click="aprobarCompra"
             >
-              {{ errorAccion }}
-            </p>
+              Aprobar
+            </button>
 
-            <div
-              v-if="!mostrarFormRechazo && !mostrarFormCertificacion"
-              class="acciones-botones"
+            <button
+              class="btn-rechazar"
+              :disabled="procesando"
+              @click="abrirFormRechazo"
             >
+              Rechazar
+            </button>
+          </div>
+
+          <div
+            v-else-if="mostrarFormRechazo"
+            class="form-rechazo"
+          >
+            <label>
+              Motivo del rechazo
+              <span>*</span>
+            </label>
+
+            <textarea
+              v-model="motivoRechazoTexto"
+              rows="3"
+              placeholder="Explique por qué se rechaza esta solicitud..."
+            ></textarea>
+
+            <div class="acciones-botones">
+
               <button
-                class="btn-aprobar"
+                class="btn-cancelar"
                 :disabled="procesando"
-                @click="iniciarAprobacion"
+                @click="cancelarRechazo"
               >
-                Aprobar
+                Cancelar
               </button>
 
               <button
                 class="btn-rechazar"
                 :disabled="procesando"
-                @click="abrirFormRechazo"
+                @click="confirmarRechazo"
               >
-                Rechazar
+                Confirmar rechazo
               </button>
+
             </div>
-
-            <div
-              v-else-if="mostrarFormRechazo"
-              class="form-rechazo"
-            >
-              <label>
-                Motivo del rechazo
-                <span>*</span>
-              </label>
-
-              <textarea
-                v-model="motivoRechazoTexto"
-                rows="3"
-                placeholder="Explique por qué se rechaza esta solicitud..."
-              ></textarea>
-
-              <div class="acciones-botones">
-
-                <button
-                  class="btn-cancelar"
-                  :disabled="procesando"
-                  @click="cancelarRechazo"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  class="btn-rechazar"
-                  :disabled="procesando"
-                  @click="confirmarRechazo"
-                >
-                  Confirmar rechazo
-                </button>
-
-              </div>
-            </div>
-
-            <div
-              v-else-if="mostrarFormCertificacion"
-              class="form-certificacion"
-            >
-              <p class="nota-tramite">
-                DAF debe hacer llegar la certificación presupuestaria en
-                PDF. Adjúntela aquí para completar la aprobación.
-              </p>
-
-              <label>
-                Certificación presupuestaria (PDF)
-                <span>*</span>
-              </label>
-
-              <input
-                type="file"
-                accept="application/pdf"
-                @change="onSeleccionarCertificacion"
-              />
-
-              <span
-                v-if="archivoCertificacion"
-                class="archivo-seleccionado"
-              >
-                {{ archivoCertificacion.name }}
-              </span>
-
-              <div class="acciones-botones">
-
-                <button
-                  class="btn-cancelar"
-                  :disabled="procesando"
-                  @click="cancelarCertificacion"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  class="btn-aprobar"
-                  :disabled="procesando"
-                  @click="confirmarCertificacion"
-                >
-                  Confirmar aprobación
-                </button>
-
-              </div>
-            </div>
-
           </div>
 
         </div>
@@ -638,6 +664,7 @@ import {
 } from 'vue'
 
 import {
+  useRoute,
   useRouter
 } from 'vue-router'
 
@@ -647,6 +674,9 @@ import AdminMenu
 
 const router =
   useRouter()
+
+const route =
+  useRoute()
 
 
 // ==========================================================
@@ -664,20 +694,89 @@ const cargando =
 // FILTRO
 // ==========================================================
 
-const filtroEstado =
+// La bandeja se parte en dos entradas de menú que comparten
+// este componente: "Solicitudes" (/admin/compras) es la cola
+// de trabajo real del Director —lo que aún espera decisión— e
+// "Historial" (/admin/historial) es el archivo de lo ya
+// resuelto. Antes ambas cosas convivían en una sola lista, así
+// que una solicitud aprobada o rechazada seguía apareciendo
+// entre las que faltaban por atender y la bandeja crecía sin
+// fin. Cuál toca se lee de meta.vista de la ruta.
+
+const vista =
+  computed(() =>
+    route.meta.vista === 'HISTORIAL'
+      ? 'HISTORIAL'
+      : 'PENDIENTES'
+  )
+
+const filtroHistorial =
   ref('')
+
+
+const conteos =
+  computed(() => {
+
+    const total = {
+      PENDIENTES: 0,
+      APROBADA: 0,
+      RECHAZADA: 0,
+    }
+
+    for (const compra of compras.value) {
+
+      const bucket =
+        bucketEstado(compra.estado)
+
+      if (bucket === 'EN_ESPERA') {
+        total.PENDIENTES += 1
+      }
+
+      else if (bucket === 'APROBADA') {
+        total.APROBADA += 1
+      }
+
+      else if (bucket === 'RECHAZADA') {
+        total.RECHAZADA += 1
+      }
+    }
+
+    total.HISTORIAL =
+      total.APROBADA
+      + total.RECHAZADA
+
+    return total
+  })
+
 
 const comprasFiltradas =
   computed(() => {
 
-    if (!filtroEstado.value) {
-      return compras.value
+    if (vista.value === 'PENDIENTES') {
+
+      return compras.value.filter(
+        compra =>
+          bucketEstado(compra.estado)
+          === 'EN_ESPERA'
+      )
     }
 
     return compras.value.filter(
-      compra =>
-        bucketEstado(compra.estado)
-        === filtroEstado.value
+      compra => {
+
+        const bucket =
+          bucketEstado(compra.estado)
+
+        if (bucket === 'EN_ESPERA') {
+          return false
+        }
+
+        if (!filtroHistorial.value) {
+          return true
+        }
+
+        return bucket === filtroHistorial.value
+      }
     )
   })
 
@@ -715,6 +814,56 @@ const documentosExpediente =
     ]
   })
 
+
+// Semáforo del expediente que se muestra en la cabecera de
+// decisión. Solo cuentan los cuatro documentos que adjunta la
+// Unidad Solicitante: la certificación presupuestaria la
+// genera OAF/DAF más adelante en el flujo, así que tenerla
+// pendiente no significa que el expediente venga incompleto.
+
+const resumenExpediente =
+  computed(() => {
+
+    const docs =
+      documentosExpediente.value
+        .filter(
+          doc =>
+            doc.label !== 'Certificación presupuestaria'
+        )
+
+    const adjuntos =
+      docs.filter(doc => doc.url).length
+
+    return {
+      adjuntos,
+      total: docs.length,
+      completo:
+        docs.length > 0
+        && adjuntos === docs.length,
+    }
+  })
+
+
+// La descripción y las especificaciones suelen venir con el
+// mismo texto (el formulario del solicitante repite el dato);
+// mostrarlo dos veces en la ficha del Director es ruido.
+
+const especificacionesDistintas =
+  computed(() => {
+
+    const c =
+      compraSeleccionada.value
+
+    if (!c?.especificaciones) {
+      return false
+    }
+
+    return (
+      String(c.especificaciones).trim().toLowerCase()
+      !== String(c.descripcion || '').trim().toLowerCase()
+    )
+  })
+
 const procesando =
   ref(false)
 
@@ -724,14 +873,21 @@ const mostrarFormRechazo =
 const motivoRechazoTexto =
   ref('')
 
-const mostrarFormCertificacion =
-  ref(false)
-
-const archivoCertificacion =
-  ref(null)
-
 const errorAccion =
   ref('')
+
+
+// La certificación presupuestaria la emite la DAF (endpoint
+// certificar-daf, permiso CERTIFICAR_PRESUPUESTO). El Director
+// autoriza DESPUÉS, sobre el expediente ya certificado, así que
+// mientras la solicitud siga en este estado no se le ofrece
+// "Aprobar": no le corresponde a él adjuntar ese PDF.
+
+const esperandoCertificacionDaf =
+  computed(() =>
+    compraSeleccionada.value?.estado
+    === 'EVALUADO_PENDIENTE_CERTIFICACION'
+  )
 
 
 function resetearFormularios() {
@@ -741,12 +897,6 @@ function resetearFormularios() {
 
   motivoRechazoTexto.value =
     ''
-
-  mostrarFormCertificacion.value =
-    false
-
-  archivoCertificacion.value =
-    null
 
   errorAccion.value =
     ''
@@ -764,49 +914,6 @@ function verDetalle(
     true
 
   resetearFormularios()
-}
-
-
-function rechazarDesdeLista(
-  compra
-) {
-
-  compraSeleccionada.value =
-    compra
-
-  mostrarDetalle.value =
-    true
-
-  resetearFormularios()
-
-  mostrarFormRechazo.value =
-    true
-}
-
-
-async function aprobarDesdeLista(
-  compra
-) {
-
-  compraSeleccionada.value =
-    compra
-
-  if (
-    compra.estado === 'EVALUADO_PENDIENTE_CERTIFICACION'
-  ) {
-
-    mostrarDetalle.value =
-      true
-
-    resetearFormularios()
-
-    mostrarFormCertificacion.value =
-      true
-
-    return
-  }
-
-  await aprobarCompra()
 }
 
 
@@ -917,29 +1024,11 @@ function cerrarSolicitante() {
 // administrador) en vez de un simple sí/no. Rechazar, en
 // cambio, no necesita ningún documento adicional y está
 // disponible en cualquier estado "en espera".
+//
+// La decisión vive SOLO en el documento de detalle: desde la
+// lista únicamente se puede "Ver detalle". Así el Director no
+// puede aprobar ni rechazar sin haber abierto el expediente.
 // ==========================================================
-
-function puedeAprobar(
-  compra
-) {
-
-  return (
-    bucketEstado(compra?.estado)
-    === 'EN_ESPERA'
-  )
-}
-
-
-function puedeRechazar(
-  compra
-) {
-
-  return (
-    bucketEstado(compra?.estado)
-    === 'EN_ESPERA'
-  )
-}
-
 
 function abrirFormRechazo() {
 
@@ -953,90 +1042,6 @@ function abrirFormRechazo() {
 function cancelarRechazo() {
 
   resetearFormularios()
-}
-
-
-function abrirFormCertificacion() {
-
-  resetearFormularios()
-
-  mostrarFormCertificacion.value =
-    true
-}
-
-
-function cancelarCertificacion() {
-
-  resetearFormularios()
-}
-
-
-function onSeleccionarCertificacion(
-  evento
-) {
-
-  errorAccion.value =
-    ''
-
-  archivoCertificacion.value =
-    evento.target.files?.[0]
-    || null
-}
-
-
-function iniciarAprobacion() {
-
-  if (
-    compraSeleccionada.value?.estado
-    === 'EVALUADO_PENDIENTE_CERTIFICACION'
-  ) {
-
-    abrirFormCertificacion()
-
-    return
-  }
-
-  aprobarCompra()
-}
-
-
-async function confirmarCertificacion() {
-
-  const archivo =
-    archivoCertificacion.value
-
-  if (!archivo) {
-
-    errorAccion.value =
-      'Debe adjuntar el PDF de la certificación presupuestaria.'
-
-    return
-  }
-
-  if (
-    !archivo.name.toLowerCase().endsWith('.pdf')
-  ) {
-
-    errorAccion.value =
-      'La certificación debe ser un archivo PDF.'
-
-    return
-  }
-
-  const datosFormulario =
-    new FormData()
-
-  datosFormulario.append(
-    'certificacion_presupuestaria',
-    archivo
-  )
-
-  await ejecutarAccion(
-    'certificar-daf',
-    datosFormulario,
-    'aprobar',
-    true
-  )
 }
 
 
@@ -1433,18 +1438,21 @@ function etiquetaBucket(
 }
 
 
-function etiquetaFiltroVacio(
-  bucket
-) {
+const mensajeVacio =
+  computed(() => {
 
-  return (
-    {
-      APROBADA: 'solicitudes aprobadas',
-      RECHAZADA: 'solicitudes rechazadas',
-    }[bucket]
-    || 'solicitudes'
-  )
-}
+    if (vista.value === 'PENDIENTES') {
+      return 'No hay solicitudes pendientes de decisión.'
+    }
+
+    return (
+      {
+        APROBADA: 'Todavía no hay solicitudes aprobadas.',
+        RECHAZADA: 'Todavía no hay solicitudes rechazadas.',
+      }[filtroHistorial.value]
+      || 'Todavía no hay solicitudes resueltas.'
+    )
+  })
 
 
 function claseBucket(
@@ -1621,6 +1629,20 @@ function cerrarSesion() {
 }
 
 
+.resolucion-motivo,
+.resolucion-estado {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--sigta-texto-suave);
+}
+
+
+.resolucion-motivo b {
+  color: var(--sigta-error);
+}
+
+
 .refresh-button {
   min-height: 41px;
   padding: 0 15px;
@@ -1768,9 +1790,7 @@ function cerrarSesion() {
 }
 
 
-.view,
-.row-aprobar,
-.row-rechazar {
+.view {
   padding: 6px 8px;
   border: none;
   border-radius: 5px;
@@ -1783,18 +1803,6 @@ function cerrarSesion() {
 .view {
   background: var(--sigta-azul-tenue);
   color: var(--sigta-texto-suave);
-}
-
-
-.row-aprobar {
-  background: var(--sigta-exito-fondo);
-  color: var(--sigta-exito);
-}
-
-
-.row-rechazar {
-  background: var(--sigta-error-fondo);
-  color: var(--sigta-error);
 }
 
 
@@ -1821,8 +1829,17 @@ function cerrarSesion() {
    DOCUMENTO DE DETALLE
 ========================================================= */
 
+/*
+  El scroll deja de estar en el modal entero (regla global
+  .detalle-modal) y pasa a .documento-body, para que la
+  cabecera y la barra de decisión queden fijas.
+*/
+
 .documento-modal {
   max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 
@@ -1838,6 +1855,65 @@ function cerrarSesion() {
 
 .documento-body {
   padding: 18px 22px 22px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+
+/* =========================================================
+   CABECERA DE DECISIÓN
+========================================================= */
+
+.decision-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--sigta-azul-tenue);
+  border-left: 5px solid var(--sigta-mostaza);
+}
+
+
+.decision-dato b {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--sigta-texto-suave);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+
+.decision-dato strong {
+  display: block;
+  color: var(--sigta-azul-oscuro);
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+
+.decision-monto {
+  font-size: 26px;
+  letter-spacing: -.5px;
+}
+
+
+.decision-expediente {
+  font-size: 15px;
+}
+
+
+.decision-expediente.ok {
+  color: var(--sigta-exito);
+}
+
+
+.decision-expediente.falta {
+  color: var(--sigta-alerta);
 }
 
 
@@ -2002,8 +2078,38 @@ function cerrarSesion() {
 }
 
 
-.documento-fila-5 {
-  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+.documento-fila-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+
+/*
+  Los textos largos (especificaciones, justificación) van a
+  ancho completo: en una columna estrecha se parten palabra a
+  palabra y cuesta leerlos.
+*/
+
+.documento-bloque {
+  margin-bottom: 12px;
+}
+
+
+.documento-bloque b {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--sigta-texto-suave);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+
+.documento-bloque span {
+  display: block;
+  color: var(--sigta-texto);
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 
@@ -2169,9 +2275,11 @@ function cerrarSesion() {
 ========================================================= */
 
 .documento-acciones {
-  margin-top: 16px;
-  padding-top: 16px;
+  flex-shrink: 0;
+  padding: 16px 22px;
   border-top: 1px solid var(--sigta-azul-tenue);
+  background: var(--sigta-blanco);
+  border-radius: 0 0 14px 14px;
 }
 
 
@@ -2268,40 +2376,6 @@ function cerrarSesion() {
   font-size: 14px;
   resize: vertical;
   outline: none;
-}
-
-
-.form-certificacion .nota-tramite {
-  margin-bottom: 12px;
-}
-
-
-.form-certificacion label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--sigta-azul);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-
-.form-certificacion label span {
-  color: var(--sigta-error);
-}
-
-
-.form-certificacion input[type="file"] {
-  width: 100%;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-
-.archivo-seleccionado {
-  display: block;
-  margin-bottom: 10px;
-  color: var(--sigta-texto-suave);
-  font-size: 13px;
 }
 
 

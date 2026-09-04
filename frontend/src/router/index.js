@@ -222,6 +222,20 @@ const router = createRouter({
       meta: {
         requiereAuth: true,
         admin: true,
+        vista: 'PENDIENTES',
+      },
+    },
+
+    /* Mismo componente que /admin/compras, en modo archivo:
+       solo solicitudes ya aprobadas o rechazadas. */
+    {
+      path: '/admin/historial',
+      name: 'admin-historial',
+      component: AdminComprasView,
+      meta: {
+        requiereAuth: true,
+        admin: true,
+        vista: 'HISTORIAL',
       },
     },
 
@@ -257,19 +271,9 @@ const router = createRouter({
 
 
     /* -----------------------------------------------------
-       BITÁCORA (misma pantalla, ruta propia por portal
-       para que cada uno conserve su propio sidebar)
+       BITÁCORA (solo el Superusuario; el Director ya no
+       tiene acceso a esta sección)
     ----------------------------------------------------- */
-
-    {
-      path: '/admin/auditoria',
-      name: 'admin-auditoria',
-      component: AdminBitacoraView,
-      meta: {
-        requiereAuth: true,
-        roles: ['ADMIN', 'SUPERUSER'],
-      },
-    },
 
     {
       path: '/superuser/auditoria',
@@ -277,7 +281,7 @@ const router = createRouter({
       component: AdminBitacoraView,
       meta: {
         requiereAuth: true,
-        roles: ['ADMIN', 'SUPERUSER'],
+        roles: ['SUPERUSER'],
       },
     },
 
