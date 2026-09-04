@@ -68,6 +68,17 @@
         </span>
       </router-link>
 
+      <router-link
+        to="/daf/emitir"
+        class="menu-item"
+      >
+        <IconoSigta class="icon" nombre="editar" />
+
+        <span>
+          Emitir Certificación
+        </span>
+      </router-link>
+
     </nav>
 
 

@@ -38,7 +38,7 @@
 
         <div class="panels">
           <section class="panel">
-            <div class="panel-head"><div><small>FLUJO BPMN</small><h3>Atención del mantenimiento</h3></div></div>
+            <div class="panel-head"><div><h3>Atención del mantenimiento</h3></div></div>
             <button class="flow" @click="irA('ordenes')"><i class="blue">1</i><div><b>Recibir orden de trabajo</b><small>Tomar conocimiento del requerimiento designado</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('ordenes')"><i class="blue">2</i><div><b>Inspección técnica y diagnóstico</b><small>Determinar la falla y si requiere compra</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('compras')"><i class="navy">3</i><div><b>Realizar requerimiento</b><small>Características del componente y cotización</small></div><strong>›</strong></button>
@@ -53,81 +53,109 @@
         </div>
       </section>
 
-      <!-- ==================== A. ÓRDENES DE TRABAJO ==================== -->
-      <section v-else-if="vista==='ordenes' && !ordenAbierta">
-        <div class="instruction"><b>Recibir orden de trabajo</b><span>Revise los datos del requerimiento y abra la hoja de trabajo para registrar el diagnóstico.</span></div>
-        <div v-if="cargando" class="empty">Consultando órdenes…</div>
-        <div v-else-if="porRecibir.length" class="cards">
-          <article v-for="r in porRecibir" :key="r.id">
-            <div class="top"><span>{{ r.codigo }}</span><em>{{ r.prioridad_jefatura || r.estado_codigo }}</em></div>
-            <h3>{{ r.titulo }}</h3>
-            <ul class="datos">
-              <li><b>Designada</b><span>{{ fecha(r.derivado_en) }}</span></li>
-              <li><b>Ubicación</b><span>{{ r.ubicacion || 's/d' }}</span></li>
-              <li><b>Solicitante</b><span>{{ r.solicitante_nombre || 's/d' }}</span></li>
-            </ul>
-            <p>{{ (r.descripcion||'').slice(0,140) }}</p>
-            <a v-if="r.evidencia_archivo_url" class="adjunto" :href="r.evidencia_archivo_url" target="_blank">📎 Evidencia del solicitante</a>
-            <div class="actions">
-              <button @click="verItem(r)">Ver detalle</button>
-              <button class="primary" @click="recibirOrden(r)">Recibir orden de trabajo</button>
+            <!-- ==================== A. ÓRDENES DE TRABAJO (MASTER-DETAIL) ==================== -->
+      <section v-else-if="vista==='ordenes'" class="gestion-tickets-layout">
+        <div class="gestion-left">
+          <div class="gestion-left-header">
+            <h3>Órdenes de Trabajo</h3>
+            <span class="badge">{{ porRecibir.length }} Pendientes</span>
+          </div>
+          <div class="gestion-lista">
+            <article v-for="r in porRecibir" :key="r.id" :class="['ticket-item', ordenAbierta?.id === r.id ? 'activo' : '', 't-validar']" @click="recibirOrden(r)">
+              <div class="top">
+                <span>{{ r.codigo }}</span>
+                <em class="e-validar">{{ r.prioridad_jefatura || r.estado_codigo }}</em>
+              </div>
+              <h4>{{ r.titulo }}</h4>
+              <p>📍 {{ r.ubicacion || 's/d' }}</p>
+            </article>
+            <div v-if="!porRecibir.length" class="empty-list">Bandeja al día. No tiene órdenes pendientes.</div>
+          </div>
+        </div>
+
+        <div class="gestion-right">
+          <div v-if="!ordenAbierta" class="empty">
+            <span>←</span>
+            <h3>Seleccione una orden</h3>
+            <p>Seleccione una orden de trabajo de la lista para registrar el diagnóstico.</p>
+          </div>
+          <div v-else class="gestion-detalle-wrapper">
+            <div class="ticket-header-card">
+              <div class="t-head">
+                <h2>{{ ordenAbierta.titulo }}</h2>
+                <span class="codigo-badge">{{ ordenAbierta.codigo }}</span>
+              </div>
+              <p class="t-meta"><b>Solicitante:</b> {{ ordenAbierta.solicitante_nombre }} • <b>Ubicación:</b> {{ ordenAbierta.ubicacion }}</p>
+              <div class="desc-box">{{ ordenAbierta.descripcion }}</div>
+              <a v-if="ordenAbierta.evidencia_archivo_url" class="adjunto mt-2 block" :href="ordenAbierta.evidencia_archivo_url" target="_blank">📎 Ver Evidencia Adjunta</a>
             </div>
-          </article>
-        </div>
-        <div v-else class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No tiene órdenes pendientes de recibir.</p></div>
-      </section>
 
-      <!-- ============ B/C. DIAGNÓSTICO Y REQUERIMIENTO ============ -->
-      <section v-else-if="vista==='ordenes' && ordenAbierta" class="panel hoja">
-        <div class="hoja-head">
-          <div><small>ORDEN DE TRABAJO</small><h3>{{ ordenAbierta.codigo }} — {{ ordenAbierta.titulo }}</h3></div>
-          <button class="refresh" @click="cerrarOrden">Cerrar hoja</button>
-        </div>
+            <div class="workflow-card">
+              <div class="wf-header">Consola de Diagnóstico</div>
+              <div class="wf-body">
+                
+                <!-- PASO 1: DIAGNÓSTICO -->
+                <div :class="['wf-step', modoComponente ? 'completed' : 'active']">
+                  <div class="step-num">1</div>
+                  <div class="step-content">
+                    <h4>Inspección técnica y diagnóstico <span v-if="modoComponente" class="step-badge">✓ Registrado</span></h4>
+                    <p v-if="!modoComponente">Registre los resultados de la inspección inicial.</p>
+                    <div v-if="!modoComponente">
+                      <label class="campo">Diagnóstico
+                        <textarea v-model="formDiagnostico.diagnostico" rows="3" placeholder="Falla detectada y componente afectado"></textarea>
+                      </label>
+                      <label class="campo">Plan de solución
+                        <textarea v-model="formDiagnostico.plan_solucion" rows="2" placeholder="Acciones previstas para resolver el problema"></textarea>
+                      </label>
+                      
+                      <fieldset class="compuerta" style="margin-bottom: 15px; border: 1px solid var(--sigta-borde); padding: 10px; border-radius: 6px;">
+                        <legend style="font-size:12px; font-weight:bold; color:var(--sigta-texto-suave);">¿Requiere compra de componentes?</legend>
+                        <label style="margin-right:15px; cursor:pointer;"><input v-model="formDiagnostico.requiere_compra" type="radio" :value="false"> No</label>
+                        <label style="cursor:pointer;"><input v-model="formDiagnostico.requiere_compra" type="radio" :value="true"> Sí</label>
+                      </fieldset>
 
-        <template v-if="!modoComponente">
-          <label class="campo">Inspección técnica y diagnóstico
-            <textarea v-model="formDiagnostico.diagnostico" rows="4" placeholder="Falla detectada y componente afectado"></textarea>
-          </label>
-          <label class="campo">Plan de solución
-            <textarea v-model="formDiagnostico.plan_solucion" rows="3" placeholder="Acciones previstas para resolver el problema"></textarea>
-          </label>
+                      <button class="primary step-btn" :disabled="procesando||!formDiagnostico.diagnostico.trim()||!formDiagnostico.plan_solucion.trim()" @click="guardarDiagnostico">
+                        {{ formDiagnostico.requiere_compra ? 'Guardar y realizar requerimiento' : 'Guardar diagnóstico' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-          <fieldset class="compuerta">
-            <legend>¿Requiere compra de componentes o materiales?</legend>
-            <label><input v-model="formDiagnostico.requiere_compra" type="radio" :value="false"> No</label>
-            <label><input v-model="formDiagnostico.requiere_compra" type="radio" :value="true"> Sí</label>
-          </fieldset>
+                <!-- PASO 2: REQUERIMIENTO DE COMPRA -->
+                <div v-if="formDiagnostico.requiere_compra" :class="['wf-step', !modoComponente ? 'locked' : 'active']">
+                  <div class="step-num">2</div>
+                  <div class="step-content">
+                    <h4>Realizar requerimiento de compra</h4>
+                    <p>Complete la solicitud del repuesto necesario.</p>
+                    <div v-if="modoComponente">
+                      <label class="campo">Componente requerido
+                        <input v-model="formComponente.producto_requerido" placeholder="Ej.: Compresor 12000 BTU" class="full-select">
+                      </label>
+                      <label class="campo">Características del componente
+                        <textarea v-model="formComponente.especificacion_producto" rows="2" placeholder="Marca, modelo, voltaje..."></textarea>
+                      </label>
+                      <label class="campo">Cantidad
+                        <input v-model="formComponente.cantidad_requerida" type="number" min="1" class="full-select">
+                      </label>
+                      <label class="campo">Costo estimado (Bs.)
+                        <input v-model="formComponente.costo_estimado" type="number" min="0" max="9999999999.99" step="0.01" class="full-select">
+                      </label>
+                      <label class="campo">Cotización (opcional)
+                        <input type="file" accept="application/pdf,image/*" @change="onCotizacion" class="full-select">
+                      </label>
+                      
+                      <div class="step-actions mt-2">
+                        <button class="reject" @click="retroceder">Retroceder</button>
+                        <button class="primary flex-btn" :disabled="procesando||!formComponente.producto_requerido.trim()" @click="enviarRequerimiento">Enviar requerimiento</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-          <div class="actions">
-            <button @click="cerrarOrden">Cancelar</button>
-            <button class="primary" :disabled="procesando||!formDiagnostico.diagnostico.trim()||!formDiagnostico.plan_solucion.trim()" @click="guardarDiagnostico">
-              {{ formDiagnostico.requiere_compra ? 'Guardar y realizar requerimiento' : 'Guardar diagnóstico' }}
-            </button>
+              </div>
+            </div>
           </div>
-        </template>
-
-        <template v-else>
-          <div class="instruction"><b>Realizar requerimiento</b><span>El trabajo quedará en pausa hasta que la jefatura evalúe la viabilidad y Almacén entregue el componente.</span></div>
-          <label class="campo">Componente requerido
-            <input v-model="formComponente.producto_requerido" placeholder="Ej.: Compresor 12000 BTU">
-          </label>
-          <label class="campo">Características del componente
-            <textarea v-model="formComponente.especificacion_producto" rows="3" placeholder="Marca, modelo, voltaje y demás especificaciones"></textarea>
-          </label>
-          <label class="campo">Cantidad
-            <input v-model="formComponente.cantidad_requerida" type="number" min="1">
-          </label>
-          <label class="campo">Costo estimado (Bs.)
-            <input v-model="formComponente.costo_estimado" type="number" min="0" step="0.01">
-          </label>
-          <label class="campo">Cotización
-            <input type="file" accept="application/pdf,image/*" @change="onCotizacion">
-          </label>
-          <div class="actions">
-            <button @click="cerrarOrden">Cancelar</button>
-            <button class="primary" :disabled="procesando||!formComponente.producto_requerido.trim()" @click="enviarRequerimiento">Enviar requerimiento</button>
-          </div>
-        </template>
+        </div>
       </section>
 
       <!-- ==================== EN ESPERA DE COMPRA ==================== -->
@@ -416,38 +444,74 @@ function cerrarOrden() {
   modoComponente.value = false
 }
 
+function retroceder() {
+  modoComponente.value = false
+}
+
 async function guardarDiagnostico() {
+  if (formDiagnostico.requiere_compra) {
+    modoComponente.value = true
+    return
+  }
+  
+  procesando.value = true
   try {
     await postAccion(ordenAbierta.value, 'registrar-diagnostico', {
       diagnostico: formDiagnostico.diagnostico.trim(),
       plan_solucion: formDiagnostico.plan_solucion.trim(),
     })
-    if (formDiagnostico.requiere_compra) {
-      modoComponente.value = true
-    } else {
-      cerrarOrden()
-      vista.value = 'trabajo'
-    }
+    cerrarOrden()
+    vista.value = 'trabajo'
   } catch (e) { alert(e.message) }
+  finally { procesando.value = false }
 }
+
+
 
 function onCotizacion(evento) {
   formComponente.archivo = evento.target.files?.[0] || null
 }
 
 async function enviarRequerimiento() {
+  procesando.value = true
   try {
+    const token = localStorage.getItem('sigta_token');
+    
+    // 1. Guardar diagnóstico primero (solo si aún está en DERIVADO)
+    if (ordenAbierta.value.estado_codigo === 'DERIVADO') {
+      const respDiag = await fetch(`/api/mantenimiento/requerimientos/${ordenAbierta.value.id}/registrar-diagnostico/`, {
+        method: 'POST',
+        headers: { Authorization: `Token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          diagnostico: formDiagnostico.diagnostico.trim(),
+          plan_solucion: formDiagnostico.plan_solucion.trim(),
+        })
+      })
+      
+      if (!respDiag.ok) {
+        const d = await respDiag.json().catch(() => ({}))
+        throw new Error(d.detalle || 'Error al guardar el diagnóstico.')
+      }
+      
+      // Marcar localmente para no repetir en caso de que el paso 2 falle
+      ordenAbierta.value.estado_codigo = 'EN_MANTENIMIENTO';
+    }
+
+    // 2. Solicitar requerimiento
     const datos = new FormData()
     datos.append('producto_requerido', formComponente.producto_requerido.trim())
     datos.append('especificacion_producto', formComponente.especificacion_producto.trim())
     datos.append('cantidad_requerida', String(formComponente.cantidad_requerida || 1))
     if (formComponente.costo_estimado) datos.append('costo_estimado', formComponente.costo_estimado)
     if (formComponente.archivo) datos.append('cotizacion_archivo', formComponente.archivo)
+    
     await postAccion(ordenAbierta.value, 'solicitar-requerimiento', datos, true)
+    
     cerrarOrden()
     vista.value = 'compras'
     alert('Requerimiento enviado a la jefatura para evaluar su viabilidad.')
   } catch (e) { alert(e.message) }
+  finally { procesando.value = false }
 }
 
 /* ---------- Reparación, pruebas e informe ---------- */
@@ -496,5 +560,66 @@ onMounted(cargar)
 </script>
 
 <style scoped>
-*{box-sizing:border-box}.layout{min-height:100vh;background:var(--sigta-fondo);color:var(--sigta-texto);font-family:var(--sigta-fuente)}aside{position:fixed;inset:0 auto 0 0;width:var(--sigta-sidebar);background:var(--sigta-azul);color:var(--sigta-blanco);padding:22px 16px;display:flex;flex-direction:column}.brand,.profile{display:flex;align-items:center;gap:12px}.brand{padding:0 10px 20px;border-bottom:1px solid rgba(255,255,255,.2)}.brand>b{background:var(--sigta-mostaza);color:var(--sigta-azul);padding:14px 10px;border-radius:9px}.brand strong,.brand small,.profile b,.profile small{display:block}.brand strong{font-size:23px}.brand small,.profile small{color:var(--sigta-azul-texto-claro);margin-top:3px}.profile{padding:22px 10px}.profile>i{width:42px;height:42px;border-radius:50%;background:var(--sigta-mostaza);color:var(--sigta-azul);display:grid;place-items:center;font-style:normal;font-weight:900}aside>p{font-size:10px;color:var(--sigta-azul-texto-claro);font-weight:800;letter-spacing:1.4px;margin:14px 10px 8px}aside button{border:0;background:transparent;color:var(--sigta-blanco);border-radius:8px;padding:12px;display:flex;gap:11px;align-items:center;text-align:left;cursor:pointer;margin:2px 0;width:100%}aside button>span{font-size:10px;font-weight:900;width:28px}aside button em{margin-left:auto;background:rgba(255,255,255,.16);padding:2px 8px;border-radius:10px;font-style:normal}aside button.active,aside button:hover{background:rgba(255,255,255,.13)}.bottom{margin-top:auto;border-top:1px solid rgba(255,255,255,.2);padding-top:10px}.bottom button{width:100%}main{margin-left:var(--sigta-sidebar);padding:30px 38px 55px;max-width:1650px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:27px}header small{color:var(--sigta-texto-suave)}h1{font-size:var(--sigta-titulo);margin:6px 0}header p{margin:0;color:var(--sigta-texto-suave)}.refresh{border:1px solid var(--sigta-borde);background:var(--sigta-blanco);color:var(--sigta-azul);padding:10px 14px;border-radius:8px;cursor:pointer}.hero{background:linear-gradient(120deg,var(--sigta-azul),var(--sigta-azul-medio));color:var(--sigta-blanco);border-radius:13px;padding:28px 30px;display:flex;justify-content:space-between;align-items:center}.hero small,.panel-head small,.hoja-head small{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--sigta-mostaza-clara)}.hero h2{font-size:24px;margin:7px 0}.hero p{margin:0;color:var(--sigta-azul-texto-claro)}.hero>span{width:68px;height:68px;border:1px solid var(--sigta-mostaza);border-radius:50%;display:grid;place-items:center;font-weight:900}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0}.stats article{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:10px;padding:19px;display:flex;gap:13px;cursor:pointer}.stats i,.flow i{font-style:normal;width:37px;height:37px;border-radius:8px;display:grid;place-items:center;color:var(--sigta-blanco);font-size:10px;font-weight:900}.blue{background:var(--sigta-azul)}.gold{background:var(--sigta-mostaza);color:var(--sigta-texto)!important}.green{background:var(--sigta-azul-medio)}.navy{background:var(--sigta-azul-medio)}.stats small,.stats b,.stats p{display:block}.stats b{font-size:25px;margin:3px 0}.stats p{font-size:11px;color:var(--sigta-texto-suave);margin:0}.panels{display:grid;grid-template-columns:2fr 1fr;gap:18px}.panel{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:11px;padding:22px}.panel-head h3{margin:5px 0 14px}.flow{width:100%;border:0;border-top:1px solid var(--sigta-borde-suave);background:var(--sigta-blanco);padding:15px 2px;display:flex;gap:13px;align-items:center;text-align:left;cursor:pointer}.flow div{flex:1}.flow b,.flow small{display:block}.flow small{color:var(--sigta-texto-suave);margin-top:4px}.flow>strong{font-size:20px}.copy{color:var(--sigta-texto-suave);font-size:12px;line-height:1.7}.wide{width:100%;padding:10px;border-radius:7px;border:1px solid var(--sigta-borde);cursor:pointer}.primary{background:var(--sigta-azul)!important;color:var(--sigta-blanco)!important;border-color:var(--sigta-azul)!important}.instruction{background:var(--sigta-mostaza-suave);border-left:4px solid var(--sigta-mostaza);padding:14px 17px;margin-bottom:17px;border-radius:7px}.instruction b,.instruction span{display:block}.instruction span{font-size:12px;color:var(--sigta-alerta);margin-top:4px}.alerta{background:var(--sigta-error-fondo);border-left:4px solid var(--sigta-error);padding:14px 17px;margin:0 0 17px;border-radius:7px}.alerta b,.alerta span{display:block}.alerta b{color:var(--sigta-error)}.alerta span{font-size:12px;color:var(--sigta-error);margin-top:4px}.mini-alerta{background:var(--sigta-error-fondo);color:var(--sigta-error);font-size:11px;font-weight:700;padding:7px 9px;border-radius:6px;margin-bottom:10px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.cards article{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:10px;padding:19px}.cards article.retorno{border-color:var(--sigta-error);box-shadow:inset 3px 0 var(--sigta-error)}.top{display:flex;justify-content:space-between;gap:8px}.top span{font-size:12px;font-weight:800;color:var(--sigta-azul)}.top em{font-size:10px;background:var(--sigta-azul-tenue);padding:4px 8px;border-radius:10px;font-style:normal;white-space:nowrap}.cards h3{font-size:17px;margin:15px 0 7px}.cards article>p{font-size:12px;color:var(--sigta-texto-suave);min-height:42px}.datos{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:4px}.datos li{display:flex;justify-content:space-between;gap:10px;font-size:11px;border-bottom:1px dashed var(--sigta-borde-suave);padding-bottom:3px}.datos b{color:var(--sigta-texto-suave)}.datos span{color:var(--sigta-texto-suave);text-align:right}.adjunto{display:inline-block;font-size:11px;color:var(--sigta-azul);margin-bottom:10px;text-decoration:none}.actions{display:flex;gap:7px;border-top:1px solid var(--sigta-borde-suave);padding-top:13px;margin-top:10px}.actions button{flex:1;padding:9px 6px;border-radius:7px;border:1px solid var(--sigta-borde);background:var(--sigta-blanco);color:var(--sigta-texto);font-weight:700;cursor:pointer}.actions button:disabled{opacity:.55;cursor:not-allowed}.empty{text-align:center;background:var(--sigta-blanco);border:1px dashed var(--sigta-borde);padding:65px;border-radius:10px;color:var(--sigta-texto-suave)}.empty>span{font-size:31px;color:var(--sigta-exito)}.campo{display:block;margin:14px 0;font-size:12px;font-weight:700;color:var(--sigta-texto)}.campo input,.campo select,.campo textarea{display:block;width:100%;margin-top:6px;padding:9px 11px;border:1px solid var(--sigta-borde);border-radius:7px;font-family:inherit;font-size:13px;font-weight:400;color:var(--sigta-texto)}.hoja{max-width:820px}.hoja-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}.hoja-head h3{margin:5px 0 0}.compuerta{border:1px solid var(--sigta-borde);border-radius:8px;padding:12px 15px;margin:16px 0;display:flex;gap:22px;align-items:center}.compuerta legend{font-size:12px;font-weight:700;color:var(--sigta-texto);padding:0 6px}.compuerta label{font-size:13px;display:flex;align-items:center;gap:6px;font-weight:600}.compuerta input{margin:0}.detalle-modal-backdrop{position:fixed;inset:0;background:rgba(18,58,107,.55);display:grid;place-items:center;padding:20px;z-index:20}.detalle-modal{background:var(--sigta-blanco);border-radius:14px;width:min(700px,100%);max-height:88vh;display:flex;flex-direction:column}.detalle-modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--sigta-borde-suave)}.detalle-modal-header h3{margin:0}.detalle-modal-header small{color:var(--sigta-texto-suave)}.detalle-modal-close{border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--sigta-texto-suave)}.detalle-modal-body{padding:20px 24px;overflow-y:auto;display:grid;gap:14px}.detalle-fila{display:grid;grid-template-columns:1fr 1fr;gap:14px}.detalle-campo b{display:block;font-size:11px;color:var(--sigta-texto-suave);margin-bottom:4px}.detalle-campo span,.detalle-campo p{font-size:13px;color:var(--sigta-texto);margin:0}@media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.panels{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}@media(max-width:760px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column;gap:12px}.detalle-fila{grid-template-columns:1fr}}
+*{box-sizing:border-box}.layout{min-height:100vh;background:var(--sigta-fondo);color:var(--sigta-texto);font-family:var(--sigta-fuente)}aside{position:fixed;inset:0 auto 0 0;width:var(--sigta-sidebar);background:var(--sigta-azul);color:var(--sigta-blanco);padding:22px 16px;display:flex;flex-direction:column}.brand,.profile{display:flex;align-items:center;gap:12px}.brand{padding:0 10px 20px;border-bottom:1px solid rgba(255,255,255,.2)}.brand>b{background:var(--sigta-mostaza);color:var(--sigta-azul);padding:14px 10px;border-radius:9px}.brand strong,.brand small,.profile b,.profile small{display:block}.brand strong{font-size:23px}.brand small,.profile small{color:var(--sigta-azul-texto-claro);margin-top:3px}.profile{padding:22px 10px}.profile>i{width:42px;height:42px;border-radius:50%;background:var(--sigta-mostaza);color:var(--sigta-azul);display:grid;place-items:center;font-style:normal;font-weight:900}aside>p{font-size:10px;color:var(--sigta-azul-texto-claro);font-weight:800;letter-spacing:1.4px;margin:14px 10px 8px}aside button{border:0;background:transparent;color:var(--sigta-blanco);border-radius:8px;padding:12px;display:flex;gap:11px;align-items:center;text-align:left;cursor:pointer;margin:2px 0;width:100%}aside button>span{font-size:10px;font-weight:900;width:28px}aside button em{margin-left:auto;background:rgba(255,255,255,.16);padding:2px 8px;border-radius:10px;font-style:normal}aside button.active,aside button:hover{background:rgba(255,255,255,.13)}.bottom{margin-top:auto;border-top:1px solid rgba(255,255,255,.2);padding-top:10px}.bottom button{width:100%}main{margin-left:var(--sigta-sidebar);padding:30px 38px 55px;max-width:1650px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:27px}header small{color:var(--sigta-texto-suave)}h1{font-size:var(--sigta-titulo);margin:6px 0}header p{margin:0;color:var(--sigta-texto-suave)}.refresh{border:1px solid var(--sigta-borde);background:var(--sigta-blanco);color:var(--sigta-azul);padding:10px 14px;border-radius:8px;cursor:pointer}.hero{background:linear-gradient(120deg,var(--sigta-azul),var(--sigta-azul-medio));color:var(--sigta-blanco);border-radius:13px;padding:28px 30px;display:flex;justify-content:space-between;align-items:center}.hero small,.panel-head small,.hoja-head small{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--sigta-mostaza-clara)}.hero h2{font-size:24px;margin:7px 0}.hero p{margin:0;color:var(--sigta-azul-texto-claro)}.hero>span{width:68px;height:68px;border:1px solid var(--sigta-mostaza);border-radius:50%;display:grid;place-items:center;font-weight:900}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0}.stats article{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:10px;padding:19px;display:flex;gap:13px;cursor:pointer}.stats i,.flow i{font-style:normal;width:37px;height:37px;border-radius:8px;display:grid;place-items:center;color:var(--sigta-blanco);font-size:10px;font-weight:900}.blue{background:var(--sigta-azul)}.gold{background:var(--sigta-mostaza);color:var(--sigta-texto)!important}.green{background:var(--sigta-azul-medio)}.navy{background:var(--sigta-azul-medio)}.stats small,.stats b,.stats p{display:block}.stats b{font-size:25px;margin:3px 0}.stats p{font-size:11px;color:var(--sigta-texto-suave);margin:0}.panels{display:grid;grid-template-columns:2fr 1fr;gap:18px}.panel{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:11px;padding:22px}.panel-head h3{margin:5px 0 14px}.flow{width:100%;border:0;border-top:1px solid var(--sigta-borde-suave);background:var(--sigta-blanco);padding:15px 2px;display:flex;gap:13px;align-items:center;text-align:left;cursor:pointer}.flow div{flex:1}.flow b,.flow small{display:block}.flow small{color:var(--sigta-texto-suave);margin-top:4px}.flow>strong{font-size:20px}.copy{color:var(--sigta-texto-suave);font-size:12px;line-height:1.7}.wide{width:100%;padding:10px;border-radius:7px;border:1px solid var(--sigta-borde);cursor:pointer}.primary{background:var(--sigta-azul)!important;color:var(--sigta-blanco)!important;border-color:var(--sigta-azul)!important}.instruction{background:var(--sigta-mostaza-suave);border-left:4px solid var(--sigta-mostaza);padding:14px 17px;margin-bottom:17px;border-radius:7px}.instruction b,.instruction span{display:block}.instruction span{font-size:12px;color:var(--sigta-alerta);margin-top:4px}.alerta{background:var(--sigta-error-fondo);border-left:4px solid var(--sigta-error);padding:14px 17px;margin:0 0 17px;border-radius:7px}.alerta b,.alerta span{display:block}.alerta b{color:var(--sigta-error)}.alerta span{font-size:12px;color:var(--sigta-error);margin-top:4px}.mini-alerta{background:var(--sigta-error-fondo);color:var(--sigta-error);font-size:11px;font-weight:700;padding:7px 9px;border-radius:6px;margin-bottom:10px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.cards article{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:10px;padding:19px}.cards article.retorno{border-color:var(--sigta-error);box-shadow:inset 3px 0 var(--sigta-error)}.top{display:flex;justify-content:space-between;gap:8px}.top span{font-size:12px;font-weight:800;color:var(--sigta-azul)}.top em{font-size:10px;background:var(--sigta-azul-tenue);padding:4px 8px;border-radius:10px;font-style:normal;white-space:nowrap}.cards h3{font-size:17px;margin:15px 0 7px}.cards article>p{font-size:12px;color:var(--sigta-texto-suave);min-height:42px}.datos{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:4px}.datos li{display:flex;justify-content:space-between;gap:10px;font-size:11px;border-bottom:1px dashed var(--sigta-borde-suave);padding-bottom:3px}.datos b{color:var(--sigta-texto-suave)}.datos span{color:var(--sigta-texto-suave);text-align:right}.adjunto{display:inline-block;font-size:11px;color:var(--sigta-azul);margin-bottom:10px;text-decoration:none}.actions{display:flex;gap:7px;border-top:1px solid var(--sigta-borde-suave);padding-top:13px;margin-top:10px}.actions button{flex:1;padding:9px 6px;border-radius:7px;border:1px solid var(--sigta-borde);background:var(--sigta-blanco);color:var(--sigta-texto);font-weight:700;cursor:pointer}.actions button:disabled{opacity:.55;cursor:not-allowed}.empty{text-align:center;background:var(--sigta-blanco);border:1px dashed var(--sigta-borde);padding:65px;border-radius:10px;color:var(--sigta-texto-suave)}.empty>span{font-size:31px;color:var(--sigta-exito)}.campo{display:block;margin:14px 0;font-size:12px;font-weight:700;color:var(--sigta-texto)}.campo input,.campo select,.campo textarea{display:block;width:100%;margin-top:6px;padding:9px 11px;border:1px solid var(--sigta-borde);border-radius:7px;font-family:inherit;font-size:13px;font-weight:400;color:var(--sigta-texto)}.hoja{max-width:820px}.hoja-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}.hoja-head h3{margin:5px 0 0}.compuerta{border:1px solid var(--sigta-borde);border-radius:8px;padding:12px 15px;margin:16px 0;display:flex;gap:22px;align-items:center}.compuerta legend{font-size:12px;font-weight:700;color:var(--sigta-texto);padding:0 6px}.compuerta label{font-size:13px;display:flex;align-items:center;gap:6px;font-weight:600}.compuerta input{margin:0}.detalle-modal-backdrop{position:fixed;inset:0;background:rgba(18,58,107,.55);display:grid;place-items:center;padding:20px;z-index:20}.detalle-modal{background:var(--sigta-blanco);border-radius:14px;width:min(700px,100%);max-height:88vh;display:flex;flex-direction:column}.detalle-modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--sigta-borde-suave)}.detalle-modal-header h3{margin:0}.detalle-modal-header small{color:var(--sigta-texto-suave)}.detalle-modal-close{border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--sigta-texto-suave)}.detalle-modal-body{padding:20px 24px;overflow-y:auto;display:grid;gap:14px}.detalle-fila{display:grid;grid-template-columns:1fr 1fr;gap:14px}.detalle-campo b{display:block;font-size:11px;color:var(--sigta-texto-suave);margin-bottom:4px}.detalle-campo span,.detalle-campo p{font-size:13px;color:var(--sigta-texto);margin:0}
+/* ====== NUEVOS ESTILOS: GESTIÓN DE TICKETS (MASTER-DETAIL) ====== */
+.gestion-tickets-layout { display: flex; gap: 20px; height: calc(100vh - 160px); overflow: hidden; align-items: stretch; }
+.gestion-left { width: 35%; display: flex; flex-direction: column; background: var(--sigta-blanco); border: 1px solid var(--sigta-borde); border-radius: 12px; overflow: hidden; }
+.gestion-left-header { padding: 15px 20px; border-bottom: 1px solid var(--sigta-borde-suave); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+.gestion-left-header h3 { margin: 0; font-size: 14px; color: var(--sigta-texto); }
+.badge { background: #e0e7ff; color: var(--sigta-azul); font-size: 11px; padding: 4px 8px; border-radius: 20px; font-weight: bold; }
+.gestion-lista { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.ticket-item { padding: 14px; border: 1px solid var(--sigta-borde-suave); border-radius: 8px; cursor: pointer; transition: all 0.2s; background: var(--sigta-blanco); }
+.ticket-item:hover { border-color: var(--sigta-borde); box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+.ticket-item.activo { border-color: var(--sigta-azul); background: #f8fafc; }
+.ticket-item.t-validar { border-left: 4px solid var(--sigta-error); }
+.ticket-item.t-clasificar { border-left: 4px solid var(--sigta-mostaza); }
+.ticket-item.t-designar { border-left: 4px solid var(--sigta-azul); }
+.ticket-item h4 { margin: 8px 0 4px; font-size: 14px; color: var(--sigta-texto); }
+.ticket-item p { margin: 0; font-size: 11px; color: var(--sigta-texto-suave); }
+.e-validar { background: #fee2e2; color: #b91c1c; }
+.e-clasificar { background: #fef3c7; color: #b45309; }
+.e-designar { background: #e0e7ff; color: #4338ca; }
+.empty-list { text-align: center; padding: 30px; font-size: 12px; color: var(--sigta-texto-suave); }
+
+.gestion-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.gestion-detalle-wrapper { display: flex; flex-direction: column; gap: 15px; height: 100%; }
+.ticket-header-card { background: var(--sigta-blanco); border: 1px solid var(--sigta-borde); border-radius: 12px; padding: 20px; flex-shrink: 0; }
+.t-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.t-head h2 { margin: 0; font-size: 18px; color: var(--sigta-texto); }
+.codigo-badge { font-weight: bold; color: var(--sigta-azul); font-size: 14px; }
+.t-meta { margin: 0 0 12px; font-size: 12px; color: var(--sigta-texto-suave); }
+.desc-box { background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; color: var(--sigta-texto); border: 1px solid var(--sigta-borde-suave); }
+
+.workflow-card { flex: 1; background: var(--sigta-blanco); border: 1px solid var(--sigta-borde); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+.wf-header { padding: 15px 20px; border-bottom: 1px solid var(--sigta-borde-suave); font-weight: bold; color: var(--sigta-texto); background: #f8fafc; }
+.wf-body { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; position: relative; }
+.wf-body::before { content: ''; position: absolute; left: 45px; top: 35px; bottom: 35px; width: 2px; background: var(--sigta-borde-suave); z-index: 1; }
+
+.wf-step { display: flex; margin-bottom: 30px; position: relative; z-index: 2; }
+.wf-step:last-child { margin-bottom: 0; }
+.step-num { width: 42px; height: 42px; border-radius: 50%; background: var(--sigta-borde); color: var(--sigta-texto-suave); display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; border: 4px solid var(--sigta-blanco); transition: all 0.3s; }
+.step-content { margin-left: 20px; flex: 1; background: var(--sigta-blanco); border: 1px solid var(--sigta-borde); border-radius: 10px; padding: 15px 20px; transition: all 0.3s; }
+.step-content h4 { margin: 0 0 5px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+.step-content p { margin: 0 0 15px; font-size: 12px; color: var(--sigta-texto-suave); }
+.step-badge { font-size: 10px; text-transform: uppercase; background: #f0fdf4; color: #166534; padding: 3px 8px; border-radius: 10px; }
+
+.wf-step.active .step-num { background: var(--sigta-azul); color: var(--sigta-blanco); box-shadow: 0 0 0 4px rgba(0, 42, 92, 0.1); }
+.wf-step.active .step-content { border-color: var(--sigta-azul); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.wf-step.locked { opacity: 0.5; pointer-events: none; }
+.wf-step.locked .step-content { background: #f8fafc; }
+.wf-step.completed .step-num { background: var(--sigta-azul-medio); color: var(--sigta-blanco); }
+.wf-step.completed .step-content { border-color: var(--sigta-borde-suave); background: #f8fafc; }
+
+.step-actions { display: flex; gap: 10px; }
+.flex-btn { flex: 1; text-align: center; justify-content: center; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; }
+.reject { background: var(--sigta-blanco); border: 1px solid var(--sigta-error); color: var(--sigta-error); padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+.p-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+.p-options label { border: 1px solid var(--sigta-borde); border-radius: 6px; padding: 8px; text-align: center; font-size: 12px; font-weight: bold; cursor: pointer; color: var(--sigta-texto-suave); }
+.p-options label:has(input:checked) { background: #e0e7ff; border-color: var(--sigta-azul); color: var(--sigta-azul); }
+.p-options input { display: none; }
+textarea { width: 100%; border: 1px solid var(--sigta-borde); border-radius: 6px; padding: 10px; font-family: inherit; font-size: 13px; resize: vertical; margin-bottom: 15px; }
+.full-select { width: 100%; border: 1px solid var(--sigta-borde); border-radius: 6px; padding: 10px; font-family: inherit; font-size: 13px; color: var(--sigta-texto); background: #fff; margin-bottom: 15px; }
+.step-btn { width: 100%; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; background: var(--sigta-azul); color: var(--sigta-blanco); font-size: 14px; text-align: center; margin-top:10px; }
+
+@media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.panels{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}@media(max-width:760px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column;gap:12px}.detalle-fila{grid-template-columns:1fr}}
 </style>

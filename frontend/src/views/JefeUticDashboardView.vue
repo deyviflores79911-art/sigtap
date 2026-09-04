@@ -30,7 +30,7 @@
         </div>
         <div class="panels">
           <section class="panel">
-            <div class="panel-head"><div><small>FLUJO BPMN</small><h3>Proceso de soporte técnico</h3></div></div>
+            <div class="panel-head"><div><h3>Proceso de soporte técnico</h3></div></div>
             <button class="flow" @click="vista='validacion'"><i class="blue">1</i><div><b>Recibir y validar ticket</b><small>Confirmar que el ticket es válido o devolverlo al solicitante</small></div><strong>›</strong></button>
             <button class="flow" @click="vista='clasificacion'"><i class="gold">2</i><div><b>Clasificar prioridad y SLA</b><small>Definir prioridad y calcular el tiempo de atención</small></div><strong>›</strong></button>
             <button class="flow" @click="vista='asignacion'"><i class="green">3</i><div><b>Asignar especialista responsable</b><small>Designar al técnico que atenderá el ticket</small></div><strong>›</strong></button>
@@ -333,7 +333,7 @@ async function validarTicket(t) {
 }
 
 async function rechazarTicket(t) {
-  const motivo = prompt('Indique el motivo del rechazo:')
+  const motivo = await window.sigtaPrompt('Indique el motivo del rechazo:')
   if (!motivo?.trim()) return
   try {
     await postAccion(t, 'validar-ticket', { es_valido: false, motivo_rechazo: motivo.trim() })

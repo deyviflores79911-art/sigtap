@@ -33,7 +33,7 @@
 
         <div class="panels">
           <section class="panel">
-            <div class="panel-head"><div><small>FLUJO BPMN</small><h3>Proceso de Compra — Caja Chica</h3></div></div>
+            <div class="panel-head"><div><h3>Proceso de Compra — Caja Chica</h3></div></div>
             <div class="flow inactivo"><i class="gris">1</i><div><b>Enviar solicitud de compra</b><small>Sección solicitante</small></div></div>
             <div class="flow inactivo"><i class="gris">2</i><div><b>Verificar requisitos y emitir certificación</b><small>DAF</small></div></div>
             <div class="flow inactivo"><i class="gris">3</i><div><b>Autorizar compra</b><small>Director</small></div></div>

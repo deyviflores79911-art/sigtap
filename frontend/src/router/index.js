@@ -472,6 +472,12 @@ const router = createRouter({
     },
 
     {
+      path: '/daf/emitir',
+      name: 'daf-emitir',
+      component: () => import('../views/DafEmitirView.vue'),
+      meta: { requiereAuth: true, roles: ['DAF'] },
+    },
+    {
       path: '/daf/dashboard',
       name: 'daf-dashboard',
       component: DafDashboardView,

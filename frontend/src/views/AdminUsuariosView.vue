@@ -1898,6 +1898,22 @@ async function guardarUsuario() {
 async function inactivarUsuario(
   usuario
 ) {
+<<<<<<< HEAD
+=======
+
+  const confirmar =
+    await window.sigtaConfirm(
+      `¿Desea inactivar a ${usuario.nombre_completo}?`
+    )
+
+
+  if (!confirmar) {
+
+    return
+  }
+
+
+>>>>>>> origin/cocas_mant
   try {
 
     const respuesta =
