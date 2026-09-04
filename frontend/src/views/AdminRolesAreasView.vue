@@ -986,6 +986,79 @@
     </div>
 
 
+    <!-- CONFIRMACIÓN DE CAMBIO DE ESTADO DEL ÁREA -->
+
+    <div
+      v-if="modalConfirmacionArea"
+      class="overlay confirmation-overlay"
+      @click.self="cerrarConfirmacionArea"
+    >
+
+      <section class="modal area-confirmation-modal">
+
+        <div
+          :class="[
+            'area-confirmation-icon',
+            accionEstadoArea
+          ]"
+        >
+          !
+        </div>
+
+        <h2>
+          {{ accionEstadoArea === 'inactivar' ? 'Inactivar área' : 'Activar área' }}
+        </h2>
+
+        <p class="area-confirmation-question">
+          {{ accionEstadoArea === 'inactivar'
+            ? '¿Está seguro de que desea inactivar esta área?'
+            : '¿Está seguro de que desea activar esta área?' }}
+        </p>
+
+        <dl class="area-confirmation-data">
+          <div>
+            <dt>Área:</dt>
+            <dd>{{ formArea.nombre.trim() }}</dd>
+          </div>
+        </dl>
+
+        <div :class="['area-confirmation-notice', accionEstadoArea]">
+          {{ accionEstadoArea === 'inactivar'
+            ? 'El área dejará de estar disponible para nuevas asignaciones de usuarios y requerimientos.'
+            : 'El área volverá a estar disponible para asignación de usuarios y requerimientos.' }}
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="secondary-button"
+            :disabled="guardando"
+            @click="cerrarConfirmacionArea"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            :class="accionEstadoArea === 'inactivar'
+              ? 'area-disable-button'
+              : 'area-enable-button'"
+            :disabled="guardando"
+            @click="confirmarCambioEstadoArea"
+          >
+            {{ guardando
+              ? 'Guardando...'
+              : (accionEstadoArea === 'inactivar'
+                  ? 'Inactivar área'
+                  : 'Activar área') }}
+          </button>
+        </div>
+
+      </section>
+
+    </div>
+
+
     <!-- =====================================================
          MODAL PERMISOS DEL ROL
     ====================================================== -->
@@ -1197,6 +1270,15 @@ const modalArea =
 const modalPermisos =
   ref(false)
 
+const modalConfirmacionArea =
+  ref(false)
+
+const estadoOriginalArea =
+  ref(null)
+
+const accionEstadoArea =
+  ref('')
+
 
 const rolId =
   ref(null)
@@ -1252,6 +1334,13 @@ const formArea =
 
     activo: true,
   })
+
+const codigoAreaFormulario = computed(() =>
+  formArea.codigo
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '_')
+)
 
 
 /* =========================================================
@@ -1876,6 +1965,8 @@ function nuevaArea() {
 
   areaId.value = null
 
+  estadoOriginalArea.value = null
+
 
   Object.assign(
     formArea,
@@ -1901,6 +1992,9 @@ function editarArea(
 
   areaId.value =
     area.id
+
+  estadoOriginalArea.value =
+    Boolean(area.activo)
 
 
   Object.assign(
@@ -1937,11 +2031,52 @@ function cerrarModalArea() {
 
   modalArea.value = false
 
+  modalConfirmacionArea.value = false
+
   areaId.value = null
+
+  estadoOriginalArea.value = null
+
+  accionEstadoArea.value = ''
 }
 
 
 async function guardarArea() {
+
+  const editando = Boolean(areaId.value)
+
+  if (
+    editando
+    && estadoOriginalArea.value !== formArea.activo
+  ) {
+    accionEstadoArea.value = formArea.activo
+      ? 'activar'
+      : 'inactivar'
+    modalConfirmacionArea.value = true
+    return
+  }
+
+  await persistirArea()
+}
+
+
+function cerrarConfirmacionArea() {
+
+  if (guardando.value) return
+
+  modalConfirmacionArea.value = false
+
+  accionEstadoArea.value = ''
+}
+
+
+async function confirmarCambioEstadoArea() {
+
+  await persistirArea(accionEstadoArea.value)
+}
+
+
+async function persistirArea(accionEstadoConfirmada = '') {
 
   guardando.value = true
 
@@ -1986,13 +2121,7 @@ async function guardarArea() {
           body:
             JSON.stringify({
               codigo:
-                formArea.codigo
-                  .trim()
-                  .toUpperCase()
-                  .replace(
-                    /\s+/g,
-                    '_'
-                  ),
+                codigoAreaFormulario.value,
 
               nombre:
                 formArea.nombre
@@ -2030,14 +2159,19 @@ async function guardarArea() {
     }
 
 
-    modalArea.value =
-      false
+    modalConfirmacionArea.value = false
+
+    modalArea.value = false
 
 
     mostrarMensaje(
-      editando
-        ? 'Área actualizada correctamente.'
-        : 'Área creada correctamente.'
+      accionEstadoConfirmada === 'inactivar'
+        ? 'Área inactivada correctamente.'
+        : accionEstadoConfirmada === 'activar'
+          ? 'Área activada correctamente.'
+          : editando
+            ? 'Área actualizada correctamente.'
+            : 'Área creada correctamente.'
     )
 
 
@@ -3548,6 +3682,110 @@ function cerrarSesion() {
   gap: 8px;
 
   margin-top: 20px;
+}
+
+.confirmation-overlay {
+  z-index: 1010;
+}
+
+.area-confirmation-modal {
+  width: 500px;
+  text-align: center;
+}
+
+.area-confirmation-modal h2 {
+  margin: 12px 0 7px;
+  color: var(--sigta-azul);
+  font-size: 21px;
+}
+
+.area-confirmation-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  border-radius: 50%;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.area-confirmation-icon.inactivar {
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
+}
+
+.area-confirmation-icon.activar {
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
+}
+
+.area-confirmation-question {
+  margin: 0;
+  color: var(--sigta-texto-suave);
+  font-size: 15px;
+}
+
+.area-confirmation-data {
+  margin: 18px 0;
+  padding: 13px;
+  border: 1px solid var(--sigta-borde);
+  border-radius: 8px;
+  background: var(--sigta-azul-tenue);
+  text-align: left;
+}
+
+.area-confirmation-data div {
+  display: grid;
+  grid-template-columns: 55px 1fr;
+  gap: 9px;
+  padding: 4px 0;
+}
+
+.area-confirmation-data dt {
+  color: var(--sigta-azul);
+  font-weight: 800;
+}
+
+.area-confirmation-data dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.area-confirmation-notice {
+  padding: 11px 12px;
+  border-left: 4px solid var(--sigta-mostaza);
+  border-radius: 7px;
+  background: #fff9e6;
+  color: var(--sigta-texto-suave);
+  text-align: left;
+  line-height: 1.45;
+}
+
+.area-enable-button,
+.area-disable-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.area-enable-button {
+  background: var(--sigta-azul);
+}
+
+.area-disable-button {
+  background: var(--sigta-error);
+}
+
+.area-enable-button:disabled,
+.area-disable-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
 }
 
 

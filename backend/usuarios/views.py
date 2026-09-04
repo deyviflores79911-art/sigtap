@@ -63,6 +63,7 @@ from .serializers import (
     RolPermisoSerializer,
     DelegacionAprobacionSerializer,
     InformeJefaturaSerializer,
+    generar_password_temporal,
 )
 
 
@@ -1050,6 +1051,56 @@ class UsuarioViewSet(
                     "Usuario activado correctamente."
             },
             status=status.HTTP_200_OK
+        )
+
+
+    # ======================================================
+    # RESTABLECER CONTRASEÑA
+    # ======================================================
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="restablecer-password"
+    )
+    @transaction.atomic
+    def restablecer_password(self, request, pk=None):
+
+        usuario = self.get_object()
+        password_temporal = generar_password_temporal()
+        password_validation.validate_password(password_temporal, user=usuario)
+
+        usuario.set_password(password_temporal)
+        usuario.must_change_password = True
+        usuario.failed_attempts = 0
+        usuario.locked_until = None
+        usuario.save(update_fields=[
+            "password",
+            "must_change_password",
+            "failed_attempts",
+            "locked_until",
+        ])
+
+        # Las sesiones por token anteriores dejan de ser válidas.
+        Token.objects.filter(user=usuario).delete()
+
+        registrar_bitacora(
+            request=request,
+            usuario=request.user,
+            accion="RESTABLECER_PASSWORD_USUARIO",
+            modulo="Administración",
+            detalle=(
+                f"Se restableció la contraseña del usuario {usuario.email}."
+            ),
+            nivel="SECURITY",
+        )
+
+        return Response(
+            {
+                "mensaje": "Contraseña restablecida correctamente.",
+                "password_temporal": password_temporal,
+            },
+            status=status.HTTP_200_OK,
         )
 
 

@@ -7,6 +7,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient, APITestCase
 
 from .models import Rol, Usuario, UsuarioRol, DelegacionAprobacion
+from .serializers import UsuarioSerializer
 
 
 class DelegacionAprobacionTests(APITestCase):
@@ -122,6 +123,142 @@ class DelegacionAprobacionTests(APITestCase):
         r = self.client.post(f"/api/usuarios/delegaciones/{delegacion_id}/revocar/", {}, format="json")
         self.assertEqual(r.status_code, 200, r.data)
         self.assertFalse(r.data["activo"])
+
+
+class GestionUsuariosAdminTests(APITestCase):
+
+    def setUp(self):
+        call_command("cargar_permisos_sigta")
+        self.rol_solicitante = Rol.objects.get(codigo="SOLICITANTE")
+        self.admin = Usuario.objects.create_user(
+            username="admin-prueba",
+            email="admin-prueba@emi.edu.bo",
+            nombre_completo="Admin Prueba",
+            password="Admin#Prueba2026",
+        )
+        UsuarioRol.objects.create(
+            usuario=self.admin,
+            rol=Rol.objects.get(codigo="ADMIN"),
+            activo=True,
+        )
+
+    def datos_usuario(self):
+        return {
+            "primer_nombre": "Wendy",
+            "segundo_nombre": "Roxana",
+            "apellido_paterno": "Caillaví",
+            "apellido_materno": "Reyes",
+            "nombre_completo": "Wendy Roxana Caillaví Reyes",
+            "email": "cualquier-valor@emi.edu.bo",
+            "password": "Temporal2026*",
+            "rol_id": self.rol_solicitante.id,
+        }
+
+    def test_genera_correo_y_password_temporal_con_hash(self):
+        serializer = UsuarioSerializer(data=self.datos_usuario())
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        usuario = serializer.save()
+        respuesta = serializer.data
+
+        self.assertEqual(usuario.email, "wcaillavir@emi.edu.bo")
+        self.assertIn("password_temporal", respuesta)
+        self.assertEqual(respuesta["password_temporal"], "Temporal2026*")
+        self.assertTrue(usuario.check_password(respuesta["password_temporal"]))
+        self.assertNotEqual(usuario.password, respuesta["password_temporal"])
+        self.assertTrue(usuario.must_change_password)
+
+        usuario_recargado = Usuario.objects.get(pk=usuario.pk)
+        self.assertNotIn(
+            "password_temporal",
+            UsuarioSerializer(usuario_recargado).data,
+        )
+
+    def test_el_correo_no_utiliza_el_segundo_nombre(self):
+        datos = self.datos_usuario()
+        datos["segundo_nombre"] = ""
+        serializer = UsuarioSerializer(data=datos)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.save().email, "wcaillavir@emi.edu.bo")
+
+    def test_inactivar_y_activar_usuario(self):
+        serializer = UsuarioSerializer(data=self.datos_usuario())
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        usuario = serializer.save()
+        self.client.force_authenticate(self.admin)
+
+        respuesta = self.client.delete(f"/api/usuarios/usuarios/{usuario.id}/")
+        self.assertEqual(respuesta.status_code, 200, respuesta.data)
+        usuario.refresh_from_db()
+        self.assertFalse(usuario.is_active)
+
+        respuesta = self.client.post(f"/api/usuarios/usuarios/{usuario.id}/activar/", {})
+        self.assertEqual(respuesta.status_code, 200, respuesta.data)
+        usuario.refresh_from_db()
+        self.assertTrue(usuario.is_active)
+
+    def test_restablecer_password_invalida_anterior_y_exige_cambio(self):
+        serializer = UsuarioSerializer(data=self.datos_usuario())
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        usuario = serializer.save()
+        self.client.force_authenticate(self.admin)
+
+        respuesta = self.client.post(
+            f"/api/usuarios/usuarios/{usuario.id}/restablecer-password/",
+            {},
+        )
+
+        self.assertEqual(respuesta.status_code, 200, respuesta.data)
+        self.assertIn("password_temporal", respuesta.data)
+        self.assertEqual(respuesta.data["password_temporal"], "Temporal2026*")
+
+        usuario.refresh_from_db()
+        self.assertTrue(usuario.check_password(respuesta.data["password_temporal"]))
+        self.assertTrue(usuario.must_change_password)
+
+        usuario_consultado = Usuario.objects.get(pk=usuario.pk)
+        listado = UsuarioSerializer(usuario_consultado).data
+        self.assertNotIn("password_temporal", listado)
+
+    def test_restablecer_password_no_activa_usuario_inactivo(self):
+        serializer = UsuarioSerializer(data=self.datos_usuario())
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        usuario = serializer.save()
+        usuario.is_active = False
+        usuario.save(update_fields=["is_active"])
+        self.client.force_authenticate(self.admin)
+
+        respuesta = self.client.post(
+            f"/api/usuarios/usuarios/{usuario.id}/restablecer-password/",
+            {},
+        )
+
+        self.assertEqual(respuesta.status_code, 200, respuesta.data)
+        usuario.refresh_from_db()
+        self.assertFalse(usuario.is_active)
+
+    def test_usuario_sin_rol_admin_no_puede_restablecer_password(self):
+        serializer = UsuarioSerializer(data=self.datos_usuario())
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        usuario = serializer.save()
+        solicitante = Usuario.objects.create_user(
+            username="solicitante-sin-permiso",
+            email="sin-permiso@emi.edu.bo",
+            nombre_completo="Solicitante Sin Permiso",
+            password="Prueba#2026",
+        )
+        UsuarioRol.objects.create(
+            usuario=solicitante,
+            rol=self.rol_solicitante,
+            activo=True,
+        )
+        self.client.force_authenticate(solicitante)
+
+        respuesta = self.client.post(
+            f"/api/usuarios/usuarios/{usuario.id}/restablecer-password/",
+            {},
+        )
+
+        self.assertEqual(respuesta.status_code, 403, respuesta.data)
 
 
 class SeguridadAutenticacionTests(APITestCase):
