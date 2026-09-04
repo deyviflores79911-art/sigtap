@@ -217,6 +217,7 @@
 
               <strong>
                 Cargar evidencia
+                <span class="required-mark">*</span>
               </strong>
 
               <span>
@@ -225,7 +226,7 @@
               </span>
 
               <small>
-                JPG, JPEG, PNG o PDF · Máximo 5 MB
+                JPG, JPEG, PNG o PDF · Máximo 5 MB · Obligatorio
               </small>
 
             </label>
@@ -761,6 +762,8 @@ async function registrarRequerimiento() {
     !form.area
     ||
     !form.ubicacion.trim()
+    ||
+    !archivoSeleccionado.value
   ) {
 
     mostrarMensaje(
@@ -1304,6 +1307,11 @@ function cerrarSesion() {
 .upload-box strong {
   color: var(--sigta-azul);
   font-size: 17px;
+}
+
+
+.required-mark {
+  color: var(--sigta-error);
 }
 
 

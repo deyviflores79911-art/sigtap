@@ -1040,6 +1040,17 @@ class RequerimientoMantenimientoViewSet(
 
         viable = request.data.get("viable")
 
+        # Multipart (cuando se adjunta el POA) manda "viable" como
+        # texto ("true"/"false"); JSON lo manda como booleano real.
+        if isinstance(viable, str):
+
+            viable = viable.strip().lower()
+
+            if viable in ("true", "1"):
+                viable = True
+            elif viable in ("false", "0"):
+                viable = False
+
         if viable not in [True, False]:
             return Response({"viable": "Debe indicar True o False."}, status=400)
 
@@ -1096,6 +1107,7 @@ class RequerimientoMantenimientoViewSet(
             estado="CREADO_PENDIENTE_DAF",
             origen_modulo="MANTENIMIENTO",
             requerimiento_mantenimiento=requerimiento,
+            poa=request.FILES.get("poa"),
         )
 
         requerimiento.estado_compra_componente = "VIABLE"
@@ -1327,13 +1339,27 @@ class RequerimientoMantenimientoViewSet(
     @action(detail=True, methods=["post"], url_path="verificar-funcionamiento")
     def verificar_funcionamiento(self, request, pk=None):
 
-        if not (es_admin(request.user) or tiene_rol(request.user, "SERVICIOS_GENERALES")):
+        requerimiento = self.get_object()
+
+        # El solicitante es quien prueba su propio requerimiento.
+        # El Jefe/admin conservan la opción de verificarlo también
+        # (por ejemplo si el solicitante no responde).
+        es_solicitante = requerimiento.solicitante_id == request.user.id
+
+        if not (
+            es_admin(request.user)
+            or tiene_rol(request.user, "SERVICIOS_GENERALES")
+            or es_solicitante
+        ):
             return Response(
-                {"detalle": "Solo el Jefe de Mantenimiento puede verificar el funcionamiento."},
+                {
+                    "detalle": (
+                        "Solo el solicitante o el Jefe de Mantenimiento "
+                        "pueden verificar el funcionamiento."
+                    )
+                },
                 status=status.HTTP_403_FORBIDDEN
             )
-
-        requerimiento = self.get_object()
 
         if not estado_permitido(requerimiento, ["INFORME_REGISTRADO"]):
             return Response(

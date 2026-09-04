@@ -403,6 +403,23 @@
                   No conforme
                 </button>
 
+
+                <button
+                  v-if="item.proceso === 'MANTENIMIENTO' && item.estado_codigo === 'INFORME_REGISTRADO'"
+                  class="edit"
+                  @click="confirmarSolucionMantenimiento(item, true)"
+                >
+                  Se solucionó
+                </button>
+
+                <button
+                  v-if="item.proceso === 'MANTENIMIENTO' && item.estado_codigo === 'INFORME_REGISTRADO'"
+                  class="cancel"
+                  @click="confirmarSolucionMantenimiento(item, false)"
+                >
+                  Sigue el problema
+                </button>
+
               </div>
 
             </div>
@@ -2220,6 +2237,70 @@ async function informarConformidad(
 
     mostrarMensaje(
       'No fue posible registrar la conformidad.',
+      true
+    )
+  }
+}
+
+
+async function confirmarSolucionMantenimiento(
+  item,
+  resuelto
+) {
+
+  const confirmado = window.confirm(
+    resuelto
+      ? `¿Confirma que el problema de ${item.codigo} quedó solucionado?`
+      : `¿Confirma que el problema de ${item.codigo} sigue sin resolverse? Volverá al técnico.`
+  )
+
+  if (!confirmado) {
+    return
+  }
+
+  try {
+
+    const respuesta = await fetch(
+      `/api/mantenimiento/requerimientos/${item.id}/verificar-funcionamiento/`,
+      {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          problema_resuelto: resuelto,
+        }),
+      }
+    )
+
+    let datos = {}
+
+    try {
+      datos = await respuesta.json()
+    } catch {
+      datos = {}
+    }
+
+    if (!respuesta.ok) {
+      mostrarMensaje(
+        datos.detalle || 'No fue posible registrar su respuesta.',
+        true
+      )
+      return
+    }
+
+    mostrarMensaje(
+      resuelto
+        ? 'Gracias, quedó registrado que el problema se solucionó.'
+        : 'Registrado. El requerimiento vuelve al técnico de mantenimiento.'
+    )
+
+    await cargarTodo()
+
+  } catch (error) {
+
+    console.error('Error confirmando solución de mantenimiento:', error)
+
+    mostrarMensaje(
+      'No fue posible registrar su respuesta.',
       true
     )
   }

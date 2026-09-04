@@ -49,6 +49,14 @@ const TRAZOS = {
   correo: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5 12 13l8.5-6.5"/>',
   salir: '<path d="M9.5 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3.5"/><path d="M15 8.5 19 12l-4 3.5"/><path d="M19 12H9.5"/>',
   notificaciones: '<path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5S6.5 14 6.5 10z"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/>',
+
+  validar: '<circle cx="12" cy="12" r="9"/><path d="M8 12.3 10.5 15 16 9"/>',
+  prioridad: '<path d="M6 3v18"/><path d="M6 4h11.5L15 8l2.5 4H6"/>',
+  tecnico: '<circle cx="10" cy="9" r="3.3"/><path d="M3.5 20c1.1-3.6 3.7-5.5 6.5-5.5s5.4 1.9 6.5 5.5"/><path d="M17.5 4.5v4M15.5 6.5h4"/>',
+  verificar: '<path d="M12 3.5 19 6.5v5.2c0 5-3 7.9-7 9.3-4-1.4-7-4.3-7-9.3V6.5z"/><path d="M9 12l2 2 4-4"/>',
+  conformidad: '<rect x="4.5" y="3" width="15" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h4"/><path d="M8.5 16.5 10.5 18.5 15 14"/>',
+  reporte: '<rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9h17"/><path d="M8 13.5v3.5M12 11.5v5.5M16 14.5v2.5"/>',
+  historial: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3.2 2"/>',
 }
 
 const trazo = computed(() => TRAZOS[props.nombre] || TRAZOS.panel)
