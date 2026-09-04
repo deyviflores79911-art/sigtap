@@ -298,11 +298,6 @@ function redirigirSegunRol() {
     return
   }
 
-  if (roles.includes('JEFE_DAF')) {
-    router.push('/jefe-daf/dashboard')
-    return
-  }
-
   if (roles.includes('DAF')) {
     router.push('/daf/dashboard')
     return
@@ -336,7 +331,7 @@ function redirigirSegunRol() {
 
 .portal-layout.con-menu {
   display: flex;
-  background: #f3f6fb;
+  background: var(--sigta-azul-tenue);
 }
 
 .password-page {
@@ -353,16 +348,16 @@ function redirigirSegunRol() {
   background:
     linear-gradient(
       135deg,
-      #0a2f54 0%,
-      #124d7c 55%,
-      #1f628f 100%
+      var(--sigta-azul) 0%,
+      var(--sigta-azul) 55%,
+      var(--sigta-texto-suave) 100%
     );
 
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 .portal-layout.con-menu .password-page {
-  background: #f3f6fb;
+  background: var(--sigta-azul-tenue);
 }
 
 @media (max-width: 760px) {
@@ -379,7 +374,7 @@ function redirigirSegunRol() {
 
   padding: 24px 30px 20px;
 
-  border-top: 4px solid #FFFF00;
+  border-top: 4px solid var(--sigta-mostaza);
 
   box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.24);
@@ -401,9 +396,9 @@ function redirigirSegunRol() {
 
   flex-shrink: 0;
 
-  background: #6576B4;
+  background: var(--sigta-azul);
 
-  border: 3px solid #FFFF00;
+  border: 3px solid var(--sigta-mostaza);
 
   border-radius: 12px;
 
@@ -419,7 +414,7 @@ function redirigirSegunRol() {
 .brand h1 {
   margin: 0;
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 27px;
 }
@@ -427,14 +422,14 @@ function redirigirSegunRol() {
 .brand p {
   margin: 3px 0 2px;
 
-  color: #1d3348;
+  color: var(--sigta-azul);
 
   font-size: 13px;
   font-weight: 700;
 }
 
 .brand span {
-  color: #68798a;
+  color: var(--sigta-texto-suave);
 
   font-size: 11px;
 }
@@ -444,7 +439,7 @@ function redirigirSegunRol() {
 
   margin: 16px 0;
 
-  background: #FFFF00;
+  background: var(--sigta-mostaza);
 
   border-radius: 10px;
 }
@@ -452,7 +447,7 @@ function redirigirSegunRol() {
 .header h2 {
   margin: 0;
 
-  color: #152b3d;
+  color: var(--sigta-azul-oscuro);
 
   font-size: 21px;
 }
@@ -460,7 +455,7 @@ function redirigirSegunRol() {
 .header p {
   margin: 7px 0 17px;
 
-  color: #687887;
+  color: var(--sigta-texto-suave);
 
   font-size: 12.5px;
 
@@ -476,7 +471,7 @@ function redirigirSegunRol() {
 
   margin-bottom: 5px;
 
-  color: #273a4b;
+  color: var(--sigta-azul);
 
   font-size: 13px;
   font-weight: 700;
@@ -492,7 +487,7 @@ function redirigirSegunRol() {
 
   padding: 0 66px 0 13px;
 
-  border: 1px solid #cbd5df;
+  border: 1px solid var(--sigta-borde);
 
   border-radius: 8px;
 
@@ -502,7 +497,7 @@ function redirigirSegunRol() {
 }
 
 .form-group input:focus {
-  border-color: #0b5795;
+  border-color: var(--sigta-texto-suave);
 
   box-shadow:
     0 0 0 3px rgba(11, 87, 149, 0.12);
@@ -520,7 +515,7 @@ function redirigirSegunRol() {
 
   background: transparent;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 12px;
   font-weight: 700;
@@ -533,17 +528,17 @@ function redirigirSegunRol() {
 
   padding: 10px 13px;
 
-  background: #f6f8fa;
+  background: var(--sigta-azul-tenue);
 
   border-radius: 8px;
 
-  border-left: 3px solid #FFFF00;
+  border-left: 3px solid var(--sigta-mostaza);
 }
 
 .requirements p {
   margin: 0 0 5px;
 
-  color: #34495c;
+  color: var(--sigta-azul);
 
   font-size: 11.5px;
   font-weight: 700;
@@ -554,7 +549,7 @@ function redirigirSegunRol() {
 
   padding-left: 18px;
 
-  color: #667787;
+  color: var(--sigta-texto-suave);
 
   font-size: 11px;
 
@@ -570,15 +565,15 @@ function redirigirSegunRol() {
 }
 
 .message.error {
-  background: #fff1f1;
+  background: var(--sigta-error-fondo);
 
-  color: #a52121;
+  color: var(--sigta-error);
 }
 
 .message.success {
-  background: #edf8f0;
+  background: var(--sigta-exito-fondo);
 
-  color: #20763b;
+  color: var(--sigta-exito);
 }
 
 .primary-button {
@@ -589,7 +584,7 @@ function redirigirSegunRol() {
 
   border-radius: 8px;
 
-  background: #6576B4;
+  background: var(--sigta-azul);
 
   color: white;
 
@@ -600,7 +595,7 @@ function redirigirSegunRol() {
 }
 
 .primary-button:hover:not(:disabled) {
-  background: #073563;
+  background: var(--sigta-azul);
 }
 
 .primary-button:disabled {
@@ -614,7 +609,7 @@ footer {
 
   text-align: center;
 
-  color: #75828d;
+  color: var(--sigta-texto-suave);
 }
 
 footer p {

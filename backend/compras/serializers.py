@@ -26,8 +26,11 @@ CAMPOS_ARCHIVO = (
 
 class SolicitudCompraSerializer(serializers.ModelSerializer):
 
-    tecnico_daf_nombre = serializers.CharField(source="tecnico_daf.nombre_completo", read_only=True)
-    jefe_daf_nombre = serializers.CharField(source="validado_por_jefe_daf.nombre_completo", read_only=True)
+    # El expediente dice por sí mismo de quién depende ahora: evita que
+    # cada área tenga que preguntar en qué punto va el trámite.
+    responsable_actual = serializers.SerializerMethodField()
+    situacion = serializers.SerializerMethodField()
+
 
     solicitante_nombre = serializers.CharField(
         source="solicitante.nombre_completo",
@@ -72,9 +75,6 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "solicitante",
             "solicitante_nombre",
             "solicitante_email",
-            "tecnico_daf", "tecnico_daf_nombre",
-            "validado_por_jefe_daf", "jefe_daf_nombre",
-            "prioridad_daf", "criterio_prioridad_daf", "asignado_daf_en",
 
             "area",
             "area_nombre",
@@ -95,6 +95,9 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "estado",
             "estado_nombre",
 
+            "responsable_actual",
+            "situacion",
+
             "origen_modulo",
             "ticket_soporte",
             "requerimiento_mantenimiento",
@@ -105,9 +108,15 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "certificacion_presupuestaria",
             "factura", "acta_conformidad", "fotograma",
             "motivo_rechazo", "monto_desembolsado",
+            "fondos_recibidos_en", "fondos_recibidos_por",
+            "gestion_estado", "gestion_nota", "gestion_actualizada_en",
             "responsable_adquisicion", "monto_real", "proveedor",
             "componente_verificado", "observacion_verificacion",
+            "comprobante_compra", "fecha_compra",
+            "cantidad_recibida", "responsable_recepcion", "observacion_ingreso",
+            "cantidad_entregada", "entregado_a", "observacion_salida",
             "fecha_ingreso_almacen", "fecha_despacho_almacen",
+            "fecha_entrega_solicitante", "acta_firmada_en", "solicitud_recibida_en",
             "cerrado_inmutable",
 
             "activo",
@@ -131,13 +140,61 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "monto_desembolsado", "responsable_adquisicion",
             "monto_real", "proveedor",
             "componente_verificado", "observacion_verificacion",
+            "comprobante_compra", "fecha_compra",
+            "cantidad_recibida", "responsable_recepcion", "observacion_ingreso",
+            "cantidad_entregada", "entregado_a", "observacion_salida",
             "fecha_ingreso_almacen", "fecha_despacho_almacen",
+            "fecha_entrega_solicitante", "acta_firmada_en", "solicitud_recibida_en",
             "cerrado_inmutable",
-            "tecnico_daf", "validado_por_jefe_daf", "prioridad_daf",
-            "criterio_prioridad_daf", "asignado_daf_en",
             "creado_en",
             "actualizado_en",
         ]
+
+    ETAPAS = {
+        "CREADO_PENDIENTE_DAF": ("DAF", "Verificar los requisitos del expediente"),
+        "EVALUADO_PENDIENTE_CERTIFICACION": ("DAF", "Emitir la certificación presupuestaria"),
+        "VERIFICADO_PENDIENTE_AUTORIZACION": ("Director", "Autorizar la compra"),
+        "APROBADO_PARA_DESEMBOLSO": ("Tesorería", "Desembolsar el dinero"),
+        "COMPRA_REGISTRADA": ("Compras y Almacén", "Registrar los movimientos de almacén"),
+        "COMPRADO_Y_ENTREGADO": ("Sección solicitante", "Firmar el acta de conformidad"),
+        "DESCARGO_PENDIENTE_LIQUIDACION": ("Sección solicitante", "Recibir formalmente la solicitud"),
+        "CERRADO_ARCHIVADO": ("", "Proceso concluido"),
+        "RECHAZADO": ("", "Expediente rechazado"),
+        "ANULADO": ("", "Expediente anulado"),
+    }
+
+    def get_responsable_actual(self, obj):
+
+        if obj.estado == "FONDOS_DESEMBOLSADOS":
+            return "Compras y Almacén"
+
+        return self.ETAPAS.get(obj.estado, ("", ""))[0]
+
+    def get_situacion(self, obj):
+        """Frase corta que explica en qué punto está el trámite."""
+
+        if obj.estado == "FONDOS_DESEMBOLSADOS":
+
+            if not obj.fondos_recibidos_en:
+                return "Fondos listos para retirar en Tesorería"
+
+            if obj.gestion_estado:
+                texto = dict(SolicitudCompra.GESTIONES)[obj.gestion_estado]
+                return f"{texto}{f' — {obj.gestion_nota}' if obj.gestion_nota else ''}"
+
+            return "Efectivo recibido — pendiente de realizar la compra"
+
+        if obj.estado == "COMPRA_REGISTRADA":
+
+            if not obj.fecha_ingreso_almacen:
+                return "Comprado — pendiente de registrar la entrada a almacén"
+
+            if not obj.fecha_despacho_almacen:
+                return "En almacén — pendiente de registrar la salida"
+
+            return "Salida registrada — pendiente de entregar con acta"
+
+        return self.ETAPAS.get(obj.estado, ("", obj.get_estado_display()))[1]
 
     def to_representation(self, instance):
 
@@ -166,14 +223,16 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        # BPMN: la solicitud viaja respaldada por Informe, Proforma y POA.
+        # El "pedido" se conserva como documento opcional del expediente.
         if self.instance is None:
             faltantes = [
-                nombre for nombre in ("informe", "poa", "pedido", "proforma")
+                nombre for nombre in ("informe", "proforma", "poa")
                 if not attrs.get(nombre)
             ]
             if faltantes:
                 raise serializers.ValidationError({
-                    "documentos": "Debe adjuntar Informe, POA, Pedido y Proforma. Faltan: " + ", ".join(faltantes)
+                    "documentos": "Debe adjuntar Informe, Proforma y POA. Faltan: " + ", ".join(faltantes)
                 })
 
         # Se exige PDF para que el expediente sea previsualizable
@@ -184,7 +243,7 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
         ]
         if no_pdf:
             raise serializers.ValidationError({
-                "documentos": "Informe, POA, Pedido y Proforma deben ser archivos PDF: " + ", ".join(no_pdf)
+                "documentos": "Los documentos del expediente deben ser archivos PDF: " + ", ".join(no_pdf)
             })
 
         return attrs

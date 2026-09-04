@@ -1252,15 +1252,12 @@ function mostrarError(texto) {
   background:
     linear-gradient(
       135deg,
-      #0a2f54 0%,
-      #124d7c 55%,
-      #1f628f 100%
+      var(--sigta-azul) 0%,
+      var(--sigta-azul) 55%,
+      var(--sigta-texto-suave) 100%
     );
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -1276,12 +1273,12 @@ function mostrarError(texto) {
 
   overflow: hidden;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
   border-radius: 17px;
 
   border-top:
-    4px solid #FFFF00;
+    4px solid var(--sigta-mostaza);
 
   box-shadow:
     0 24px 65px
@@ -1322,10 +1319,10 @@ function mostrarError(texto) {
 
   justify-content: center;
 
-  background: #6576B4;
+  background: var(--sigta-azul);
 
   border:
-    3px solid #FFFF00;
+    3px solid var(--sigta-mostaza);
 
   border-radius: 13px;
 
@@ -1346,7 +1343,7 @@ function mostrarError(texto) {
 
   margin: 0;
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 29px;
 
@@ -1362,7 +1359,7 @@ function mostrarError(texto) {
 
   margin-top: 5px;
 
-  color: #1e3549;
+  color: var(--sigta-azul);
 
   font-size: 13px;
 }
@@ -1374,7 +1371,7 @@ function mostrarError(texto) {
 
   margin-top: 3px;
 
-  color: #6f8090;
+  color: var(--sigta-texto-suave);
 
   font-size: 11px;
 }
@@ -1390,7 +1387,7 @@ function mostrarError(texto) {
 
   border-radius: 8px;
 
-  background: #FFFF00;
+  background: var(--sigta-mostaza);
 }
 
 
@@ -1436,13 +1433,13 @@ function mostrarError(texto) {
   justify-content: center;
 
   border:
-    2px solid #cbd5dd;
+    2px solid var(--sigta-borde);
 
   border-radius: 50%;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
-  color: #8a98a3;
+  color: var(--sigta-texto-suave);
 
   font-size: 11px;
 
@@ -1456,7 +1453,7 @@ function mostrarError(texto) {
 
   margin-top: 6px;
 
-  color: #87949e;
+  color: var(--sigta-texto-suave);
 
   font-size: 9px;
 
@@ -1466,17 +1463,17 @@ function mostrarError(texto) {
 
 .step.active .circle {
 
-  border-color: #073b6f;
+  border-color: var(--sigta-azul);
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
-  color: #ffffff;
+  color: var(--sigta-blanco);
 }
 
 
 .step.active span {
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 }
 
 
@@ -1488,13 +1485,13 @@ function mostrarError(texto) {
 
   margin-top: 15px;
 
-  background: #dce3e8;
+  background: var(--sigta-borde);
 }
 
 
 .active-line {
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 }
 
 
@@ -1532,9 +1529,9 @@ function mostrarError(texto) {
 
   border-radius: 11px;
 
-  background: #edf4fa;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 18px;
 
@@ -1544,9 +1541,9 @@ function mostrarError(texto) {
 
 .icon-box.verified {
 
-  background: #e8f7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #237345;
+  color: var(--sigta-exito);
 }
 
 
@@ -1554,7 +1551,7 @@ function mostrarError(texto) {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 23px;
 }
@@ -1569,7 +1566,7 @@ function mostrarError(texto) {
     auto
     21px;
 
-  color: #70818f;
+  color: var(--sigta-texto-suave);
 
   font-size: 12px;
 
@@ -1595,7 +1592,7 @@ function mostrarError(texto) {
 
   margin-bottom: 6px;
 
-  color: #344b5e;
+  color: var(--sigta-azul);
 
   font-size: 11px;
 
@@ -1614,13 +1611,13 @@ function mostrarError(texto) {
     13px;
 
   border:
-    1px solid #ccd6de;
+    1px solid var(--sigta-borde);
 
   border-radius: 8px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
-  color: #263b4c;
+  color: var(--sigta-azul);
 
   font-size: 14px;
 
@@ -1630,7 +1627,7 @@ function mostrarError(texto) {
 
 .form-group > input:focus {
 
-  border-color: #07518d;
+  border-color: var(--sigta-azul);
 
   box-shadow:
     0 0 0 3px
@@ -1653,7 +1650,7 @@ function mostrarError(texto) {
   align-items: center;
 
   border:
-    1px solid #ccd6de;
+    1px solid var(--sigta-borde);
 
   border-radius: 8px;
 
@@ -1663,7 +1660,7 @@ function mostrarError(texto) {
 
 .password-wrapper:focus-within {
 
-  border-color: #07518d;
+  border-color: var(--sigta-azul);
 
   box-shadow:
     0 0 0 3px
@@ -1705,7 +1702,7 @@ function mostrarError(texto) {
 
   background: transparent;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 11px;
 
@@ -1725,7 +1722,7 @@ function mostrarError(texto) {
 
   margin-bottom: 10px;
 
-  color: #43586a;
+  color: var(--sigta-texto-suave);
 
   font-size: 11px;
 
@@ -1752,13 +1749,13 @@ function mostrarError(texto) {
   height: 57px;
 
   border:
-    1px solid #ccd6de;
+    1px solid var(--sigta-borde);
 
   border-radius: 9px;
 
   text-align: center;
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 23px;
 
@@ -1770,7 +1767,7 @@ function mostrarError(texto) {
 
 .code-input:focus {
 
-  border-color: #FFFF00;
+  border-color: var(--sigta-mostaza);
 
   box-shadow:
     0 0 0 3px
@@ -1790,10 +1787,10 @@ function mostrarError(texto) {
 
   padding: 14px;
 
-  background: #f5f7f9;
+  background: var(--sigta-azul-tenue);
 
   border-left:
-    4px solid #FFFF00;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 7px;
 
@@ -1803,7 +1800,7 @@ function mostrarError(texto) {
 
 .requirements strong {
 
-  color: #344b5e;
+  color: var(--sigta-azul);
 
   font-size: 10px;
 }
@@ -1825,7 +1822,7 @@ function mostrarError(texto) {
 
 .requirement-grid span {
 
-  color: #9aa4ac;
+  color: var(--sigta-texto-suave);
 
   font-size: 9px;
 }
@@ -1833,7 +1830,7 @@ function mostrarError(texto) {
 
 .requirement-grid span.valid {
 
-  color: #237345;
+  color: var(--sigta-exito);
 
   font-weight: 700;
 }
@@ -1863,17 +1860,17 @@ function mostrarError(texto) {
 
 .message.error {
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #aa3030;
+  color: var(--sigta-error);
 }
 
 
 .message.success {
 
-  background: #e8f7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #237345;
+  color: var(--sigta-exito);
 }
 
 
@@ -1891,9 +1888,9 @@ function mostrarError(texto) {
 
   border-radius: 8px;
 
-  background: #0a4b86;
+  background: var(--sigta-azul);
 
-  color: #ffffff;
+  color: var(--sigta-blanco);
 
   font-size: 13px;
 
@@ -1909,7 +1906,7 @@ function mostrarError(texto) {
 
 .primary-button:hover:not(:disabled) {
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
   box-shadow:
     0 8px 18px
@@ -1937,7 +1934,7 @@ function mostrarError(texto) {
 
   background: transparent;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 10px;
 
@@ -1963,7 +1960,7 @@ function mostrarError(texto) {
 
   margin-top: 14px;
 
-  color: #778895;
+  color: var(--sigta-texto-suave);
 
   font-size: 10px;
 }
@@ -1977,7 +1974,7 @@ function mostrarError(texto) {
 
   background: transparent;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 10px;
 
@@ -2018,9 +2015,9 @@ function mostrarError(texto) {
 
   border-radius: 50%;
 
-  background: #e8f7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #237345;
+  color: var(--sigta-exito);
 
   font-size: 31px;
 
@@ -2036,7 +2033,7 @@ function mostrarError(texto) {
 
   padding: 15px;
 
-  background: #f4f7f9;
+  background: var(--sigta-azul-tenue);
 
   border-radius: 8px;
 }
@@ -2051,7 +2048,7 @@ function mostrarError(texto) {
 
 .final-message strong {
 
-  color: #29475e;
+  color: var(--sigta-azul);
 
   font-size: 12px;
 }
@@ -2061,7 +2058,7 @@ function mostrarError(texto) {
 
   margin-top: 5px;
 
-  color: #788895;
+  color: var(--sigta-texto-suave);
 
   font-size: 10px;
 }
@@ -2077,11 +2074,11 @@ footer {
     14px
     20px;
 
-  background: #f5f7f9;
+  background: var(--sigta-azul-tenue);
 
   text-align: center;
 
-  color: #7b8994;
+  color: var(--sigta-texto-suave);
 }
 
 
@@ -2098,7 +2095,7 @@ footer p {
 
 footer strong {
 
-  color: #52697b;
+  color: var(--sigta-texto-suave);
 
   font-size: 9px;
 }

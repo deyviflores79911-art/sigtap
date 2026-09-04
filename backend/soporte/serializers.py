@@ -170,6 +170,10 @@ class TicketSerializer(
         serializers.SerializerMethodField()
     )
 
+    cotizacion_archivo_url = (
+        serializers.SerializerMethodField()
+    )
+
 
     # ======================================================
     # META
@@ -214,6 +218,8 @@ class TicketSerializer(
             "area_nombre",
 
             "ubicacion",
+
+            "referencia_ubicacion",
 
             "equipo_afectado",
 
@@ -308,6 +314,16 @@ class TicketSerializer(
 
             "costo_estimado",
 
+            "cotizacion_archivo",
+
+            "cotizacion_archivo_url",
+
+            "estado_compra_componente",
+
+            "motivo_no_viable",
+
+            "componente_entregado_en",
+
             "codigo_compra_vinculada",
 
             "compra_vinculada",
@@ -323,7 +339,15 @@ class TicketSerializer(
 
             "observaciones_usuario",
 
+            "informe_tecnico",
+
             "informe_final",
+
+            "informe_elevado_en",
+
+            "informe_recibido_director_en",
+
+            "proceso_finalizado_en",
 
 
             # ------------------------------------------------
@@ -420,6 +444,14 @@ class TicketSerializer(
 
             "costo_estimado",
 
+            "cotizacion_archivo",
+
+            "estado_compra_componente",
+
+            "motivo_no_viable",
+
+            "componente_entregado_en",
+
             "codigo_compra_vinculada",
 
 
@@ -431,7 +463,15 @@ class TicketSerializer(
 
             "observaciones_usuario",
 
+            "informe_tecnico",
+
             "informe_final",
+
+            "informe_elevado_en",
+
+            "informe_recibido_director_en",
+
+            "proceso_finalizado_en",
 
 
             # Fechas workflow
@@ -522,6 +562,41 @@ class TicketSerializer(
         from compras.serializers import SolicitudCompraResumenSerializer
 
         return SolicitudCompraResumenSerializer(solicitud).data
+
+
+    # ======================================================
+    # URL DE LA COTIZACIÓN DEL COMPONENTE
+    # ======================================================
+
+    def get_cotizacion_archivo_url(
+        self,
+        obj
+    ):
+
+        if not obj.cotizacion_archivo:
+
+            return None
+
+
+        try:
+
+            url = obj.cotizacion_archivo.url
+
+        except ValueError:
+
+            return None
+
+
+        request = self.context.get(
+            "request"
+        )
+
+
+        return (
+            request.build_absolute_uri(url)
+            if request
+            else url
+        )
 
 
     # ======================================================

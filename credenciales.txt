@@ -18,30 +18,22 @@ Correo: jefe.utic@emi.edu.bo
 Contraseña: SIGTA_JefeUTIC#2026!
 Ruta: /jefe-utic/dashboard
 
-Jefe DAF
-Correo: jefe.daf@emi.edu.bo
-Contraseña: SIGTA_JefeDAF#2026!
-Ruta: /daf/dashboard
-
 Jefe Mantenimiento
 Correo: servicios.generales@emi.edu.bo
 Contraseña: SIGTA_ServiciosGrales#2026!
 Ruta: /servicios-generales/dashboard
 
-Técnico de la DAF
-Depende de: Jefe DAF
+DAF (Dirección de Asuntos Financieros)
 Correo: daf@emi.edu.bo
 Contraseña: SIGTA_DAF#2026!
 Ruta: /daf/dashboard
 
 Técnico de Almacén y Compras
-Depende de: Jefe DAF
 Correo: almacen@emi.edu.bo
 Contraseña: SIGTA_Almacen#2026!
 Ruta: /almacen/dashboard
 
 Técnico de Tesorería
-Depende de: Jefe DAF
 Correo: tesoreria@emi.edu.bo
 Contraseña: SIGTA_Tesoreria#2026!
 Ruta: /tesoreria/dashboard

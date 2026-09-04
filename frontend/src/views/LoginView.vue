@@ -434,11 +434,6 @@ async function iniciarSesion() {
       return
     }
 
-    if (codigosRoles.includes('JEFE_DAF')) {
-      router.push('/jefe-daf/dashboard')
-      return
-    }
-
     if (codigosRoles.includes('DAF')) {
       router.push('/daf/dashboard')
       return
@@ -561,15 +556,12 @@ if (emailRecordado) {
   background:
     linear-gradient(
       135deg,
-      #0a2f54 0%,
-      #124d7c 55%,
-      #1f628f 100%
+      var(--sigta-azul) 0%,
+      var(--sigta-azul) 55%,
+      var(--sigta-texto-suave) 100%
     );
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -583,7 +575,7 @@ if (emailRecordado) {
 
   max-width: 420px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
   border-radius: 16px;
 
@@ -593,7 +585,7 @@ if (emailRecordado) {
     20px;
 
   border-top:
-    4px solid #FFFF00;
+    4px solid var(--sigta-mostaza);
 
   box-shadow:
     0 20px 50px
@@ -631,12 +623,12 @@ if (emailRecordado) {
 
   border-radius: 13px;
 
-  background: #6576B4;
+  background: var(--sigta-azul);
 
   border:
-    3px solid #FFFF00;
+    3px solid var(--sigta-mostaza);
 
-  color: #ffffff;
+  color: var(--sigta-blanco);
 
   font-size: 19px;
 
@@ -668,7 +660,7 @@ if (emailRecordado) {
 
   margin: 0;
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 28px;
 
@@ -687,7 +679,7 @@ if (emailRecordado) {
     0
     2px;
 
-  color: #1d3348;
+  color: var(--sigta-azul);
 
   font-size: 14px;
 
@@ -699,7 +691,7 @@ if (emailRecordado) {
 
   display: block;
 
-  color: #68798a;
+  color: var(--sigta-texto-suave);
 
   font-size: 12px;
 }
@@ -719,7 +711,7 @@ if (emailRecordado) {
 
   border-radius: 10px;
 
-  background: #FFFF00;
+  background: var(--sigta-mostaza);
 }
 
 
@@ -731,7 +723,7 @@ if (emailRecordado) {
 
   margin: 0;
 
-  color: #152b3d;
+  color: var(--sigta-azul-oscuro);
 
   font-size: 23px;
 
@@ -746,7 +738,7 @@ if (emailRecordado) {
     0
     17px;
 
-  color: #687887;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 
@@ -770,7 +762,7 @@ if (emailRecordado) {
 
   margin-bottom: 6px;
 
-  color: #273a4b;
+  color: var(--sigta-azul);
 
   font-size: 13px;
 
@@ -789,13 +781,13 @@ if (emailRecordado) {
     14px;
 
   border:
-    1px solid #cbd5df;
+    1px solid var(--sigta-borde);
 
   border-radius: 8px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
-  color: #243748;
+  color: var(--sigta-azul);
 
   font-size: 15px;
 
@@ -809,13 +801,13 @@ if (emailRecordado) {
 
 .form-group input::placeholder {
 
-  color: #929ca6;
+  color: var(--sigta-texto-suave);
 }
 
 
 .form-group input:focus {
 
-  border-color: #0b5795;
+  border-color: var(--sigta-texto-suave);
 
   box-shadow:
     0 0 0 3px
@@ -825,7 +817,7 @@ if (emailRecordado) {
 
 .form-group input:disabled {
 
-  background: #f4f6f8;
+  background: var(--sigta-azul-tenue);
 
   cursor: not-allowed;
 }
@@ -862,7 +854,7 @@ if (emailRecordado) {
 
   background: transparent;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 13px;
 
@@ -874,7 +866,7 @@ if (emailRecordado) {
 
 .show-password:hover {
 
-  color: #043b6c;
+  color: var(--sigta-azul);
 }
 
 
@@ -917,7 +909,7 @@ if (emailRecordado) {
 
   gap: 7px;
 
-  color: #556575;
+  color: var(--sigta-texto-suave);
 
   white-space: nowrap;
 }
@@ -929,7 +921,7 @@ if (emailRecordado) {
 
   height: 16px;
 
-  accent-color: #6576B4;
+  accent-color: var(--sigta-azul);
 }
 
 
@@ -945,12 +937,9 @@ if (emailRecordado) {
 
   background: transparent;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 
   font-size: 13px;
 
@@ -966,7 +955,7 @@ if (emailRecordado) {
 
   text-decoration: underline;
 
-  color: #043b6c;
+  color: var(--sigta-azul);
 }
 
 
@@ -995,9 +984,9 @@ if (emailRecordado) {
 
   border-radius: 7px;
 
-  background: #eef5fb;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 12px;
 
@@ -1019,9 +1008,9 @@ if (emailRecordado) {
 
   border-radius: 8px;
 
-  background: #6576B4;
+  background: var(--sigta-azul);
 
-  color: #ffffff;
+  color: var(--sigta-blanco);
 
   font-size: 15px;
 
@@ -1038,7 +1027,7 @@ if (emailRecordado) {
 
 .login-button:hover:not(:disabled) {
 
-  background: #073563;
+  background: var(--sigta-azul);
 
   box-shadow:
     0 8px 18px
@@ -1070,7 +1059,7 @@ footer {
 
   text-align: center;
 
-  color: #75828d;
+  color: var(--sigta-texto-suave);
 }
 
 

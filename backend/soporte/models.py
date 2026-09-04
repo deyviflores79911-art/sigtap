@@ -127,7 +127,21 @@ class Ticket(models.Model):
     )
 
     ubicacion = models.CharField(
-        max_length=200
+        max_length=200,
+        help_text=(
+            "Aula o ambiente donde se presenta el problema "
+            "(por ejemplo: Aula C0-07, Laboratorio de Redes)."
+        )
+    )
+
+    referencia_ubicacion = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        help_text=(
+            "Referencias para llegar al ambiente: bloque, piso o "
+            "punto cercano conocido."
+        )
     )
 
     equipo_afectado = models.CharField(
@@ -299,6 +313,22 @@ class Ticket(models.Model):
         blank=True
     )
 
+    cotizacion_archivo = models.FileField(
+        upload_to="soporte/cotizaciones/%Y/%m/",
+        blank=True,
+        null=True,
+        help_text="Cotización o proforma del componente requerido."
+    )
+
+    componente_entregado_en = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Fecha en que Almacén despachó el componente y el "
+            "especialista pudo retomar la atención del ticket."
+        )
+    )
+
     codigo_compra_vinculada = models.CharField(
         max_length=30,
         blank=True
@@ -319,6 +349,7 @@ class Ticket(models.Model):
         ("SOLICITADA", "Solicitada"),
         ("NO_VIABLE", "No viable"),
         ("VIABLE", "Viable"),
+        ("ENTREGADA", "Componente entregado"),
     ]
 
     estado_compra_componente = models.CharField(
@@ -349,8 +380,42 @@ class Ticket(models.Model):
         blank=True
     )
 
+    informe_tecnico = models.TextField(
+        blank=True,
+        help_text=(
+            "Descargo técnico que el especialista dirige a la jefatura "
+            "al terminar la reparación y las pruebas."
+        )
+    )
+
     informe_final = models.TextField(
         blank=True
+    )
+
+    informe_elevado_en = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Fecha en que la jefatura elevó el informe final de "
+            "actividades a sus destinatarios."
+        )
+    )
+
+    # BPMN: la Dirección recibe el informe de actividades; con ese
+    # acuse el proceso del ticket llega a su evento final.
+    informe_recibido_director_en = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha en que el Director recibió el informe de actividades."
+    )
+
+    proceso_finalizado_en = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Fecha en que la Dirección acusó recibo del informe y el "
+            "proceso llegó a su evento final."
+        )
     )
 
 

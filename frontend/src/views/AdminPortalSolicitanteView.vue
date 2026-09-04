@@ -540,12 +540,9 @@ const requerimientos =
 
   display: flex;
 
-  background: #f2f5f9;
+  background: var(--sigta-azul-tenue);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -578,7 +575,7 @@ header {
 
   margin-bottom: 6px;
 
-  color: #8493a0;
+  color: var(--sigta-texto-suave);
 
   font-size: 9px;
 }
@@ -588,7 +585,7 @@ header h1 {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 28px;
 }
@@ -598,7 +595,7 @@ header p {
 
   margin: 6px 0 0;
 
-  color: #718294;
+  color: var(--sigta-texto-suave);
 
   font-size: 11px;
 }
@@ -615,9 +612,9 @@ header button {
 
   border-radius: 7px;
 
-  background: #f2c400;
+  background: var(--sigta-mostaza);
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-weight: 800;
 
@@ -644,7 +641,7 @@ header button {
   padding: 20px;
 
   border-top:
-    3px solid #073b6f;
+    3px solid var(--sigta-azul);
 
   border-radius: 9px;
 
@@ -667,7 +664,7 @@ header button {
 
 .cards strong {
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 27px;
 }
@@ -677,7 +674,7 @@ header button {
 
   margin-top: 7px;
 
-  color: #718294;
+  color: var(--sigta-texto-suave);
 
   font-size: 10px;
 }
@@ -720,7 +717,7 @@ header button {
 
   margin-bottom: 4px;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 7px;
 
@@ -734,7 +731,7 @@ header button {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 17px;
 }
@@ -747,9 +744,9 @@ header button {
 
   border-radius: 14px;
 
-  background: #edf4fa;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 8px;
 
@@ -777,9 +774,9 @@ header button {
     0 12px;
 
   border-bottom:
-    1px solid #edf0f3;
+    1px solid var(--sigta-azul-tenue);
 
-  color: #506476;
+  color: var(--sigta-texto-suave);
 
   font-size: 10px;
 }
@@ -787,9 +784,9 @@ header button {
 
 .row.head {
 
-  background: #f5f7f9;
+  background: var(--sigta-azul-tenue);
 
-  color: #40596f;
+  color: var(--sigta-texto-suave);
 
   font-weight: 800;
 }
@@ -797,7 +794,7 @@ header button {
 
 .row strong {
 
-  color: #07518d;
+  color: var(--sigta-azul);
 }
 
 
@@ -805,7 +802,7 @@ header button {
 
   padding: 30px;
 
-  color: #718294;
+  color: var(--sigta-texto-suave);
 
   text-align: center;
 

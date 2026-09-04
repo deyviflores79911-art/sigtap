@@ -172,6 +172,22 @@ class RequerimientoMantenimiento(models.Model):
     prioridad_jefatura = models.CharField(max_length=10, blank=True)
     criterio_prioridad = models.TextField(blank=True)
 
+    motivo_rechazo = models.TextField(blank=True)
+
+    validado_en = models.DateTimeField(null=True, blank=True)
+    clasificado_en = models.DateTimeField(null=True, blank=True)
+
+
+    # ======================================================
+    # INSPECCIÓN TÉCNICA Y DIAGNÓSTICO
+    # ======================================================
+
+    diagnostico = models.TextField(blank=True)
+
+    plan_solucion = models.TextField(blank=True)
+
+    diagnosticado_en = models.DateTimeField(null=True, blank=True)
+
 
     # ======================================================
     # REPOSICIÓN DE ALMACÉN
@@ -233,6 +249,37 @@ class RequerimientoMantenimiento(models.Model):
     #
     # ======================================================
 
+    # ------------------------------------------------------
+    # BPMN: "¿Requiere compra?" -> el técnico realiza el
+    # requerimiento con características y cotización, y la
+    # jefatura evalúa su viabilidad antes de elevarlo a la DAF.
+    # ------------------------------------------------------
+
+    ESTADOS_COMPRA_COMPONENTE = [
+        ("SOLICITADA", "Solicitada"),
+        ("NO_VIABLE", "No viable"),
+        ("VIABLE", "Viable"),
+        ("ENTREGADA", "Componente entregado"),
+    ]
+
+    estado_compra_componente = models.CharField(
+        max_length=20,
+        choices=ESTADOS_COMPRA_COMPONENTE,
+        blank=True
+    )
+
+    costo_estimado = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+
+    cotizacion_archivo = models.FileField(
+        upload_to="mantenimiento/cotizaciones/%Y/%m/",
+        blank=True,
+        null=True
+    )
+
+    motivo_no_viable = models.TextField(blank=True)
+
     derivado_compra = models.BooleanField(
         default=False
     )
@@ -268,6 +315,10 @@ class RequerimientoMantenimiento(models.Model):
     # "Realiza un informe, fotograma del trabajo realizado"
     #
     # ======================================================
+
+    resultado_pruebas = models.TextField(blank=True)
+
+    pruebas_en = models.DateTimeField(null=True, blank=True)
 
     informe_trabajo = models.TextField(
         blank=True
@@ -312,6 +363,25 @@ class RequerimientoMantenimiento(models.Model):
         null=True,
         blank=True
     )
+
+    verificado_en = models.DateTimeField(null=True, blank=True)
+
+    rework_count = models.PositiveIntegerField(default=0)
+
+    conformidad_en = models.DateTimeField(null=True, blank=True)
+
+
+    # ======================================================
+    # INFORME FINAL Y DISTRIBUCIÓN
+    # ======================================================
+
+    informe_final = models.TextField(blank=True)
+
+    informe_elevado_en = models.DateTimeField(null=True, blank=True)
+
+    informe_recibido_director_en = models.DateTimeField(null=True, blank=True)
+
+    proceso_finalizado_en = models.DateTimeField(null=True, blank=True)
 
     finalizado_en = models.DateTimeField(
         null=True,

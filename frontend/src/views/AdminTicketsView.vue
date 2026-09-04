@@ -538,12 +538,9 @@ const filtrados =
 
   display: flex;
 
-  background: #f4f6f8;
+  background: var(--sigta-azul-tenue);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -578,7 +575,7 @@ header {
 
   margin-bottom: 6px;
 
-  color: #8493a0;
+  color: var(--sigta-texto-suave);
 
   font-size: 9px;
 }
@@ -588,7 +585,7 @@ h1 {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 27px;
 }
@@ -598,7 +595,7 @@ header p {
 
   margin: 6px 0 0;
 
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 
   font-size: 11px;
 }
@@ -615,7 +612,7 @@ header button {
 
   border-radius: 7px;
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
   color: white;
 
@@ -646,7 +643,7 @@ header button {
   padding: 18px;
 
   border-top:
-    3px solid #f2c400;
+    3px solid var(--sigta-mostaza);
 
   border-radius: 9px;
 
@@ -662,7 +659,7 @@ header button {
 
 .stats span {
 
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 
   font-size: 9px;
 }
@@ -674,7 +671,7 @@ header button {
 
   margin-top: 5px;
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 25px;
 }
@@ -704,7 +701,7 @@ header button {
     12px;
 
   border:
-    1px solid #d1dae2;
+    1px solid var(--sigta-borde);
 
   border-radius: 7px;
 
@@ -745,13 +742,13 @@ header button {
   padding: 16px;
 
   border-bottom:
-    1px solid #edf0f2;
+    1px solid var(--sigta-azul-tenue);
 }
 
 
 .code {
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-weight: 800;
 }
@@ -768,7 +765,7 @@ header button {
 
   margin-top: 4px;
 
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 
   font-size: 11px;
 }
@@ -776,7 +773,7 @@ header button {
 
 .tag {
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 9px;
 
@@ -792,7 +789,7 @@ header button {
 
   border-radius: 20px;
 
-  background: #edf4fa;
+  background: var(--sigta-azul-tenue);
 
   text-align: center;
 
@@ -804,7 +801,7 @@ header button {
 
   padding: 35px;
 
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 
   text-align: center;
 

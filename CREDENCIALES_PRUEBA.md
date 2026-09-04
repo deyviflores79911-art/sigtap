@@ -14,16 +14,15 @@
 | Rol | Correo | Contraseña | Ruta principal |
 |---|---|---|---|
 | Jefe UTIC  | `jefe.utic@emi.edu.bo` | `SIGTA_JefeUTIC#2026!` | `/jefe-utic/dashboard` |
-| Jefe DAF | `jefe.daf@emi.edu.bo` | `SIGTA_JefeDAF#2026!` | `/daf/dashboard` |
 | Jefe Mantenimiento | `servicios.generales@emi.edu.bo` | `SIGTA_ServiciosGrales#2026!` | `/servicios-generales/dashboard` |
 
 ### Técnicos
 
 | Dependencia | Rol | Correo | Contraseña | Ruta principal |
 |---|---|---|---|---|
-| Jefe DAF | Técnico de la DAF | `daf@emi.edu.bo` | `SIGTA_DAF#2026!` | `/daf/dashboard` |
-| Jefe DAF | Técnico de Almacén y Compras | `almacen@emi.edu.bo` | `SIGTA_Almacen#2026!` | `/almacen/dashboard` |
-| Jefe DAF | Técnico de Tesorería | `tesoreria@emi.edu.bo` | `SIGTA_Tesoreria#2026!` | `/tesoreria/dashboard` |
+| — | DAF (Dirección de Asuntos Financieros) | `daf@emi.edu.bo` | `SIGTA_DAF#2026!` | `/daf/dashboard` |
+| — | Técnico de Almacén y Compras | `almacen@emi.edu.bo` | `SIGTA_Almacen#2026!` | `/almacen/dashboard` |
+| — | Técnico de Tesorería | `tesoreria@emi.edu.bo` | `SIGTA_Tesoreria#2026!` | `/tesoreria/dashboard` |
 | Jefe UTIC | Técnico de Soporte Técnico | `especialista@emi.edu.bo` | `SIGTA_Especialista#2026!` | `/especialista/dashboard` |
 | Jefe Mantenimiento | Técnico de Mantenimiento | `auxiliar.sg@emi.edu.bo` | `SIGTA_AuxiliarSG#2026!` | `/auxiliar-servicios-generales/dashboard` |
 

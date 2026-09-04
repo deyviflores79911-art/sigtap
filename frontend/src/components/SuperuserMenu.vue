@@ -63,9 +63,7 @@
         to="/superuser/dashboard"
         class="menu-item"
       >
-        <span class="icon">
-          📊
-        </span>
+        <IconoSigta class="icon" nombre="panel" />
 
         <span>
           Panel
@@ -79,9 +77,7 @@
         to="/superuser/usuarios"
         class="menu-item"
       >
-        <span class="icon">
-          👥
-        </span>
+        <IconoSigta class="icon" nombre="usuarios" />
 
         <span>
           Usuarios
@@ -95,9 +91,7 @@
         to="/superuser/roles-permisos"
         class="menu-item"
       >
-        <span class="icon">
-          🔐
-        </span>
+        <IconoSigta class="icon" nombre="roles" />
 
         <span>
           Roles y permisos
@@ -111,9 +105,7 @@
         to="/superuser/auditoria"
         class="menu-item"
       >
-        <span class="icon">
-          📜
-        </span>
+        <IconoSigta class="icon" nombre="auditoria" />
 
         <span>
           Auditoría
@@ -127,9 +119,7 @@
         to="/superuser/preferencias"
         class="menu-item"
       >
-        <span class="icon">
-          ⚙️
-        </span>
+        <IconoSigta class="icon" nombre="configuracion" />
 
         <span>
           Preferencias
@@ -158,6 +148,8 @@
 
 
 <script setup>
+
+import IconoSigta from './IconoSigta.vue'
 
 import {
   ref
@@ -219,8 +211,8 @@ function cerrarSesion() {
 
   top: 0;
 
-  width: 255px;
-  min-width: 255px;
+  width: var(--sigta-sidebar);
+  min-width: var(--sigta-sidebar);
 
   height: 100vh;
 
@@ -234,14 +226,11 @@ function cerrarSesion() {
   overflow-y: auto;
   overflow-x: hidden;
 
-  background: #6576B4;
+  background: var(--sigta-azul);
 
-  color: #ffffff;
+  color: var(--sigta-blanco);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -316,7 +305,7 @@ function cerrarSesion() {
 
   overflow: hidden;
 
-  background: #FFFF00;
+  background: var(--sigta-mostaza);
 }
 
 
@@ -346,7 +335,7 @@ function cerrarSesion() {
 
   margin-top: 3px;
 
-  color: #c4d2df;
+  color: var(--sigta-azul-texto-claro);
 
   font-size: 11px;
 
@@ -365,7 +354,7 @@ function cerrarSesion() {
     10px
     6px;
 
-  color: #82a5c6;
+  color: var(--sigta-texto-suave);
 
   font-size: 10px;
 
@@ -407,7 +396,7 @@ nav {
 
   border-radius: 7px;
 
-  color: #e8eff6;
+  color: var(--sigta-azul-tenue);
 
   text-decoration: none;
 
@@ -445,7 +434,7 @@ nav {
       .08
     );
 
-  color: #ffffff;
+  color: var(--sigta-blanco);
 }
 
 
@@ -454,7 +443,7 @@ nav {
   padding-left: 8px;
 
   border-left:
-    3px solid #FFFF00;
+    3px solid var(--sigta-mostaza);
 
   background:
     rgba(
@@ -464,7 +453,7 @@ nav {
       .13
     );
 
-  color: #FFFF00;
+  color: var(--sigta-mostaza);
 
   font-weight: 700;
 }
@@ -473,7 +462,7 @@ nav {
 .menu-item.router-link-active
 .icon {
 
-  color: #FFFF00;
+  color: var(--sigta-mostaza);
 }
 
 
@@ -491,7 +480,7 @@ nav {
 
   border-radius: 7px;
 
-  color: #FFFF00;
+  color: var(--sigta-mostaza);
 
   text-decoration: none;
 
@@ -535,9 +524,9 @@ nav {
 
   border-radius: 7px;
 
-  background: #FFFF00;
+  background: var(--sigta-mostaza);
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 16px;
 
@@ -598,7 +587,7 @@ nav {
 
   border-radius: 2px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
   transition:
     transform .2s ease,

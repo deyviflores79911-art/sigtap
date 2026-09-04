@@ -1,2373 +1,564 @@
 <template>
-  <div class="layout">
+  <div class="layout sigta-role-layout">
+    <aside :class="{ abierto: menuAbierto }">
+      <div class="brand-row">
+        <div class="brand"><b><img src="/img/emi.jpg" alt="EMI"></b><div><strong>SIGTA</strong><small>Compras y Almacén</small></div></div>
+        <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
+      </div>
+      <div class="profile"><i>{{ iniciales }}</i><div><b>{{ nombre }}</b><small>Encargado de Compras y Almacén</small></div></div>
+      <p>CAJA CHICA</p>
+      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="irA(m.id)"><span>{{ m.icono }}</span>{{ m.nombre }}<em v-if="m.total!==undefined">{{ m.total }}</em></button>
+      <div class="bottom"><button @click="salir"><span>↪</span>Cerrar sesión</button></div>
+    </aside>
 
-    <AlmacenMenu />
-
-    <main class="main">
-
-      <!-- =================================================
-           ENCABEZADO
-      ================================================== -->
-      <header class="page-header">
-
-        <div v-if="esRutaRequerimientos">
-          <h1>
-            Requerimientos
-          </h1>
-
-          <p>
-            Verificación de existencia en almacén para
-            requerimientos de Mantenimiento.
-          </p>
-        </div>
-
-        <div v-else>
-          <h1>
-            Compras
-          </h1>
-
-          <p>
-            Adquisición, ingreso y despacho de compras
-            desembolsadas por Tesorería.
-          </p>
-        </div>
-
-        <div
-          v-if="!esRutaRequerimientos"
-          class="header-actions"
-        >
-
-          <select
-            v-model="filtroEstado"
-            class="filtro-estado"
-          >
-            <option value="">Todas las solicitudes</option>
-            <option value="APROBADA">Solicitudes aprobadas</option>
-            <option value="RECHAZADA">Solicitudes rechazadas</option>
-          </select>
-
-          <button
-            class="refresh-button"
-            type="button"
-            :disabled="cargando"
-            @click="cargarCompras"
-          >
-            {{
-              cargando
-                ? 'Actualizando...'
-                : 'Actualizar'
-            }}
-          </button>
-
-        </div>
-
-        <button
-          v-else
-          class="refresh-button"
-          type="button"
-          :disabled="cargandoRequerimientos"
-          @click="cargarRequerimientos"
-        >
-          {{
-            cargandoRequerimientos
-              ? 'Actualizando...'
-              : 'Actualizar'
-          }}
-        </button>
-
+    <main>
+      <header>
+        <div><small>SIGTA / COMPRAS / {{ titulo }}</small><h1>{{ titulo }}</h1><p>{{ subtitulo }}</p></div>
+        <button class="refresh" :disabled="cargando" @click="cargar">↻ Actualizar</button>
       </header>
 
-
-      <!-- =================================================
-           COMPRAS
-      ================================================== -->
-
-      <template v-if="!esRutaRequerimientos">
-
-        <div
-          v-if="cargando"
-          class="loading"
-        >
-          Cargando solicitudes de compra...
+      <!-- ============================ RESUMEN ============================ -->
+      <section v-if="vista==='resumen'">
+        <div class="hero">
+          <div><small>COMPRAS Y ALMACÉN</small><h2>{{ saludo }}, {{ primerNombre }}</h2><p>Adquisición, control de almacén y entrega de los bienes.</p></div>
+          <span>CA</span>
         </div>
 
-        <div
-          v-else-if="compras.length === 0"
-          class="empty"
-        >
-          No existen solicitudes de compra registradas.
+        <div class="stats">
+          <article @click="irA('comprar')"><i class="gold">CO</i><div><small>Por comprar</small><b>{{ porComprar.length }}</b><p>fondos desembolsados</p></div></article>
+          <article @click="irA('entrada')"><i class="blue">EN</i><div><small>Por registrar entrada</small><b>{{ porIngresar.length }}</b><p>producto adquirido</p></div></article>
+          <article @click="irA('salida')"><i class="blue">SA</i><div><small>Por registrar salida</small><b>{{ porDespachar.length }}</b><p>en almacén</p></div></article>
+          <article @click="irA('entrega')"><i class="green">EG</i><div><small>Por entregar</small><b>{{ porEntregar.length }}</b><p>con acta de conformidad</p></div></article>
         </div>
 
-        <div
-          v-else-if="comprasFiltradas.length === 0"
-          class="empty"
-        >
-          No hay {{ etiquetaFiltroVacio(filtroEstado) }}.
+        <div class="panels">
+          <section class="panel">
+            <div class="panel-head"><div><small>FLUJO BPMN</small><h3>Sus cuatro tareas del proceso</h3></div></div>
+            <button class="flow" @click="irA('comprar')"><i class="gold">1</i><div><b>Realizar compra</b><small>Adquirir el bien y respaldarlo con la factura o recibo</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('entrada')"><i class="blue">2</i><div><b>Registrar entrada de almacén</b><small>Cuántas unidades llegaron y quién las recibió</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('salida')"><i class="blue">3</i><div><b>Registrar salida de almacén</b><small>Qué sale, cuándo y para quién</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('entrega')"><i class="green">4</i><div><b>Entregar la solicitud con acta de conformidad</b><small>Entrega formal al área solicitante</small></div><strong>›</strong></button>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><small>SU FUNCIÓN</small><h3>Ejecutar y controlar</h3></div></div>
+            <p class="copy">Usted no autoriza la compra ni desembolsa el dinero: eso corresponde al Director y a Tesorería. Su trabajo empieza cuando ya hay autorización y fondos, y consiste en que el bien pase correctamente por <b>adquisición → control en almacén → entrega</b>.</p>
+            <button class="wide primary" @click="irA('historial')">Ver historial de movimientos →</button>
+          </section>
+        </div>
+      </section>
+
+      <!-- ========================= 1. REALIZAR COMPRA ========================= -->
+      <section v-else-if="vista==='comprar'">
+        <div class="instruction"><b>Realizar compra</b><span>Adquiera el bien y registre el monto real, el proveedor y la factura que respalda la compra.</span></div>
+
+        <div v-if="cargando" class="empty">Consultando expedientes…</div>
+
+        <div v-else-if="!activo" class="cards">
+          <article v-for="e in porComprar" :key="e.id">
+            <div class="top"><span>{{ e.codigo }}</span><em>fondos entregados</em></div>
+            <h3>{{ e.titulo }}</h3>
+            <ul class="datos">
+              <li><b>Cantidad</b><span>{{ e.cantidad }}</span></li>
+              <li><b>Desembolsado</b><span>Bs {{ e.monto_desembolsado || 's/d' }}</span></li>
+              <li><b>Entregó Tesorería a</b><span>{{ e.responsable_adquisicion || 's/d' }}</span></li>
+            </ul>
+
+            <p class="situacion" :class="{ aviso: !e.fondos_recibidos_en }">
+              {{ e.situacion }}
+            </p>
+
+            <div class="actions">
+              <button @click="verDetalle(e)">Ver expediente</button>
+              <button
+                v-if="!e.fondos_recibidos_en"
+                class="primary"
+                @click="confirmarFondos(e)"
+              >
+                Recibí el efectivo
+              </button>
+              <template v-else>
+                <button @click="abrirGestion(e)">Informar avance</button>
+                <button class="primary" @click="abrir(e)">Registrar compra</button>
+              </template>
+            </div>
+          </article>
+          <div v-if="!porComprar.length" class="empty">
+            <span>✓</span><h3>Sin compras pendientes</h3>
+            <p>Los expedientes llegan aquí cuando Tesorería desembolsa los fondos.</p>
+          </div>
         </div>
 
-        <section
-          v-else
-          class="requests-card"
-        >
-
-          <div class="request-list">
-
-            <article
-              v-for="compra in comprasFiltradas"
-              :key="compra.id"
-              class="request"
-            >
-
-              <div class="request-main">
-
-                <div class="request-code">
-                  <strong>
-                    {{ compra.codigo }}
-                  </strong>
-
-                  <small>
-                    {{ compra.area_nombre || 'Área no indicada' }}
-                  </small>
-                </div>
-
-
-                <div class="request-info">
-
-                  <h3>
-                    {{
-                      compra.titulo
-                      || compra.descripcion
-                      || 'Solicitud de compra'
-                    }}
-                  </h3>
-
-                  <div class="meta">
-
-                    <span>
-                      {{
-                        compra.solicitante_nombre
-                        || compra.solicitante_email
-                        || 'Sin información'
-                      }}
-                    </span>
-
-                    <span>
-                      {{
-                        compra.via_nombre
-                        || 'Vía no indicada'
-                      }}
-                    </span>
-
-                    <span v-if="compra.creado_en">
-                      {{ formatearFecha(compra.creado_en) }}
-                    </span>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              <div class="request-side">
-
-                <span
-                  :class="['status', claseBucket(bucketEstado(compra.estado))]"
-                >
-                  {{ etiquetaBucket(bucketEstado(compra.estado)) }}
-                </span>
-
-                <div class="row-actions">
-
-                  <button
-                    class="view"
-                    @click="verDetalle(compra)"
-                  >
-                    Ver detalle
-                  </button>
-
-                  <button
-                    v-if="etapaAccion(compra) === 'comprar'"
-                    class="row-aprobar"
-                    @click="verDetalle(compra)"
-                  >
-                    Registrar compra
-                  </button>
-
-                  <button
-                    v-if="etapaAccion(compra) === 'ingreso'"
-                    class="row-aprobar"
-                    @click="verDetalle(compra)"
-                  >
-                    Registrar ingreso
-                  </button>
-
-                  <button
-                    v-if="etapaAccion(compra) === 'despacho'"
-                    class="row-aprobar"
-                    @click="verDetalle(compra)"
-                  >
-                    Registrar despacho
-                  </button>
-
-                </div>
-
-              </div>
-
-            </article>
-
+        <div v-else-if="modoGestion" class="panel hoja">
+          <div class="hoja-head">
+            <div><small>INFORMAR AVANCE</small><h3>{{ activo.codigo }} — {{ activo.titulo }}</h3></div>
+            <button class="refresh" @click="cerrar">Volver</button>
           </div>
 
-        </section>
+          <p class="copy">Deje constancia de en qué punto va la gestión. El resto de las áreas verá este avance en el expediente, sin tener que preguntar.</p>
 
-      </template>
+          <label class="campo">¿En qué está?
+            <select v-model="formGestion.gestion_estado">
+              <option value="BUSCANDO">Buscando producto o proveedor</option>
+              <option value="COMPRANDO">Compra en curso</option>
+            </select>
+          </label>
+          <label class="campo">Detalle
+            <input v-model="formGestion.gestion_nota" type="text" placeholder="Ej.: cotizando en tres proveedores">
+          </label>
 
+          <p v-if="error" class="error-linea">{{ error }}</p>
 
-      <!-- =================================================
-           REQUERIMIENTOS (MANTENIMIENTO)
-      ================================================== -->
-
-      <template v-else>
-
-        <div
-          v-if="cargandoRequerimientos"
-          class="loading"
-        >
-          Cargando requerimientos...
-        </div>
-
-        <div
-          v-else-if="requerimientos.length === 0"
-          class="empty"
-        >
-          No existen requerimientos de mantenimiento registrados.
-        </div>
-
-        <section
-          v-else
-          class="requests-card"
-        >
-
-          <div class="request-list">
-
-            <article
-              v-for="req in requerimientos"
-              :key="req.id"
-              class="request"
-            >
-
-              <div class="request-main">
-
-                <div class="request-code">
-                  <strong>
-                    {{ codigoRequerimiento(req) }}
-                  </strong>
-
-                  <small>
-                    {{ req.area_nombre || 'Área no indicada' }}
-                  </small>
-                </div>
-
-
-                <div class="request-info">
-
-                  <h3>
-                    {{
-                      req.titulo
-                      || req.asunto
-                      || req.descripcion_corta
-                      || 'Requerimiento de mantenimiento'
-                    }}
-                  </h3>
-
-                  <div class="meta">
-
-                    <span>
-                      {{
-                        req.solicitante_nombre
-                        || req.solicitante_email
-                        || 'Sin información'
-                      }}
-                    </span>
-
-                    <span v-if="req.created_at || req.fecha_solicitud">
-                      {{ formatearFecha(req.created_at || req.fecha_solicitud) }}
-                    </span>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              <div class="request-side">
-
-                <span class="status working">
-                  {{ estadoRequerimiento(req) }}
-                </span>
-
-                <div class="row-actions">
-
-                  <button
-                    class="view"
-                    @click="verRequerimiento(req)"
-                  >
-                    Ver detalle
-                  </button>
-
-                  <button
-                    v-if="req.estado_codigo === 'REVISION_ALMACEN'"
-                    class="row-aprobar"
-                    @click="verRequerimiento(req)"
-                  >
-                    Reportar existencia
-                  </button>
-
-                </div>
-
-              </div>
-
-            </article>
-
+          <div class="actions">
+            <button @click="cerrar">Cancelar</button>
+            <button class="primary" :disabled="procesando" @click="informarAvance">Guardar avance</button>
           </div>
+        </div>
 
-        </section>
+        <div v-else class="panel hoja">
+          <div class="hoja-head">
+            <div><small>REALIZAR COMPRA</small><h3>{{ activo.codigo }} — {{ activo.titulo }}</h3></div>
+            <button class="refresh" @click="cerrar">Volver</button>
+          </div>
+          <p class="copy"><b>Solicitado:</b> {{ activo.cantidad }} unidad(es) · {{ activo.especificaciones || 's/d' }}<br><b>Monto desembolsado:</b> Bs {{ activo.monto_desembolsado || 's/d' }}<br><b>Efectivo recibido por:</b> {{ activo.fondos_recibidos_por }} el {{ fecha(activo.fondos_recibidos_en) }}</p>
 
-      </template>
+          <label class="campo">Monto real cobrado (Bs)
+            <input v-model="formCompra.monto_real" type="number" min="0" step="0.01" placeholder="0.00">
+          </label>
+          <label class="campo">Proveedor
+            <input v-model="formCompra.proveedor" type="text" placeholder="Nombre o razón social">
+          </label>
+          <label class="campo">Factura o recibo de la compra
+            <input type="file" accept="application/pdf,image/*" @change="onComprobante">
+          </label>
+          <label class="campo">Verificación del producto
+            <input v-model="formCompra.observacion_verificacion" type="text" placeholder="El producto corresponde a lo solicitado...">
+          </label>
 
+          <p v-if="error" class="error-linea">{{ error }}</p>
+
+          <div class="actions">
+            <button @click="cerrar">Cancelar</button>
+            <button class="primary" :disabled="procesando||!formCompra.monto_real||!formCompra.proveedor.trim()||!comprobante" @click="registrarCompra">Registrar compra</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= 2. ENTRADA DE ALMACÉN ======================= -->
+      <section v-else-if="vista==='entrada'">
+        <div class="instruction"><b>Registrar entrada de almacén</b><span>Deje constancia de cuántas unidades ingresaron y quién las recibió.</span></div>
+
+        <div v-if="!activo" class="cards">
+          <article v-for="e in porIngresar" :key="e.id">
+            <div class="top"><span>{{ e.codigo }}</span><em>comprado</em></div>
+            <h3>{{ e.titulo }}</h3>
+            <ul class="datos">
+              <li><b>Solicitadas</b><span>{{ e.cantidad }}</span></li>
+              <li><b>Proveedor</b><span>{{ e.proveedor || 's/d' }}</span></li>
+              <li><b>Monto real</b><span>Bs {{ e.monto_real || 's/d' }}</span></li>
+            </ul>
+            <div class="actions">
+              <button @click="verDetalle(e)">Ver expediente</button>
+              <button class="primary" @click="abrir(e)">Registrar entrada</button>
+            </div>
+          </article>
+          <div v-if="!porIngresar.length" class="empty"><span>✓</span><h3>Sin ingresos pendientes</h3><p>Aquí aparecen los productos ya comprados.</p></div>
+        </div>
+
+        <div v-else class="panel hoja">
+          <div class="hoja-head">
+            <div><small>ENTRADA DE ALMACÉN</small><h3>{{ activo.codigo }} — {{ activo.titulo }}</h3></div>
+            <button class="refresh" @click="cerrar">Volver</button>
+          </div>
+          <p class="copy"><b>Solicitadas:</b> {{ activo.cantidad }} unidad(es) · <b>Proveedor:</b> {{ activo.proveedor }}</p>
+
+          <label class="campo">Cantidad recibida
+            <input v-model="formIngreso.cantidad_recibida" type="number" min="1" :max="activo.cantidad" :placeholder="`Máximo ${activo.cantidad}`">
+          </label>
+          <label class="campo">Recibido por
+            <input v-model="formIngreso.responsable_recepcion" type="text" placeholder="Nombre de quien recibe en almacén">
+          </label>
+          <label class="campo">Observación del ingreso
+            <input v-model="formIngreso.observacion_ingreso" type="text" placeholder="Estado del producto, embalaje...">
+          </label>
+
+          <p v-if="error" class="error-linea">{{ error }}</p>
+
+          <div class="actions">
+            <button @click="cerrar">Cancelar</button>
+            <button class="primary" :disabled="procesando||!formIngreso.cantidad_recibida||!formIngreso.responsable_recepcion.trim()" @click="registrarEntrada">Registrar entrada</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================== 3. SALIDA DE ALMACÉN ======================== -->
+      <section v-else-if="vista==='salida'">
+        <div class="instruction"><b>Registrar salida de almacén</b><span>Registre qué cantidad sale del almacén y a quién se entrega.</span></div>
+
+        <div v-if="!activo" class="cards">
+          <article v-for="e in porDespachar" :key="e.id">
+            <div class="top"><span>{{ e.codigo }}</span><em>en almacén</em></div>
+            <h3>{{ e.titulo }}</h3>
+            <ul class="datos">
+              <li><b>En almacén</b><span>{{ e.cantidad_recibida }} unid.</span></li>
+              <li><b>Recibió</b><span>{{ e.responsable_recepcion || 's/d' }}</span></li>
+              <li><b>Ingresó</b><span>{{ fecha(e.fecha_ingreso_almacen) }}</span></li>
+            </ul>
+            <div class="actions">
+              <button @click="verDetalle(e)">Ver expediente</button>
+              <button class="primary" @click="abrir(e)">Registrar salida</button>
+            </div>
+          </article>
+          <div v-if="!porDespachar.length" class="empty"><span>✓</span><h3>Sin salidas pendientes</h3><p>Aquí aparecen los productos que ya ingresaron a almacén.</p></div>
+        </div>
+
+        <div v-else class="panel hoja">
+          <div class="hoja-head">
+            <div><small>SALIDA DE ALMACÉN</small><h3>{{ activo.codigo }} — {{ activo.titulo }}</h3></div>
+            <button class="refresh" @click="cerrar">Volver</button>
+          </div>
+          <p class="copy"><b>Disponible en almacén:</b> {{ activo.cantidad_recibida }} unidad(es), recibidas por {{ activo.responsable_recepcion }}</p>
+
+          <label class="campo">Cantidad que sale
+            <input v-model="formSalida.cantidad_entregada" type="number" min="1" :max="activo.cantidad_recibida" :placeholder="`Máximo ${activo.cantidad_recibida}`">
+          </label>
+          <label class="campo">Entregado a
+            <input v-model="formSalida.entregado_a" type="text" placeholder="Nombre de quien retira el producto">
+          </label>
+          <label class="campo">Observación de la salida
+            <input v-model="formSalida.observacion_salida" type="text" placeholder="Detalle adicional...">
+          </label>
+
+          <p v-if="error" class="error-linea">{{ error }}</p>
+
+          <div class="actions">
+            <button @click="cerrar">Cancelar</button>
+            <button class="primary" :disabled="procesando||!formSalida.cantidad_entregada||!formSalida.entregado_a.trim()" @click="registrarSalida">Registrar salida</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 4. ENTREGA CON ACTA ===================== -->
+      <section v-else-if="vista==='entrega'">
+        <div class="instruction"><b>Entregar la solicitud con acta de conformidad</b><span>Entregue el bien al área solicitante adjuntando el acta que respalda la entrega.</span></div>
+
+        <div v-if="!activo" class="cards">
+          <article v-for="e in porEntregar" :key="e.id">
+            <div class="top"><span>{{ e.codigo }}</span><em>salida registrada</em></div>
+            <h3>{{ e.titulo }}</h3>
+            <ul class="datos">
+              <li><b>Salieron</b><span>{{ e.cantidad_entregada }} unid.</span></li>
+              <li><b>Destino</b><span>{{ e.entregado_a || 's/d' }}</span></li>
+              <li><b>Solicitante</b><span>{{ e.solicitante_nombre || 's/d' }}</span></li>
+            </ul>
+            <div class="actions">
+              <button @click="verDetalle(e)">Ver expediente</button>
+              <button class="primary" @click="abrir(e)">Entregar con acta</button>
+            </div>
+          </article>
+          <div v-if="!porEntregar.length" class="empty"><span>✓</span><h3>Sin entregas pendientes</h3><p>Aquí aparecen los productos cuya salida ya fue registrada.</p></div>
+        </div>
+
+        <div v-else class="panel hoja">
+          <div class="hoja-head">
+            <div><small>ENTREGA CON ACTA</small><h3>{{ activo.codigo }} — {{ activo.titulo }}</h3></div>
+            <button class="refresh" @click="cerrar">Volver</button>
+          </div>
+          <p class="copy"><b>Salieron:</b> {{ activo.cantidad_entregada }} unidad(es) con destino a {{ activo.entregado_a }}<br>Tras la entrega, el solicitante firmará el acta y recibirá formalmente la solicitud.</p>
+
+          <label class="campo">Acta de conformidad
+            <input type="file" accept="application/pdf,image/*" @change="onActa">
+          </label>
+
+          <p v-if="error" class="error-linea">{{ error }}</p>
+
+          <div class="actions">
+            <button @click="cerrar">Cancelar</button>
+            <button class="primary" :disabled="procesando||!acta" @click="entregarConActa">Entregar con acta de conformidad</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================== HISTORIAL =========================== -->
+      <section v-else-if="vista==='historial'">
+        <div class="instruction"><b>Historial de movimientos</b><span>Expedientes que ya pasaron por almacén.</span></div>
+        <div v-if="historial.length" class="cards">
+          <article v-for="e in historial" :key="e.id">
+            <div class="top"><span>{{ e.codigo }}</span><em>{{ etiquetaEstado(e.estado) }}</em></div>
+            <h3>{{ e.titulo }}</h3>
+            <ul class="datos">
+              <li v-if="e.cantidad_recibida"><b>Entrada</b><span>{{ e.cantidad_recibida }} unid. · {{ fecha(e.fecha_ingreso_almacen) }}</span></li>
+              <li v-if="e.cantidad_entregada"><b>Salida</b><span>{{ e.cantidad_entregada }} unid. · {{ fecha(e.fecha_despacho_almacen) }}</span></li>
+              <li v-if="e.entregado_a"><b>Destino</b><span>{{ e.entregado_a }}</span></li>
+            </ul>
+            <div class="actions"><button @click="verDetalle(e)">Ver expediente</button></div>
+          </article>
+        </div>
+        <div v-else class="empty"><span>✓</span><h3>Sin movimientos</h3><p>Todavía no registró compras ni movimientos de almacén.</p></div>
+      </section>
     </main>
 
-
-    <!-- =================================================
-         DOCUMENTO DE DETALLE (COMPRAS)
-    ================================================== -->
-
-    <div
-      v-if="mostrarDetalle"
-      class="detalle-modal-backdrop"
-      @click.self="cerrarDetalle"
-    >
-      <div class="detalle-modal documento-modal">
-
+    <!-- ============================ DETALLE ============================ -->
+    <div v-if="detalle" class="detalle-modal-backdrop" @click.self="detalle=null">
+      <div class="detalle-modal">
         <div class="detalle-modal-header">
-          <div class="documento-header-titulo">
-
-            <span class="documento-header-icono">📄</span>
-
-            <div>
-              <h3>{{ compraSeleccionada?.codigo }}</h3>
-              <small>{{ compraSeleccionada?.titulo }}</small>
-            </div>
-
-          </div>
-
-          <button
-            class="detalle-modal-close"
-            @click="cerrarDetalle"
-          >✕</button>
+          <div><h3>{{ detalle.codigo }}</h3><small>{{ detalle.titulo }}</small></div>
+          <button class="detalle-modal-close" @click="detalle=null">✕</button>
         </div>
-
-        <div class="documento-body">
-
-          <div
-            :class="['estado-banner', claseBucket(bucketEstado(compraSeleccionada?.estado))]"
-          >
-            <span class="estado-banner-icono">
-              {{ iconoBucket(bucketEstado(compraSeleccionada?.estado)) }}
-            </span>
-
-            <div>
-              <strong>{{ etiquetaBucket(bucketEstado(compraSeleccionada?.estado)) }}</strong>
-              <span class="estado-banner-descripcion">
-                {{ descripcionBucket(bucketEstado(compraSeleccionada?.estado)) }}
-              </span>
-            </div>
+        <div class="detalle-modal-body">
+          <div class="detalle-fila">
+            <div class="detalle-campo"><b>Estado</b><span>{{ etiquetaEstado(detalle.estado) }}</span></div>
+            <div class="detalle-campo"><b>Cantidad solicitada</b><span>{{ detalle.cantidad }}</span></div>
           </div>
-
-
-          <div class="documento-seccion">
-
-            <div class="documento-titulo-fila">
-              <span class="documento-icono">📦</span>
-              <span class="documento-titulo">
-                Producto o servicio a comprar
-              </span>
-            </div>
-
-            <h4>{{ compraSeleccionada?.titulo || 'Sin título' }}</h4>
-
-            <p>{{ compraSeleccionada?.descripcion || 'Sin descripción registrada.' }}</p>
-
-
-            <div class="documento-fila documento-fila-5">
-
-              <div>
-                <b>Tipo</b>
-                <span>{{ compraSeleccionada?.tipo_nombre || compraSeleccionada?.tipo || 'No indicado' }}</span>
-              </div>
-
-              <div>
-                <b>Cantidad</b>
-                <span>{{ compraSeleccionada?.cantidad || 1 }}</span>
-              </div>
-
-              <div>
-                <b>Monto estimado</b>
-                <span>
-                  {{
-                    compraSeleccionada?.monto_estimado
-                      ? `Bs ${Number(compraSeleccionada.monto_estimado).toFixed(2)}`
-                      : 'No indicado'
-                  }}
-                </span>
-              </div>
-
-              <div>
-                <b>Especificaciones</b>
-                <span>{{ compraSeleccionada?.especificaciones || 'No registradas.' }}</span>
-              </div>
-
-              <div>
-                <b>Justificación</b>
-                <span>{{ compraSeleccionada?.justificacion || 'No registrada.' }}</span>
-              </div>
-
-            </div>
-
+          <div class="detalle-campo"><b>Descripción</b><p>{{ detalle.descripcion }}</p></div>
+          <div class="detalle-campo"><b>Especificaciones</b><p>{{ detalle.especificaciones || 's/d' }}</p></div>
+          <div class="detalle-fila">
+            <div class="detalle-campo"><b>Solicitante</b><span>{{ detalle.solicitante_nombre }}</span></div>
+            <div class="detalle-campo"><b>Área</b><span>{{ detalle.area_nombre || 's/d' }}</span></div>
           </div>
-
-
-          <div class="documento-seccion">
-
-            <div class="documento-titulo-fila">
-              <span class="documento-icono">📁</span>
-              <span class="documento-titulo">
-                Datos del expediente
-              </span>
-            </div>
-
-            <div class="documento-fila">
-
-              <div>
-                <b>Solicitante</b>
-                <span>
-                  {{
-                    compraSeleccionada?.solicitante_nombre
-                    || compraSeleccionada?.solicitante_email
-                    || 'Sin información'
-                  }}
-                </span>
-              </div>
-
-              <div>
-                <b>Área</b>
-                <span>{{ compraSeleccionada?.area_nombre || 'No indicada' }}</span>
-              </div>
-
-              <div>
-                <b>Monto desembolsado</b>
-                <span>
-                  {{
-                    compraSeleccionada?.monto_desembolsado
-                      ? `Bs ${Number(compraSeleccionada.monto_desembolsado).toFixed(2)}`
-                      : 'No indicado'
-                  }}
-                </span>
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div class="documento-seccion">
-
-            <div class="documento-titulo-fila">
-              <span class="documento-icono">📄</span>
-              <span class="documento-titulo">
-                Documentos del expediente
-              </span>
-            </div>
-
-            <div class="documento-lista">
-
-              <template
-                v-for="doc in documentosExpediente"
-                :key="doc.label"
-              >
-
-                <a
-                  v-if="doc.url"
-                  :href="doc.url"
-                  target="_blank"
-                  class="documento-item ok"
-                >
-                  <span class="documento-item-icono">📄</span>
-                  <span class="documento-item-label">{{ doc.label }}</span>
-                  <span class="documento-item-accion">
-                    Ver archivo
-                    <span class="documento-item-ojo">👁</span>
-                  </span>
-                </a>
-
-                <div
-                  v-else
-                  class="documento-item falta"
-                >
-                  <span class="documento-item-icono">📄</span>
-                  <span class="documento-item-label">{{ doc.label }}</span>
-                  <small>{{ doc.pendienteTexto || 'No adjuntado' }}</small>
-                </div>
-
-              </template>
-
-            </div>
-
-          </div>
-
-
-          <!-- ACCIONES -->
-
-          <div
-            v-if="etapaAccion(compraSeleccionada)"
-            class="documento-acciones"
-          >
-
-            <p
-              v-if="errorAccion"
-              class="accion-error"
-            >
-              {{ errorAccion }}
+          <div class="detalle-campo" v-if="detalle.monto_desembolsado"><b>Desembolso</b><span>Bs {{ detalle.monto_desembolsado }} — recibió {{ detalle.responsable_adquisicion }}</span></div>
+          <div class="detalle-campo" v-if="detalle.monto_real"><b>Compra</b><span>Bs {{ detalle.monto_real }} a {{ detalle.proveedor }}</span></div>
+          <div class="detalle-campo" v-if="detalle.cantidad_recibida"><b>Entrada de almacén</b><span>{{ detalle.cantidad_recibida }} unid. recibidas por {{ detalle.responsable_recepcion }} el {{ fecha(detalle.fecha_ingreso_almacen) }}</span></div>
+          <div class="detalle-campo" v-if="detalle.cantidad_entregada"><b>Salida de almacén</b><span>{{ detalle.cantidad_entregada }} unid. a {{ detalle.entregado_a }} el {{ fecha(detalle.fecha_despacho_almacen) }}</span></div>
+          <div class="detalle-campo"><b>Documentos</b>
+            <p class="documentos">
+              <a v-if="detalle.informe" :href="detalle.informe" target="_blank">Informe</a>
+              <a v-if="detalle.proforma" :href="detalle.proforma" target="_blank">Proforma</a>
+              <a v-if="detalle.poa" :href="detalle.poa" target="_blank">POA</a>
+              <a v-if="detalle.certificacion_presupuestaria" :href="detalle.certificacion_presupuestaria" target="_blank">Certificación</a>
+              <a v-if="detalle.comprobante_compra" :href="detalle.comprobante_compra" target="_blank">Factura</a>
+              <a v-if="detalle.acta_conformidad" :href="detalle.acta_conformidad" target="_blank">Acta</a>
             </p>
-
-
-            <!-- REGISTRAR COMPRA -->
-
-            <template v-if="etapaAccion(compraSeleccionada) === 'comprar'">
-
-              <p class="nota-tramite">
-                Registre el monto real cobrado por el
-                proveedor y confirme que el componente
-                recibido coincide con lo solicitado.
-              </p>
-
-              <label>
-                Monto real (Bs)
-                <span>*</span>
-              </label>
-
-              <input
-                v-model="montoReal"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-              />
-
-              <label>
-                Proveedor
-                <span>*</span>
-              </label>
-
-              <input
-                v-model="proveedor"
-                type="text"
-                placeholder="Nombre o razón social"
-              />
-
-              <div class="acciones-botones">
-
-                <button
-                  class="btn-aprobar"
-                  :disabled="procesando"
-                  @click="confirmarCompra"
-                >
-                  Confirmar compra
-                </button>
-
-              </div>
-
-            </template>
-
-
-            <!-- INGRESO A ALMACÉN -->
-
-            <template v-else-if="etapaAccion(compraSeleccionada) === 'ingreso'">
-
-              <p class="nota-tramite">
-                Confirme el ingreso físico del producto a
-                almacén.
-              </p>
-
-              <div class="acciones-botones">
-
-                <button
-                  class="btn-aprobar"
-                  :disabled="procesando"
-                  @click="confirmarIngreso"
-                >
-                  Confirmar ingreso
-                </button>
-
-              </div>
-
-            </template>
-
-
-            <!-- DESPACHO -->
-
-            <template v-else-if="etapaAccion(compraSeleccionada) === 'despacho'">
-
-              <p class="nota-tramite">
-                Confirme el despacho y entrega del producto
-                al solicitante.
-              </p>
-
-              <div class="acciones-botones">
-
-                <button
-                  class="btn-aprobar"
-                  :disabled="procesando"
-                  @click="confirmarDespacho"
-                >
-                  Confirmar despacho
-                </button>
-
-              </div>
-
-            </template>
-
           </div>
-
         </div>
-
       </div>
     </div>
-
-
-    <!-- =================================================
-         DETALLE DE REQUERIMIENTO (MANTENIMIENTO)
-    ================================================== -->
-
-    <div
-      v-if="mostrarDetalleRequerimiento"
-      class="detalle-modal-backdrop"
-      @click.self="cerrarRequerimiento"
-    >
-      <div class="detalle-modal documento-modal">
-
-        <div class="detalle-modal-header">
-          <div class="documento-header-titulo">
-
-            <span class="documento-header-icono">🧰</span>
-
-            <div>
-              <h3>{{ codigoRequerimiento(requerimientoSeleccionado) }}</h3>
-              <small>
-                {{
-                  requerimientoSeleccionado?.titulo
-                  || requerimientoSeleccionado?.asunto
-                  || 'Requerimiento de mantenimiento'
-                }}
-              </small>
-            </div>
-
-          </div>
-
-          <button
-            class="detalle-modal-close"
-            @click="cerrarRequerimiento"
-          >✕</button>
-        </div>
-
-        <div class="documento-body">
-
-          <div class="documento-seccion">
-
-            <div class="documento-titulo-fila">
-              <span class="documento-icono">📝</span>
-              <span class="documento-titulo">
-                Detalle del requerimiento
-              </span>
-            </div>
-
-            <p>
-              {{
-                requerimientoSeleccionado?.descripcion
-                || requerimientoSeleccionado?.justificacion
-                || 'Sin descripción registrada.'
-              }}
-            </p>
-
-            <div class="documento-fila">
-
-              <div>
-                <b>Solicitante</b>
-                <span>
-                  {{
-                    requerimientoSeleccionado?.solicitante_nombre
-                    || requerimientoSeleccionado?.solicitante_email
-                    || 'Sin información'
-                  }}
-                </span>
-              </div>
-
-              <div>
-                <b>Estado</b>
-                <span>{{ estadoRequerimiento(requerimientoSeleccionado) }}</span>
-              </div>
-
-              <div>
-                <b>Fecha</b>
-                <span>
-                  {{
-                    formatearFecha(
-                      requerimientoSeleccionado?.created_at
-                      || requerimientoSeleccionado?.fecha_solicitud
-                    )
-                  }}
-                </span>
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <!-- ACCIÓN: REPORTAR EXISTENCIA -->
-
-          <div
-            v-if="requerimientoSeleccionado?.estado_codigo === 'REVISION_ALMACEN'"
-            class="documento-acciones"
-          >
-
-            <p
-              v-if="errorAccion"
-              class="accion-error"
-            >
-              {{ errorAccion }}
-            </p>
-
-            <p class="nota-tramite">
-              Indique si existe stock disponible en almacén
-              para atender este requerimiento.
-            </p>
-
-            <label>
-              Observación de almacén (opcional)
-            </label>
-
-            <input
-              v-model="observacionAlmacen"
-              type="text"
-              placeholder="Detalle adicional..."
-            />
-
-            <div class="acciones-botones">
-
-              <button
-                class="btn-rechazar"
-                :disabled="procesando"
-                @click="reportarExistencia(false)"
-              >
-                No hay stock
-              </button>
-
-              <button
-                class="btn-aprobar"
-                :disabled="procesando"
-                @click="reportarExistencia(true)"
-              >
-                Hay stock disponible
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-    </div>
-
   </div>
 </template>
 
-
 <script setup>
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-import {
-  computed,
-  onMounted,
-  ref
-} from 'vue'
+const router = useRouter()
+const usuario = ref(JSON.parse(localStorage.getItem('sigta_usuario') || '{}'))
+const vista = ref('resumen')
+const menuAbierto = ref(false)
+const expedientes = ref([])
+const cargando = ref(false)
+const procesando = ref(false)
+const activo = ref(null)
+const detalle = ref(null)
+const error = ref('')
+const comprobante = ref(null)
+const acta = ref(null)
 
-import {
-  useRoute,
-  useRouter
-} from 'vue-router'
+const nombre = computed(() => usuario.value.nombre || usuario.value.nombre_completo || 'Compras y Almacén')
+const primerNombre = computed(() => nombre.value.split(' ')[0])
+const iniciales = computed(() => nombre.value.split(' ').slice(0, 2).map(x => x[0]).join('').toUpperCase())
+const saludo = computed(() => new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 19 ? 'Buenas tardes' : 'Buenas noches')
 
-import AlmacenMenu
-  from '../components/AlmacenMenu.vue'
+/* Las cuatro tareas del BPMN, cada una con su bandeja. */
+const porComprar = computed(() => expedientes.value.filter(e => e.estado === 'FONDOS_DESEMBOLSADOS'))
+const porIngresar = computed(() => expedientes.value.filter(e => e.estado === 'COMPRA_REGISTRADA' && !e.fecha_ingreso_almacen))
+const porDespachar = computed(() => expedientes.value.filter(e => e.estado === 'COMPRA_REGISTRADA' && e.fecha_ingreso_almacen && !e.fecha_despacho_almacen))
+const porEntregar = computed(() => expedientes.value.filter(e => e.estado === 'COMPRA_REGISTRADA' && e.fecha_despacho_almacen))
+const historial = computed(() => expedientes.value.filter(e => e.fecha_ingreso_almacen || e.monto_real))
 
+const menu = computed(() => [
+  { id: 'resumen', icono: '⌂', nombre: 'Dashboard' },
+  { id: 'comprar', icono: 'CO', nombre: 'Realizar compra', total: porComprar.value.length },
+  { id: 'entrada', icono: 'EN', nombre: 'Entrada de almacén', total: porIngresar.value.length },
+  { id: 'salida', icono: 'SA', nombre: 'Salida de almacén', total: porDespachar.value.length },
+  { id: 'entrega', icono: 'EG', nombre: 'Entregar con acta', total: porEntregar.value.length },
+  { id: 'historial', icono: 'HI', nombre: 'Historial' },
+])
 
-const router =
-  useRouter()
+const titulo = computed(() => ({
+  resumen: 'Dashboard de Compras y Almacén',
+  comprar: 'Realizar compra',
+  entrada: 'Registrar entrada de almacén',
+  salida: 'Registrar salida de almacén',
+  entrega: 'Entregar con acta de conformidad',
+  historial: 'Historial de movimientos',
+}[vista.value]))
 
-const route =
-  useRoute()
+const subtitulo = computed(() => ({
+  resumen: 'Adquisición, control en almacén y entrega de los bienes de Caja Chica.',
+  comprar: 'Expedientes con fondos ya desembolsados por Tesorería.',
+  entrada: 'Productos comprados que deben ingresar formalmente a almacén.',
+  salida: 'Productos en almacén listos para salir hacia el área solicitante.',
+  entrega: 'Productos que salieron de almacén y deben entregarse con acta.',
+  historial: 'Todos los movimientos que usted registró.',
+}[vista.value]))
 
-const esRutaRequerimientos =
-  computed(() =>
-    route.path.endsWith('requerimientos')
-  )
+const ETIQUETAS = {
+  CREADO_PENDIENTE_DAF: 'Esperando revisión de la DAF',
+  EVALUADO_PENDIENTE_CERTIFICACION: 'Esperando certificación de la DAF',
+  VERIFICADO_PENDIENTE_AUTORIZACION: 'Esperando autorización del Director',
+  APROBADO_PARA_DESEMBOLSO: 'Esperando desembolso de Tesorería',
+  FONDOS_DESEMBOLSADOS: 'Fondos entregados — por comprar',
+  COMPRA_REGISTRADA: 'Compra realizada',
+  COMPRADO_Y_ENTREGADO: 'Entregado al solicitante',
+  DESCARGO_PENDIENTE_LIQUIDACION: 'Acta firmada',
+  CERRADO_ARCHIVADO: 'Cerrado y archivado',
+  RECHAZADO: 'Rechazado',
+  ANULADO: 'Anulado',
+}
 
+function etiquetaEstado(estado) { return ETIQUETAS[estado] || estado }
 
-// ==========================================================
-// COMPRAS
-// ==========================================================
+function fecha(valor) {
+  return valor ? new Date(valor).toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' }) : 's/d'
+}
 
-const compras =
-  ref([])
+const token = () => localStorage.getItem('sigta_token')
 
-const cargando =
-  ref(true)
+async function cargar() {
+  cargando.value = true
+  try {
+    const r = await fetch('/api/compras/solicitudes/', { headers: { Authorization: `Token ${token()}` } })
+    const d = await r.json()
+    expedientes.value = Array.isArray(d) ? d : (d.results || [])
+    if (activo.value) activo.value = expedientes.value.find(e => e.id === activo.value.id) || null
+  } finally {
+    cargando.value = false
+  }
+}
 
-const filtroEstado =
-  ref('')
+function irA(id) {
+  vista.value = id
+  menuAbierto.value = false
+  cerrar()
+}
 
-const comprasFiltradas =
-  computed(() => {
+function abrir(e) {
+  activo.value = e
+  modoGestion.value = false
+  error.value = ''
+  comprobante.value = null
+  acta.value = null
+  formCompra.monto_real = e.monto_desembolsado || ''
+  formCompra.proveedor = ''
+  formCompra.observacion_verificacion = ''
+  formIngreso.cantidad_recibida = e.cantidad || 1
+  formIngreso.responsable_recepcion = ''
+  formIngreso.observacion_ingreso = ''
+  formSalida.cantidad_entregada = e.cantidad_recibida || 1
+  formSalida.entregado_a = ''
+  formSalida.observacion_salida = ''
+}
 
-    if (!filtroEstado.value) {
-      return compras.value
-    }
+function cerrar() {
+  activo.value = null
+  modoGestion.value = false
+  error.value = ''
+}
 
-    return compras.value.filter(
-      compra =>
-        bucketEstado(compra.estado)
-        === filtroEstado.value
-    )
+function verDetalle(e) { detalle.value = e }
+
+function salir() {
+  localStorage.removeItem('sigta_token')
+  localStorage.removeItem('sigta_usuario')
+  router.push('/login')
+}
+
+async function accion(endpoint, cuerpo, esFormData = false) {
+  error.value = ''
+  procesando.value = true
+  try {
+    const headers = { Authorization: `Token ${token()}` }
+    if (!esFormData) headers['Content-Type'] = 'application/json'
+    const r = await fetch(`/api/compras/solicitudes/${activo.value.id}/${endpoint}/`, {
+      method: 'POST',
+      headers,
+      body: esFormData ? cuerpo : JSON.stringify(cuerpo),
+    })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d.detalle || Object.values(d)[0] || 'No fue posible completar la acción.')
+    await cargar()
+    cerrar()
+    return d
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    procesando.value = false
+  }
+}
+
+/* --------- 0. Coordinación con Tesorería --------- */
+const modoGestion = ref(false)
+const formGestion = reactive({ gestion_estado: 'BUSCANDO', gestion_nota: '' })
+
+async function confirmarFondos(e) {
+  activo.value = e
+  await accion('confirmar-recepcion-fondos', {})
+}
+
+function abrirGestion(e) {
+  activo.value = e
+  modoGestion.value = true
+  error.value = ''
+  formGestion.gestion_estado = e.gestion_estado || 'BUSCANDO'
+  formGestion.gestion_nota = e.gestion_nota || ''
+}
+
+async function informarAvance() {
+  await accion('actualizar-gestion', {
+    gestion_estado: formGestion.gestion_estado,
+    gestion_nota: formGestion.gestion_nota.trim(),
   })
+}
 
 
-const mostrarDetalle =
-  ref(false)
+/* --------- 1. Realizar compra --------- */
+const formCompra = reactive({ monto_real: '', proveedor: '', observacion_verificacion: '' })
 
-const compraSeleccionada =
-  ref(null)
+function onComprobante(evento) { comprobante.value = evento.target.files?.[0] || null }
 
-const documentosExpediente =
-  computed(() => {
+async function registrarCompra() {
+  const datos = new FormData()
+  datos.append('monto_real', formCompra.monto_real)
+  datos.append('proveedor', formCompra.proveedor.trim())
+  datos.append('componente_verificado', 'true')
+  datos.append('observacion_verificacion', formCompra.observacion_verificacion.trim())
+  datos.append('comprobante_compra', comprobante.value)
+  await accion('registrar-compra', datos, true)
+}
 
-    const c =
-      compraSeleccionada.value
+/* --------- 2. Entrada de almacén --------- */
+const formIngreso = reactive({ cantidad_recibida: '', responsable_recepcion: '', observacion_ingreso: '' })
 
-    if (!c) {
-      return []
-    }
-
-    return [
-      { label: 'Informe', url: c.informe },
-      { label: 'POA', url: c.poa },
-      { label: 'Pedido', url: c.pedido },
-      { label: 'Proforma', url: c.proforma },
-      {
-        label: 'Certificación presupuestaria',
-        url: c.certificacion_presupuestaria,
-      },
-    ]
+async function registrarEntrada() {
+  await accion('registrar-ingreso-almacen', {
+    cantidad_recibida: Number(formIngreso.cantidad_recibida),
+    responsable_recepcion: formIngreso.responsable_recepcion.trim(),
+    observacion_ingreso: formIngreso.observacion_ingreso.trim(),
   })
-
-const procesando =
-  ref(false)
-
-const montoReal =
-  ref('')
-
-const proveedor =
-  ref('')
-
-const errorAccion =
-  ref('')
-
-
-function resetearFormularios() {
-
-  montoReal.value =
-    ''
-
-  proveedor.value =
-    ''
-
-  observacionAlmacen.value =
-    ''
-
-  errorAccion.value =
-    ''
 }
 
+/* --------- 3. Salida de almacén --------- */
+const formSalida = reactive({ cantidad_entregada: '', entregado_a: '', observacion_salida: '' })
 
-function verDetalle(
-  compra
-) {
-
-  compraSeleccionada.value =
-    compra
-
-  mostrarDetalle.value =
-    true
-
-  resetearFormularios()
-
-  if (
-    compra.monto_desembolsado
-    &&
-    !montoReal.value
-  ) {
-
-    montoReal.value =
-      compra.monto_desembolsado
-  }
+async function registrarSalida() {
+  await accion('registrar-despacho-almacen', {
+    cantidad_entregada: Number(formSalida.cantidad_entregada),
+    entregado_a: formSalida.entregado_a.trim(),
+    observacion_salida: formSalida.observacion_salida.trim(),
+  })
 }
 
+/* --------- 4. Entrega con acta --------- */
+function onActa(evento) { acta.value = evento.target.files?.[0] || null }
 
-function cerrarDetalle() {
-
-  mostrarDetalle.value =
-    false
-
-  compraSeleccionada.value =
-    null
-
-  resetearFormularios()
+async function entregarConActa() {
+  const datos = new FormData()
+  datos.append('acta_conformidad', acta.value)
+  await accion('entregar-con-acta', datos, true)
 }
 
-
-// ==========================================================
-// ETAPA DE ALMACÉN (COMPRAS)
-// ==========================================================
-//
-// El Encargado de Compras y Almacén interviene en 3 pasos del
-// BPMN, una vez que Tesorería desembolsó los fondos: comprar
-// el pedido, registrar el ingreso físico a almacén y
-// registrar el despacho/entrega al solicitante.
-// ==========================================================
-
-function etapaAccion(
-  compra
-) {
-
-  const codigo =
-    String(
-      compra?.estado
-      || ''
-    )
-      .trim()
-      .toUpperCase()
-
-  if (
-    codigo === 'FONDOS_DESEMBOLSADOS'
-  ) {
-
-    return 'comprar'
-  }
-
-  if (
-    codigo === 'COMPRA_REGISTRADA'
-  ) {
-
-    return compra?.fecha_ingreso_almacen
-      ? 'despacho'
-      : 'ingreso'
-  }
-
-  return null
-}
-
-
-async function confirmarCompra() {
-
-  const monto =
-    String(
-      montoReal.value
-      || ''
-    ).trim()
-
-  const nombreProveedor =
-    proveedor.value.trim()
-
-  if (
-    !monto
-    ||
-    Number(monto) <= 0
-  ) {
-
-    errorAccion.value =
-      'Debe indicar el monto real de la compra.'
-
-    return
-  }
-
-  if (!nombreProveedor) {
-
-    errorAccion.value =
-      'Debe indicar el proveedor.'
-
-    return
-  }
-
-  if (
-    !window.confirm(
-      '¿Confirma que el componente recibido coincide con lo solicitado?'
-    )
-  ) {
-
-    return
-  }
-
-  await ejecutarAccionCompra(
-    'registrar-compra',
-    {
-      monto_real: monto,
-      proveedor: nombreProveedor,
-      componente_verificado: true,
-    }
-  )
-}
-
-
-async function confirmarIngreso() {
-
-  if (
-    !window.confirm(
-      '¿Confirma el ingreso físico del producto a almacén?'
-    )
-  ) {
-
-    return
-  }
-
-  await ejecutarAccionCompra(
-    'registrar-ingreso-almacen',
-    {}
-  )
-}
-
-
-async function confirmarDespacho() {
-
-  if (
-    !window.confirm(
-      '¿Confirma el despacho y entrega del producto al solicitante?'
-    )
-  ) {
-
-    return
-  }
-
-  await ejecutarAccionCompra(
-    'registrar-despacho-almacen',
-    {}
-  )
-}
-
-
-async function ejecutarAccionCompra(
-  endpoint,
-  body
-) {
-
-  procesando.value =
-    true
-
-  errorAccion.value =
-    ''
-
-  try {
-
-    const respuesta =
-      await fetch(
-        `/api/compras/solicitudes/${compraSeleccionada.value.id}/${endpoint}/`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Token ${token()}`,
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(body),
-        }
-      )
-
-    let datos = {}
-
-    try {
-      datos = await respuesta.json()
-    } catch {
-      datos = {}
-    }
-
-    if (
-      respuesta.status === 401
-      ||
-      respuesta.status === 403
-    ) {
-
-      cerrarSesion()
-
-      return
-    }
-
-    if (!respuesta.ok) {
-
-      errorAccion.value =
-        datos.detalle
-        || 'No fue posible registrar la acción.'
-
-      return
-    }
-
-    cerrarDetalle()
-
-    await cargarCompras()
-
-  } catch (error) {
-
-    console.error(
-      'Error ejecutando la acción:',
-      error
-    )
-
-    errorAccion.value =
-      'No fue posible comunicarse con el servidor.'
-
-  } finally {
-
-    procesando.value =
-      false
-  }
-}
-
-
-// ==========================================================
-// CARGAR COMPRAS
-// ==========================================================
-
-function normalizarLista(
-  datos
-) {
-
-  if (
-    Array.isArray(datos)
-  ) {
-
-    return datos
-  }
-
-
-  if (
-    Array.isArray(
-      datos?.results
-    )
-  ) {
-
-    return datos.results
-  }
-
-
-  return []
-}
-
-
-async function cargarCompras() {
-
-  cargando.value =
-    true
-
-  try {
-
-    const respuesta =
-      await fetch(
-        '/api/compras/solicitudes/',
-        {
-          headers: {
-            Authorization: `Token ${token()}`,
-            Accept: 'application/json',
-          }
-        }
-      )
-
-    if (
-      respuesta.status === 401
-      ||
-      respuesta.status === 403
-    ) {
-
-      cerrarSesion()
-
-      return
-    }
-
-    if (!respuesta.ok) {
-
-      compras.value = []
-
-      return
-    }
-
-    const datos =
-      await respuesta.json()
-
-    compras.value =
-      normalizarLista(datos)
-      .sort(
-        (a, b) => {
-
-          const fechaA =
-            new Date(a.creado_en || 0).getTime()
-
-          const fechaB =
-            new Date(b.creado_en || 0).getTime()
-
-          return fechaB - fechaA
-        }
-      )
-
-  } catch (error) {
-
-    console.error(
-      'Error cargando compras:',
-      error
-    )
-
-    compras.value = []
-
-  } finally {
-
-    cargando.value =
-      false
-  }
-}
-
-
-// ==========================================================
-// ESTADO (AGRUPACIÓN VISUAL SIMPLIFICADA PARA ALMACÉN)
-// ==========================================================
-
-function bucketEstado(
-  estado
-) {
-
-  const codigo =
-    String(
-      estado
-      || ''
-    )
-      .trim()
-      .toUpperCase()
-
-  if (
-    codigo === 'RECHAZADO'
-    ||
-    codigo === 'ANULADO'
-  ) {
-
-    return 'RECHAZADA'
-  }
-
-  if (
-    codigo === 'FONDOS_DESEMBOLSADOS'
-    ||
-    codigo === 'COMPRA_REGISTRADA'
-  ) {
-
-    return 'EN_ESPERA'
-  }
-
-  return 'APROBADA'
-}
-
-
-function etiquetaBucket(
-  bucket
-) {
-
-  return (
-    {
-      EN_ESPERA: 'Aprobación en espera',
-      APROBADA: 'Aprobada',
-      RECHAZADA: 'Rechazada',
-    }[bucket]
-    || bucket
-  )
-}
-
-
-function etiquetaFiltroVacio(
-  bucket
-) {
-
-  return (
-    {
-      APROBADA: 'solicitudes aprobadas',
-      RECHAZADA: 'solicitudes rechazadas',
-    }[bucket]
-    || 'solicitudes'
-  )
-}
-
-
-function claseBucket(
-  bucket
-) {
-
-  return (
-    {
-      EN_ESPERA: 'working',
-      APROBADA: 'closed',
-      RECHAZADA: 'cancelled',
-    }[bucket]
-    || 'working'
-  )
-}
-
-
-function iconoBucket(
-  bucket
-) {
-
-  return (
-    {
-      EN_ESPERA: '⏳',
-      APROBADA: '✅',
-      RECHAZADA: '❌',
-    }[bucket]
-    || '⏳'
-  )
-}
-
-
-function descripcionBucket(
-  bucket
-) {
-
-  return (
-    {
-      EN_ESPERA: 'La compra se encuentra pendiente de adquisición, ingreso o despacho.',
-      APROBADA: 'La compra ya avanzó fuera de la bandeja de Almacén.',
-      RECHAZADA: 'La solicitud fue rechazada.',
-    }[bucket]
-    || ''
-  )
-}
-
-
-// ==========================================================
-// REQUERIMIENTOS (MANTENIMIENTO)
-// ==========================================================
-
-const requerimientos =
-  ref([])
-
-const cargandoRequerimientos =
-  ref(true)
-
-const mostrarDetalleRequerimiento =
-  ref(false)
-
-const requerimientoSeleccionado =
-  ref(null)
-
-const observacionAlmacen =
-  ref('')
-
-
-function codigoRequerimiento(
-  req
-) {
-
-  return (
-    req?.codigo
-    || req?.numero_solicitud
-    || `#${req?.id ?? ''}`
-  )
-}
-
-
-function estadoRequerimiento(
-  req
-) {
-
-  return String(
-    req?.estado_nombre
-    || req?.estado?.nombre
-    || req?.estado
-    || 'Pendiente'
-  )
-}
-
-
-function verRequerimiento(
-  req
-) {
-
-  requerimientoSeleccionado.value =
-    req
-
-  mostrarDetalleRequerimiento.value =
-    true
-
-  observacionAlmacen.value =
-    ''
-
-  errorAccion.value =
-    ''
-}
-
-
-function cerrarRequerimiento() {
-
-  mostrarDetalleRequerimiento.value =
-    false
-
-  requerimientoSeleccionado.value =
-    null
-}
-
-
-async function cargarRequerimientos() {
-
-  cargandoRequerimientos.value =
-    true
-
-  try {
-
-    const respuesta =
-      await fetch(
-        '/api/mantenimiento/requerimientos/',
-        {
-          headers: {
-            Authorization: `Token ${token()}`,
-            Accept: 'application/json',
-          }
-        }
-      )
-
-    if (
-      respuesta.status === 401
-      ||
-      respuesta.status === 403
-    ) {
-
-      cerrarSesion()
-
-      return
-    }
-
-    if (!respuesta.ok) {
-
-      requerimientos.value = []
-
-      return
-    }
-
-    const datos =
-      await respuesta.json()
-
-    requerimientos.value =
-      normalizarLista(datos)
-
-  } catch (error) {
-
-    console.error(
-      'Error cargando requerimientos:',
-      error
-    )
-
-    requerimientos.value = []
-
-  } finally {
-
-    cargandoRequerimientos.value =
-      false
-  }
-}
-
-
-async function reportarExistencia(
-  disponible
-) {
-
-  if (!requerimientoSeleccionado.value) {
-    return
-  }
-
-  procesando.value =
-    true
-
-  errorAccion.value =
-    ''
-
-  try {
-
-    const respuesta =
-      await fetch(
-        `/api/mantenimiento/requerimientos/${requerimientoSeleccionado.value.id}/reportar-existencia/`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Token ${token()}`,
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({
-            producto_disponible: disponible,
-            observacion_almacen: observacionAlmacen.value || '',
-          }),
-        }
-      )
-
-    let datos = {}
-
-    try {
-      datos = await respuesta.json()
-    } catch {
-      datos = {}
-    }
-
-    if (
-      respuesta.status === 401
-      ||
-      respuesta.status === 403
-    ) {
-
-      cerrarSesion()
-
-      return
-    }
-
-    if (!respuesta.ok) {
-
-      errorAccion.value =
-        datos.detalle
-        || 'No fue posible registrar la respuesta.'
-
-      return
-    }
-
-    cerrarRequerimiento()
-
-    await cargarRequerimientos()
-
-  } catch (error) {
-
-    console.error(
-      'Error reportando existencia:',
-      error
-    )
-
-    errorAccion.value =
-      'No fue posible comunicarse con el servidor.'
-
-  } finally {
-
-    procesando.value =
-      false
-  }
-}
-
-
-// ==========================================================
-// TOKEN / SESIÓN
-// ==========================================================
-
-function token() {
-
-  return localStorage.getItem(
-    'sigta_token'
-  )
-}
-
-
-function cerrarSesion() {
-
-  localStorage.removeItem(
-    'sigta_token'
-  )
-
-  localStorage.removeItem(
-    'sigta_usuario'
-  )
-
-  router.push(
-    '/login'
-  )
-}
-
-
-// ==========================================================
-// FECHA
-// ==========================================================
-
-function formatearFecha(
-  fecha
-) {
-
-  if (!fecha) {
-
-    return ''
-  }
-
-  try {
-
-    return new Date(
-      fecha
-    ).toLocaleString(
-      'es-BO',
-      {
-        dateStyle: 'short',
-        timeStyle: 'short',
-      }
-    )
-
-  } catch {
-
-    return ''
-  }
-}
-
-
-// ==========================================================
-// INICIO
-// ==========================================================
-
-onMounted(
-  async () => {
-
-    if (!token()) {
-
-      router.push(
-        '/login'
-      )
-
-      return
-    }
-
-    await Promise.all([
-      cargarCompras(),
-      cargarRequerimientos(),
-    ])
-  }
-)
-
+onMounted(cargar)
 </script>
 
-
 <style scoped>
-
-* {
-  box-sizing: border-box;
-}
-
-
-/* =========================================================
-   LAYOUT
-========================================================= */
-
-.layout {
-  min-height: 100vh;
-  display: flex;
-  background: #f2f5f9;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-
-.main {
-  flex: 1;
-  min-width: 0;
-  padding: 27px;
-  overflow-x: hidden;
-}
-
-
-/* =========================================================
-   HEADER
-========================================================= */
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 20px;
-}
-
-
-.page-header h1 {
-  margin: 0;
-  color: #17324a;
-  font-size: 33px;
-}
-
-
-.page-header p {
-  margin: 5px 0 0;
-  color: #718294;
-  font-size: 17px;
-}
-
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-
-.filtro-estado {
-  min-height: 41px;
-  padding: 0 12px;
-  border: 1px solid #d0dae2;
-  border-radius: 7px;
-  background: white;
-  color: #17324a;
-  font-family: inherit;
-  font-size: 15px;
-  outline: none;
-}
-
-
-.refresh-button {
-  min-height: 41px;
-  padding: 0 15px;
-  border: 1px solid #073b6f;
-  border-radius: 7px;
-  background: white;
-  color: #073b6f;
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-
-.refresh-button:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-
-
-/* =========================================================
-   LISTADO
-========================================================= */
-
-.requests-card {
-  overflow: hidden;
-  border-radius: 10px;
-  background: white;
-  box-shadow: 0 4px 14px rgba(0,0,0,.05);
-}
-
-
-.request-list {
-  display: flex;
-  flex-direction: column;
-}
-
-
-.request {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 17px 20px;
-  border-bottom: 1px solid #edf0f2;
-}
-
-
-.request:last-child {
-  border-bottom: none;
-}
-
-
-.request-main {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 155px 1fr;
-  gap: 15px;
-}
-
-
-.request-code strong {
-  display: block;
-  color: #07518d;
-  font-size: 15px;
-}
-
-
-.request-code small {
-  display: block;
-  margin-top: 4px;
-  color: #81909c;
-  font-size: 13px;
-}
-
-
-.request-info h3 {
-  margin: 0 0 5px;
-  color: #29475e;
-  font-size: 18px;
-}
-
-
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-
-.meta span {
-  padding: 4px 6px;
-  border-radius: 4px;
-  background: #f3f6f8;
-  color: #687986;
-  font-size: 13px;
-}
-
-
-.request-side {
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;
-  flex-direction: column;
-  gap: 9px;
-}
-
-
-/* =========================================================
-   ESTADO
-========================================================= */
-
-.status {
-  display: inline-block;
-  padding: 5px 8px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-
-.status.working {
-  background: #fff6d9;
-  color: #866400;
-}
-
-
-.status.closed {
-  background: #e8f6ee;
-  color: #237345;
-}
-
-
-.status.cancelled {
-  background: #fdeaea;
-  color: #a53232;
-}
-
-
-.row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-
-.view,
-.row-aprobar,
-.row-rechazar {
-  padding: 6px 8px;
-  border: none;
-  border-radius: 5px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-
-.view {
-  background: #edf3f8;
-  color: #435a6e;
-}
-
-
-.row-aprobar {
-  background: #e5f3ea;
-  color: #237345;
-}
-
-
-.row-rechazar {
-  background: #fdecec;
-  color: #a53232;
-}
-
-
-/* =========================================================
-   VACÍOS
-========================================================= */
-
-.loading,
-.empty {
-  padding: 45px 20px;
-  text-align: center;
-  color: #798793;
-  font-size: 16px;
-}
-
-
-.empty {
-  border-radius: 10px;
-  background: white;
-}
-
-
-/* =========================================================
-   DOCUMENTO DE DETALLE
-========================================================= */
-
-.documento-modal {
-  max-width: 700px;
-}
-
-
-.documento-modal .detalle-modal-header h3 {
-  font-size: 20px;
-}
-
-
-.documento-modal .detalle-modal-header small {
-  font-size: 13px;
-}
-
-
-.documento-body {
-  padding: 18px 22px 22px;
-}
-
-
-.estado-banner {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 18px;
-  padding: 14px 16px;
-  border-radius: 8px;
-}
-
-
-.estado-banner-icono {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.6);
-  font-size: 19px;
-}
-
-
-.estado-banner strong {
-  display: block;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-
-.estado-banner-descripcion {
-  display: block;
-  margin-top: 2px;
-  font-size: 15px;
-  font-weight: 500;
-  opacity: .85;
-}
-
-
-.estado-banner.working {
-  background: #fff6d9;
-  color: #866400;
-}
-
-
-.estado-banner.closed {
-  background: #e8f6ee;
-  color: #237345;
-}
-
-
-.estado-banner.cancelled {
-  background: #fdeaea;
-  color: #a53232;
-}
-
-
-.documento-seccion {
-  padding: 16px 0;
-  border-top: 1px solid #edf0f2;
-}
-
-
-.documento-seccion:first-of-type {
-  border-top: none;
-  padding-top: 0;
-}
-
-
-.documento-header-titulo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-
-.documento-header-icono {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: #fdf3d9;
-  font-size: 17px;
-}
-
-
-.documento-titulo-fila {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-
-.documento-icono {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: #eef1f8;
-  font-size: 13px;
-}
-
-
-.documento-titulo {
-  display: block;
-  margin-bottom: 8px;
-  color: #8592a0;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: .6px;
-  text-transform: uppercase;
-}
-
-
-.documento-titulo-fila .documento-titulo {
-  margin-bottom: 0;
-}
-
-
-.documento-seccion h4 {
-  margin: 0 0 6px;
-  color: #17324a;
-  font-size: 20px;
-}
-
-
-.documento-seccion > p {
-  margin: 0 0 10px;
-  color: #354d60;
-  font-size: 16px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-
-.documento-seccion b {
-  display: block;
-  margin-bottom: 4px;
-  color: #8592a0;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: .5px;
-  text-transform: uppercase;
-}
-
-
-.documento-fila {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-
-.documento-fila-5 {
-  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
-}
-
-
-.documento-fila > div span {
-  display: block;
-  color: #26333f;
-  font-size: 16px;
-}
-
-
-.documento-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-
-.documento-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border: none;
-  border-radius: 7px;
-  font-family: inherit;
-  text-align: left;
-  text-decoration: none;
-}
-
-
-.documento-item-icono {
-  flex-shrink: 0;
-  font-size: 16px;
-}
-
-
-.documento-item-label {
-  flex: 1;
-  color: #26333f;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-
-.documento-item small {
-  font-size: 13px;
-}
-
-
-.documento-item-accion {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
-
-
-.documento-item-ojo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.6);
-  font-size: 11px;
-}
-
-
-.documento-item.ok {
-  background: #e8f6ee;
-}
-
-
-.documento-item.ok .documento-item-accion {
-  color: #237345;
-  font-weight: 700;
-}
-
-
-.documento-item.falta {
-  background: #f3f6f8;
-}
-
-
-.documento-item.falta small {
-  color: #8a97a2;
-}
-
-
-/* =========================================================
-   ACCIONES DE DECISIÓN
-========================================================= */
-
-.documento-acciones {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #edf0f2;
-}
-
-
-.nota-tramite {
-  margin: 0 0 12px;
-  padding: 12px 14px;
-  border-radius: 7px;
-  background: #eef3f8;
-  color: #536575;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-
-.accion-error {
-  margin: 0 0 10px;
-  padding: 10px 12px;
-  border-radius: 7px;
-  background: #fdecec;
-  color: #a53232;
-  font-size: 14px;
-}
-
-
-.acciones-botones {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-
-.btn-aprobar,
-.btn-rechazar,
-.btn-cancelar {
-  min-height: 40px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 7px;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-
-.btn-aprobar {
-  background: #237345;
-  color: white;
-}
-
-
-.btn-rechazar {
-  background: #a53232;
-  color: white;
-}
-
-
-.btn-aprobar:disabled,
-.btn-rechazar:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-
-
-.documento-acciones > label {
-  display: block;
-  margin-bottom: 6px;
-  color: #344a5d;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-
-.documento-acciones > label span {
-  color: #a53232;
-}
-
-
-.documento-acciones > input {
-  width: 100%;
-  min-height: 40px;
-  margin-bottom: 12px;
-  padding: 0 12px;
-  border: 1px solid #d0dae2;
-  border-radius: 7px;
-  background: white;
-  color: #26333f;
-  font-family: inherit;
-  font-size: 14px;
-  outline: none;
-}
-
-
-/* =========================================================
-   RESPONSIVE
-========================================================= */
-
-@media (max-width: 760px) {
-
-  .layout {
-    display: block;
-  }
-
-
-  .main {
-    padding: 16px;
-  }
-
-
-  .page-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-
-  .header-actions {
-    width: 100%;
-  }
-
-
-  .filtro-estado {
-    flex: 1;
-  }
-
-
-  .request {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-
-  .request-main {
-    grid-template-columns: 1fr;
-  }
-
-
-  .request-side {
-    width: 100%;
-    align-items: flex-start;
-  }
-
-
-  .documento-fila {
-    grid-template-columns: 1fr;
-  }
-
-}
-
+*{box-sizing:border-box}.layout{min-height:100vh;background:var(--sigta-fondo);color:var(--sigta-texto);font-family:var(--sigta-fuente)}aside{position:fixed;inset:0 auto 0 0;width:var(--sigta-sidebar);background:var(--sigta-azul);color:var(--sigta-blanco);padding:22px 16px;display:flex;flex-direction:column}.brand,.profile{display:flex;align-items:center;gap:12px}.brand{padding:0 10px 20px;border-bottom:1px solid rgba(255,255,255,.2)}.brand>b{background:var(--sigta-mostaza);color:var(--sigta-azul);padding:14px 10px;border-radius:9px}.brand strong,.brand small,.profile b,.profile small{display:block}.brand strong{font-size:23px}.brand small,.profile small{color:var(--sigta-azul-texto-claro);margin-top:3px}.profile{padding:22px 10px}.profile>i{width:42px;height:42px;border-radius:50%;background:var(--sigta-mostaza);color:var(--sigta-azul);display:grid;place-items:center;font-style:normal;font-weight:900}aside>p{font-size:10px;color:var(--sigta-azul-texto-claro);font-weight:800;letter-spacing:1.4px;margin:14px 10px 8px}aside button{border:0;background:transparent;color:var(--sigta-blanco);border-radius:8px;padding:12px;display:flex;gap:11px;align-items:center;text-align:left;cursor:pointer;margin:2px 0;width:100%}aside button>span{font-size:10px;font-weight:900;width:28px}aside button em{margin-left:auto;background:rgba(255,255,255,.16);padding:2px 8px;border-radius:10px;font-style:normal}aside button.active,aside button:hover{background:rgba(255,255,255,.13)}.bottom{margin-top:auto;border-top:1px solid rgba(255,255,255,.2);padding-top:10px}.bottom button{width:100%}main{margin-left:var(--sigta-sidebar);padding:30px 38px 55px;max-width:1650px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:27px}header small{color:var(--sigta-texto-suave)}h1{font-size:var(--sigta-titulo);margin:6px 0}header p{margin:0;color:var(--sigta-texto-suave)}.refresh{border:1px solid var(--sigta-borde);background:var(--sigta-blanco);color:var(--sigta-azul);padding:10px 14px;border-radius:8px;cursor:pointer}.hero{background:linear-gradient(120deg,var(--sigta-azul),var(--sigta-azul-medio));color:var(--sigta-blanco);border-radius:13px;padding:28px 30px;display:flex;justify-content:space-between;align-items:center}.hero small,.panel-head small,.hoja-head small{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--sigta-mostaza-clara)}.hero h2{font-size:24px;margin:7px 0}.hero p{margin:0;color:var(--sigta-azul-texto-claro)}.hero>span{width:68px;height:68px;border:1px solid var(--sigta-mostaza);border-radius:50%;display:grid;place-items:center;font-weight:900}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0}.stats article{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:10px;padding:19px;display:flex;gap:13px;cursor:pointer}.stats i,.flow i{font-style:normal;width:37px;height:37px;border-radius:8px;display:grid;place-items:center;color:var(--sigta-blanco);font-size:10px;font-weight:900;flex-shrink:0}.blue{background:var(--sigta-azul)}.gold{background:var(--sigta-mostaza);color:var(--sigta-texto)!important}.green{background:var(--sigta-azul-medio)}.stats small,.stats b,.stats p{display:block}.stats b{font-size:25px;margin:3px 0}.stats p{font-size:11px;color:var(--sigta-texto-suave);margin:0}.panels{display:grid;grid-template-columns:2fr 1fr;gap:18px}.panel{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:11px;padding:22px}.panel-head h3{margin:5px 0 14px}.flow{width:100%;border:0;border-top:1px solid var(--sigta-borde-suave);background:var(--sigta-blanco);padding:15px 2px;display:flex;gap:13px;align-items:center;text-align:left;cursor:pointer}.flow div{flex:1}.flow b,.flow small{display:block}.flow small{color:var(--sigta-texto-suave);margin-top:4px}.flow>strong{font-size:20px}.copy{color:var(--sigta-texto-suave);font-size:12px;line-height:1.8}.copy a{color:var(--sigta-azul)}.wide{width:100%;padding:10px;border-radius:7px;border:1px solid var(--sigta-borde);cursor:pointer}.primary{background:var(--sigta-azul)!important;color:var(--sigta-blanco)!important;border-color:var(--sigta-azul)!important}.instruction{background:var(--sigta-mostaza-suave);border-left:4px solid var(--sigta-mostaza);padding:14px 17px;margin-bottom:17px;border-radius:7px}.instruction b,.instruction span{display:block}.instruction span{font-size:12px;color:var(--sigta-alerta);margin-top:4px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.cards article{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:10px;padding:19px}.top{display:flex;justify-content:space-between;gap:8px}.top span{font-size:12px;font-weight:800;color:var(--sigta-azul)}.top em{font-size:10px;background:var(--sigta-azul-tenue);padding:4px 8px;border-radius:10px;font-style:normal;white-space:nowrap}.cards h3{font-size:17px;margin:15px 0 7px}.datos{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:4px}.datos li{display:flex;justify-content:space-between;gap:10px;font-size:11px;border-bottom:1px dashed var(--sigta-borde-suave);padding-bottom:3px}.datos b{color:var(--sigta-texto-suave)}.datos span{color:var(--sigta-texto-suave);text-align:right}.actions{display:flex;gap:7px;border-top:1px solid var(--sigta-borde-suave);padding-top:13px;margin-top:10px}.actions button{flex:1;padding:9px 6px;border-radius:7px;border:1px solid var(--sigta-borde);background:var(--sigta-blanco);color:var(--sigta-texto);font-weight:700;cursor:pointer}.actions button:disabled{opacity:.55;cursor:not-allowed}.empty{text-align:center;background:var(--sigta-blanco);border:1px dashed var(--sigta-borde);padding:65px;border-radius:10px;color:var(--sigta-texto-suave)}.empty>span{font-size:31px;color:var(--sigta-exito)}.empty h3{margin:10px 0 6px}.campo{display:block;margin:14px 0;font-size:12px;font-weight:700;color:var(--sigta-texto)}.campo input{display:block;width:100%;margin-top:6px;padding:9px 11px;border:1px solid var(--sigta-borde);border-radius:7px;font-family:inherit;font-size:13px;font-weight:400;color:var(--sigta-texto)}.situacion{font-size:11px;color:var(--sigta-texto-suave);background:var(--sigta-azul-tenue);border-radius:6px;padding:8px 10px;margin:0 0 10px}.situacion.aviso{background:var(--sigta-mostaza-suave);color:var(--sigta-alerta);font-weight:700}.error-linea{background:var(--sigta-error-fondo);color:var(--sigta-error);padding:10px 13px;border-radius:7px;font-size:12px;font-weight:700}.hoja{max-width:760px}.hoja-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}.hoja-head h3{margin:5px 0 0}.documentos{display:flex;gap:12px;flex-wrap:wrap}.documentos a{color:var(--sigta-azul);font-size:12px}.detalle-modal-backdrop{position:fixed;inset:0;background:rgba(18,58,107,.55);display:grid;place-items:center;padding:20px;z-index:20}.detalle-modal{background:var(--sigta-blanco);border-radius:14px;width:min(700px,100%);max-height:88vh;display:flex;flex-direction:column}.detalle-modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--sigta-borde-suave)}.detalle-modal-header h3{margin:0}.detalle-modal-header small{color:var(--sigta-texto-suave)}.detalle-modal-close{border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--sigta-texto-suave)}.detalle-modal-body{padding:20px 24px;overflow-y:auto;display:grid;gap:14px}.detalle-fila{display:grid;grid-template-columns:1fr 1fr;gap:14px}.detalle-campo b{display:block;font-size:11px;color:var(--sigta-texto-suave);margin-bottom:4px}.detalle-campo span,.detalle-campo p{font-size:13px;color:var(--sigta-texto);margin:0}@media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.panels{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}@media(max-width:760px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column;gap:12px}.detalle-fila{grid-template-columns:1fr}}
 </style>

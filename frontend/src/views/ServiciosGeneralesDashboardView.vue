@@ -5,66 +5,87 @@
         <div class="brand"><b><img src="/img/emi.jpg" alt="EMI"></b><div><strong>SIGTA</strong><small>Mantenimiento</small></div></div>
         <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
       </div>
-      <div class="profile"><i>{{ iniciales }}</i><div><b>{{ nombre }}</b><small>Servicios Generales</small></div></div>
+      <div class="profile"><i>{{ iniciales }}</i><div><b>{{ nombre }}</b><small>Jefe de Mantenimiento</small></div></div>
       <p>GESTIÓN DE MANTENIMIENTO</p>
-      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id; menuAbierto=false"><span>{{ m.icono }}</span>{{ m.nombre }}<em v-if="m.total!==undefined">{{ m.total }}</em></button>
+      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="irA(m.id)"><span>{{ m.icono }}</span>{{ m.nombre }}<em v-if="m.total!==undefined">{{ m.total }}</em></button>
       <div class="bottom"><button @click="salir"><span>↪</span>Cerrar sesión</button></div>
     </aside>
 
     <main>
       <header>
-        <div><small>SIGTA / MANTENIMIENTO / {{ titulo }}</small><h1>{{ titulo }}</h1><p>Recepción y derivación de requerimientos de mantenimiento.</p></div>
-        <button class="refresh" @click="cargar">↻ Actualizar</button>
+        <div><small>SIGTA / MANTENIMIENTO / {{ titulo }}</small><h1>{{ titulo }}</h1><p>{{ subtitulo }}</p></div>
+        <button class="refresh" :disabled="cargando" @click="cargar">↻ Actualizar</button>
       </header>
 
+      <!-- ============================ RESUMEN ============================ -->
       <section v-if="vista==='resumen'">
         <div class="hero">
-          <div><small>SERVICIOS GENERALES</small><h2>{{ saludo }}, {{ primerNombre }}</h2><p>Requerimientos que requieren su gestión hoy.</p></div>
-          <span>SG</span>
+          <div><small>JEFATURA DE MANTENIMIENTO</small><h2>{{ saludo }}, {{ primerNombre }}</h2><p>Requerimientos que requieren su gestión hoy.</p></div>
+          <span>MT</span>
         </div>
         <div class="stats">
-          <article @click="vista='derivar'"><i class="blue">DR</i><div><small>Por derivar</small><b>{{ porDerivar.length }}</b><p>a un auxiliar</p></div></article>
-          <article @click="vista='compra'"><i class="gold">CO</i><div><small>Compras por validar</small><b>{{ comprasPorValidar.length }}</b><p>para elevar a DAF</p></div></article>
-          <article @click="vista='finalizar'"><i class="green">FI</i><div><small>Por finalizar</small><b>{{ porFinalizar.length }}</b><p>informe registrado</p></div></article>
-          <article @click="vista='seguimiento'"><i class="navy">EC</i><div><small>En curso</small><b>{{ enCurso.length }}</b><p>ver seguimiento</p></div></article>
+          <article @click="irA('validar')"><i class="blue">VA</i><div><small>Por validar</small><b>{{ porValidar.length }}</b><p>tickets nuevos</p></div></article>
+          <article @click="irA('clasificar')"><i class="gold">CL</i><div><small>Por clasificar</small><b>{{ porClasificar.length }}</b><p>prioridad</p></div></article>
+          <article @click="irA('designar')"><i class="blue">DE</i><div><small>Por designar</small><b>{{ porDesignar.length }}</b><p>técnico</p></div></article>
+          <article @click="irA('verificar')"><i class="green">VF</i><div><small>Por verificar</small><b>{{ porVerificar.length }}</b><p>funcionamiento</p></div></article>
         </div>
         <div class="panels">
           <section class="panel">
             <div class="panel-head"><div><small>FLUJO BPMN</small><h3>Proceso de mantenimiento</h3></div></div>
-            <button class="flow" @click="vista='derivar'"><i class="blue">1</i><div><b>Derivar a su auxiliar</b><small>Asignar el requerimiento recibido a un Auxiliar de Servicios Generales</small></div><strong>›</strong></button>
-            <button class="flow" @click="vista='finalizar'"><i class="gold">2</i><div><b>Recibir expediente y archivar</b><small>Confirmar el informe del trabajo y finalizar el requerimiento</small></div><strong>›</strong></button>
-            <button class="flow" @click="vista='reporte'"><i class="green">3</i><div><b>Reporte mensual</b><small>Consolidado de mantenimientos finalizados en el periodo</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('validar')"><i class="blue">1</i><div><b>Recibir y validar ticket</b><small>Confirmar que el requerimiento procede o rechazarlo</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('clasificar')"><i class="gold">2</i><div><b>Clasificar prioridad</b><small>Definir la urgencia del mantenimiento</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('designar')"><i class="blue">3</i><div><b>Designar revisión al equipo</b><small>Asignar el técnico responsable</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('compra')"><i class="gold">4</i><div><b>Recibir requerimiento y cotización</b><small>Evaluar la viabilidad de la compra</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('verificar')"><i class="green">5</i><div><b>Verificar funcionamiento</b><small>Confirmar si el problema quedó resuelto</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('informe')"><i class="gold">6</i><div><b>Conformidad e informe final</b><small>Cerrar el caso y elevarlo a la Dirección</small></div><strong>›</strong></button>
           </section>
           <section class="panel">
-            <div class="panel-head"><div><small>SEGUIMIENTO</small><h3>Requerimientos en curso</h3></div></div>
-            <p class="copy">Requerimientos ya derivados a un auxiliar y todavía no finalizados.</p>
-            <button class="wide primary" @click="vista='seguimiento'">Ver requerimientos en curso →</button>
+            <div class="panel-head"><div><small>SEGUIMIENTO</small><h3>Reporte mensual</h3></div></div>
+            <p class="copy">Consolidado de los mantenimientos finalizados en el periodo.</p>
+            <button class="wide primary" @click="irA('reporte')">Ver reporte mensual →</button>
           </section>
         </div>
       </section>
 
-      <section v-else-if="vista==='derivar'">
-        <div class="instruction"><b>Derivar a su auxiliar</b><span>Seleccione al Auxiliar de Servicios Generales que atenderá el requerimiento.</span></div>
-        <div v-if="!itemActivo" class="cards">
-          <article v-for="r in porDerivar" :key="r.id">
+      <!-- ========================= 1. VALIDAR ========================= -->
+      <section v-else-if="vista==='validar'">
+        <div class="instruction"><b>¿Ticket válido?</b><span>Reciba y valide el requerimiento, o notifique el rechazo al solicitante.</span></div>
+        <div v-if="cargando" class="empty">Consultando requerimientos…</div>
+        <div v-else-if="porValidar.length" class="cards">
+          <article v-for="r in porValidar" :key="r.id">
             <div class="top"><span>{{ r.codigo }}</span><em>{{ r.estado_codigo }}</em></div>
             <h3>{{ r.titulo }}</h3>
+            <ul class="datos">
+              <li><b>Ubicación</b><span>{{ r.ubicacion || 's/d' }}</span></li>
+              <li><b>Solicitante</b><span>{{ r.solicitante_nombre || 's/d' }}</span></li>
+            </ul>
             <p>{{ (r.descripcion||'').slice(0,130) }}</p>
-            <div class="actions"><button @click="verItem(r)">Ver detalle</button><button class="primary" @click="abrirDerivacion(r)">Derivar</button></div>
+            <a v-if="r.evidencia_archivo_url" class="adjunto" :href="r.evidencia_archivo_url" target="_blank">📎 Evidencia</a>
+            <div class="actions">
+              <button @click="verItem(r)">Ver detalle</button>
+              <button class="reject" @click="rechazar(r)">Rechazar</button>
+              <button class="primary" @click="validar(r)">Validar</button>
+            </div>
           </article>
-          <div v-if="!porDerivar.length" class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay requerimientos pendientes de derivación.</p></div>
+        </div>
+        <div v-else class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay requerimientos pendientes de validación.</p></div>
+      </section>
+
+      <!-- ======================= 2. CLASIFICAR ======================= -->
+      <section v-else-if="vista==='clasificar'">
+        <div class="instruction"><b>Clasificar prioridad</b><span>Defina la urgencia del mantenimiento y justifíquela.</span></div>
+        <div v-if="!itemActivo" class="cards">
+          <article v-for="r in porClasificar" :key="r.id">
+            <div class="top"><span>{{ r.codigo }}</span><em>{{ r.estado_codigo }}</em></div>
+            <h3>{{ r.titulo }}</h3>
+            <div class="actions"><button class="primary" @click="abrir(r)">Clasificar</button></div>
+          </article>
+          <div v-if="!porClasificar.length" class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay requerimientos por clasificar.</p></div>
         </div>
         <div v-else class="panel">
           <h3>{{ itemActivo.codigo }} — {{ itemActivo.titulo }}</h3>
-          <label class="campo">Auxiliar de Servicios Generales
-            <select v-model="formDerivar.auxiliar_id">
-              <option value="">Seleccione…</option>
-              <option v-for="a in auxiliares" :key="a.id" :value="a.id">{{ a.nombre_completo || a.email }}</option>
-            </select>
-          </label>
-          <small v-if="!auxiliares.length">No hay auxiliares activos disponibles.</small>
           <label class="campo">Prioridad
-            <select v-model="formDerivar.prioridad">
+            <select v-model="formClasificar.prioridad">
               <option value="">Seleccione…</option>
               <option value="BAJA">Baja</option>
               <option value="MEDIA">Media</option>
@@ -73,92 +94,178 @@
             </select>
           </label>
           <label class="campo">Criterio de prioridad
-            <textarea v-model.trim="formDerivar.criterio_prioridad" rows="3" placeholder="Explique por qué se asigna esta prioridad"></textarea>
+            <textarea v-model="formClasificar.criterio_prioridad" rows="3" placeholder="Justifique la prioridad asignada"></textarea>
           </label>
-          <div class="actions"><button @click="itemActivo=null">Cancelar</button><button class="primary" :disabled="procesando||!formDerivar.auxiliar_id||!formDerivar.prioridad||!formDerivar.criterio_prioridad" @click="derivarAuxiliar">Derivar requerimiento</button></div>
+          <div class="actions">
+            <button @click="itemActivo=null">Cancelar</button>
+            <button class="primary" :disabled="procesando||!formClasificar.prioridad||!formClasificar.criterio_prioridad.trim()" @click="clasificar">Guardar prioridad</button>
+          </div>
         </div>
       </section>
 
-      <section v-else-if="vista==='finalizar'">
-        <div class="instruction"><b>Recibir expediente y archivar</b><span>Confirme que el informe del trabajo fue registrado y finalice el requerimiento.</span></div>
-        <div class="cards">
-          <article v-for="r in porFinalizar" :key="r.id">
+      <!-- ======================== 3. DESIGNAR ======================== -->
+      <section v-else-if="vista==='designar'">
+        <div class="instruction"><b>Designar revisión al equipo</b><span>Seleccione al Técnico de Mantenimiento que atenderá el requerimiento.</span></div>
+        <div v-if="!itemActivo" class="cards">
+          <article v-for="r in porDesignar" :key="r.id">
+            <div class="top"><span>{{ r.codigo }}</span><em>{{ r.prioridad_jefatura }}</em></div>
+            <h3>{{ r.titulo }}</h3>
+            <div class="actions"><button class="primary" @click="abrir(r)">Designar</button></div>
+          </article>
+          <div v-if="!porDesignar.length" class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay requerimientos por designar.</p></div>
+        </div>
+        <div v-else class="panel">
+          <h3>{{ itemActivo.codigo }} — {{ itemActivo.titulo }}</h3>
+          <label class="campo">Técnico de Mantenimiento
+            <select v-model="formDesignar.tecnico_id">
+              <option value="">Seleccione…</option>
+              <option v-for="t in tecnicos" :key="t.id" :value="t.id">{{ t.nombre_completo || t.email }}</option>
+            </select>
+          </label>
+          <small v-if="!tecnicos.length">No hay técnicos activos disponibles.</small>
+          <div class="actions">
+            <button @click="itemActivo=null">Cancelar</button>
+            <button class="primary" :disabled="procesando||!formDesignar.tecnico_id" @click="designar">Designar técnico</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 4. VIABILIDAD COMPRA ===================== -->
+      <section v-else-if="vista==='compra'">
+        <div class="instruction"><b>Recibir requerimiento y cotización</b><span>El técnico solicitó un componente. Confirme si la compra es viable antes de elevarla a la DAF.</span></div>
+        <div v-if="!itemActivo" class="cards">
+          <article v-for="r in porEvaluarCompra" :key="r.id">
+            <div class="top"><span>{{ r.codigo }}</span><em>{{ r.estado_compra_componente }}</em></div>
+            <h3>{{ r.titulo }}</h3>
+            <ul class="datos">
+              <li><b>Componente</b><span>{{ r.producto_requerido || 's/d' }}</span></li>
+              <li><b>Cantidad</b><span>{{ r.cantidad_requerida || 1 }}</span></li>
+              <li><b>Costo estimado</b><span>{{ r.costo_estimado ? `Bs. ${r.costo_estimado}` : 's/d' }}</span></li>
+            </ul>
+            <a v-if="r.cotizacion_archivo" class="adjunto" :href="r.cotizacion_archivo" target="_blank">📎 Cotización</a>
+            <div class="actions"><button class="primary" @click="abrir(r)">Evaluar</button></div>
+          </article>
+          <div v-if="!porEvaluarCompra.length" class="empty"><span>✓</span><h3>Sin pendientes</h3><p>Ningún requerimiento espera evaluación de compra.</p></div>
+        </div>
+        <div v-else class="panel">
+          <h3>{{ itemActivo.codigo }} — {{ itemActivo.titulo }}</h3>
+          <p class="copy"><b>Componente:</b> {{ itemActivo.producto_requerido }}<br><b>Especificaciones:</b> {{ itemActivo.especificacion_producto || 's/d' }}<br><b>Costo estimado:</b> Bs. {{ itemActivo.costo_estimado || 's/d' }}</p>
+          <label class="campo">¿Es viable la compra?
+            <select v-model="formCompra.viable">
+              <option :value="true">Sí, es viable</option>
+              <option :value="false">No es viable</option>
+            </select>
+          </label>
+          <label v-if="formCompra.viable===false" class="campo">Motivo de no viabilidad
+            <textarea v-model="formCompra.motivo_no_viable" rows="2"></textarea>
+          </label>
+          <div class="actions">
+            <button @click="itemActivo=null">Cancelar</button>
+            <button class="primary" :disabled="procesando||(formCompra.viable===false&&!formCompra.motivo_no_viable.trim())" @click="evaluarCompra">
+              {{ formCompra.viable===false ? 'Cerrar sin compra' : 'Elevar informe a la DAF' }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= 5. VERIFICAR ======================= -->
+      <section v-else-if="vista==='verificar'">
+        <div class="instruction"><b>Verificar funcionamiento</b><span>¿El problema quedó resuelto? Si no, el caso vuelve al técnico para una nueva intervención.</span></div>
+        <div v-if="porVerificar.length" class="cards">
+          <article v-for="r in porVerificar" :key="r.id" :class="{ retorno: Number(r.rework_count) > 0 }">
             <div class="top"><span>{{ r.codigo }}</span><em>{{ r.estado_codigo }}</em></div>
             <h3>{{ r.titulo }}</h3>
+            <div v-if="Number(r.rework_count) > 0" class="mini-alerta">⚠ Reproceso número {{ r.rework_count }}</div>
             <p>{{ (r.informe_trabajo||'').slice(0,130) }}</p>
-            <div class="actions"><button @click="verItem(r)">Ver detalle</button><button class="primary" @click="finalizarRequerimiento(r)">Finalizar y archivar</button></div>
+            <div class="actions">
+              <button @click="verItem(r)">Ver detalle</button>
+              <button class="reject" @click="verificar(r,false)">No resuelto</button>
+              <button class="primary" @click="verificar(r,true)">Problema resuelto</button>
+            </div>
           </article>
-          <div v-if="!porFinalizar.length" class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay expedientes pendientes de archivar.</p></div>
         </div>
+        <div v-else class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay requerimientos pendientes de verificación.</p></div>
       </section>
 
-      <section v-else-if="vista==='compra'">
-        <div class="instruction"><b>Validar y elevar compra</b><span>Revise el requerimiento preparado por el técnico y, si corresponde, elévelo a DAF.</span></div>
-        <div class="cards">
-          <article v-for="r in comprasPorValidar" :key="r.id">
-            <div class="top"><span>{{ r.codigo }}</span><em>PENDIENTE</em></div>
-            <h3>{{ r.producto_requerido || r.titulo }}</h3>
-            <p>Cantidad: {{ r.cantidad_requerida || 1 }}<br>{{ r.especificacion_producto || 'Sin especificaciones adicionales.' }}</p>
-            <div class="actions"><button @click="verItem(r)">Ver documentación</button><button class="primary" :disabled="procesando" @click="elevarCompra(r)">Validar y elevar a DAF</button></div>
-          </article>
-          <div v-if="!comprasPorValidar.length" class="empty"><span>✓</span><h3>Sin compras pendientes</h3><p>No existen solicitudes esperando validación de la jefatura.</p></div>
-        </div>
-      </section>
+      <!-- =============== 6. CONFORMIDAD E INFORME FINAL =============== -->
+      <section v-else-if="vista==='informe'">
+        <div class="instruction"><b>Conformidad e informe final</b><span>Informe la conformidad del mantenimiento y elabore el informe que se elevará a la Dirección.</span></div>
 
-      <section v-else-if="vista==='seguimiento'">
-        <div class="instruction"><b>Requerimientos en curso</b><span>Solo lectura: derivados a un auxiliar y todavía no finalizados.</span></div>
-        <div class="table" v-if="enCurso.length">
-          <div class="thead"><span>Código</span><span>Título</span><span>Auxiliar</span><span>Estado</span><span>Compra vinculada</span></div>
-          <div class="row" v-for="r in enCurso" :key="r.id">
-            <b>{{ r.codigo }}</b><span>{{ r.titulo }}</span><span>{{ r.auxiliar_asignado_nombre || '—' }}</span><em>{{ r.estado_codigo }}</em>
-            <span>{{ r.compra_vinculada ? `${r.compra_vinculada.codigo} (${r.compra_vinculada.estado_nombre})` : '—' }}</span>
+        <div v-if="porConformar.length" class="cards">
+          <article v-for="r in porConformar" :key="r.id">
+            <div class="top"><span>{{ r.codigo }}</span><em>verificado</em></div>
+            <h3>{{ r.titulo }}</h3>
+            <p>Verificado el {{ fecha(r.verificado_en) }}. Informe la conformidad para continuar.</p>
+            <div class="actions"><button class="primary" @click="conformar(r)">Informar conformidad</button></div>
+          </article>
+        </div>
+
+        <div v-if="!itemActivo" class="cards">
+          <article v-for="r in porInformar" :key="r.id">
+            <div class="top"><span>{{ r.codigo }}</span><em>{{ r.estado_codigo }}</em></div>
+            <h3>{{ r.titulo }}</h3>
+            <div class="actions"><button class="primary" @click="abrir(r)">Elaborar informe final</button></div>
+          </article>
+          <div v-if="!porInformar.length && !porConformar.length" class="empty"><span>✓</span><h3>Sin pendientes</h3><p>No hay casos esperando conformidad ni informe final.</p></div>
+        </div>
+        <div v-else class="panel">
+          <h3>{{ itemActivo.codigo }} — {{ itemActivo.titulo }}</h3>
+          <label class="campo">Informe final
+            <textarea v-model="formInforme.informe_final" rows="5" placeholder="Diagnóstico, trabajo realizado, repuestos, pruebas y resultado"></textarea>
+          </label>
+          <div class="actions">
+            <button @click="itemActivo=null">Cancelar</button>
+            <button class="primary" :disabled="procesando||!formInforme.informe_final.trim()" @click="elaborarInforme">Validar y elevar a la Dirección</button>
           </div>
         </div>
-        <div v-else class="empty">No hay requerimientos en curso.</div>
       </section>
 
+      <!-- ====================== REPORTE MENSUAL ====================== -->
       <section v-else-if="vista==='reporte'">
-        <div class="instruction"><b>Reporte mensual de mantenimiento</b><span>Consolidado de requerimientos finalizados en el periodo seleccionado.</span></div>
-        <div class="toolbar">
-          <label class="campo inline">Año<input v-model.number="reporte.anio" type="number"></label>
-          <label class="campo inline">Mes<input v-model.number="reporte.mes" type="number" min="1" max="12"></label>
-          <button class="primary" @click="cargarReporte">Consultar</button>
-        </div>
-        <div class="table" v-if="reporte.requerimientos.length">
-          <div class="thead"><span>Código</span><span>Título</span><span>Área</span><span>Auxiliar</span><span>Finalizado</span></div>
-          <div class="row" v-for="r in reporte.requerimientos" :key="r.id">
-            <b>{{ r.codigo }}</b><span>{{ r.titulo }}</span><span>{{ r.area_nombre }}</span><span>{{ r.auxiliar_asignado_nombre || '—' }}</span><em>{{ formatoFecha(r.finalizado_en) }}</em>
+        <div class="instruction"><b>Reporte mensual</b><span>Consolidado de los mantenimientos finalizados en el periodo.</span></div>
+        <div class="panel">
+          <div class="actions" style="border:0;margin:0">
+            <label class="campo">Año<input v-model="periodo.anio" type="number" min="2020" max="2100"></label>
+            <label class="campo">Mes<input v-model="periodo.mes" type="number" min="1" max="12"></label>
+            <button class="primary" :disabled="procesando" @click="cargarReporte">Consultar</button>
           </div>
+          <p v-if="reporte" class="copy"><b>{{ reporte.total_finalizados }}</b> mantenimiento(s) finalizado(s) en {{ reporte.mes }}/{{ reporte.anio }}.</p>
+          <article v-for="r in (reporte?.requerimientos || [])" :key="`rep-${r.id}`" class="reporte-item">
+            <b>{{ r.codigo }}</b> — {{ r.titulo }} <small>({{ fecha(r.finalizado_en) }})</small>
+          </article>
         </div>
-        <div v-else class="empty">No hay mantenimientos finalizados en el periodo consultado.</div>
       </section>
     </main>
 
-    <div v-if="itemDetalle" class="detalle-modal-backdrop" @click.self="itemDetalle=null">
+    <!-- ============================ DETALLE ============================ -->
+    <div v-if="detalle" class="detalle-modal-backdrop" @click.self="detalle=null">
       <div class="detalle-modal">
         <div class="detalle-modal-header">
-          <div><h3>{{ itemDetalle.codigo }}</h3><small>{{ itemDetalle.titulo }}</small></div>
-          <button class="detalle-modal-close" @click="itemDetalle=null">✕</button>
+          <div><h3>{{ detalle.codigo }}</h3><small>{{ detalle.titulo }}</small></div>
+          <button class="detalle-modal-close" @click="detalle=null">✕</button>
         </div>
         <div class="detalle-modal-body">
           <div class="detalle-fila">
-            <div class="detalle-campo"><b>Estado</b><span>{{ itemDetalle.estado_nombre }}</span></div>
-            <div class="detalle-campo"><b>Tipo</b><span>{{ itemDetalle.tipo || 's/d' }}</span></div>
+            <div class="detalle-campo"><b>Estado</b><span>{{ detalle.estado_nombre || detalle.estado_codigo }}</span></div>
+            <div class="detalle-campo"><b>Prioridad</b><span>{{ detalle.prioridad_jefatura || 's/d' }}</span></div>
           </div>
           <div class="detalle-fila">
-            <div class="detalle-campo"><b>Solicitante</b><span>{{ itemDetalle.solicitante_nombre }}</span></div>
-            <div class="detalle-campo"><b>Auxiliar asignado</b><span>{{ itemDetalle.auxiliar_asignado_nombre || 's/d' }}</span></div>
+            <div class="detalle-campo"><b>Solicitante</b><span>{{ detalle.solicitante_nombre }}</span></div>
+            <div class="detalle-campo"><b>Técnico</b><span>{{ detalle.auxiliar_nombre || 's/d' }}</span></div>
           </div>
-          <div class="detalle-campo"><b>Descripción</b><p>{{ itemDetalle.descripcion || 's/d' }}</p></div>
-          <div class="detalle-campo"><b>Ubicación</b><span>{{ itemDetalle.ubicacion || 's/d' }}</span></div>
-          <div class="detalle-campo" v-if="itemDetalle.requiere_reposicion"><b>Producto requerido de almacén</b><p>{{ itemDetalle.producto_requerido }} — cantidad: {{ itemDetalle.cantidad_requerida || 's/d' }}<br>{{ itemDetalle.especificacion_producto || '' }}</p></div>
-          <div class="detalle-campo" v-if="itemDetalle.observacion_almacen"><b>Observación de Almacén</b><p>{{ itemDetalle.observacion_almacen }}</p></div>
-          <div class="detalle-campo" v-if="itemDetalle.codigo_compra_vinculada"><b>Expediente de compra</b><span>{{ itemDetalle.codigo_compra_vinculada }}</span></div>
-          <div class="detalle-campo" v-if="itemDetalle.trabajo_realizado"><b>Trabajo realizado</b><p>{{ itemDetalle.trabajo_realizado }}</p></div>
-          <div class="detalle-campo" v-if="itemDetalle.observaciones_trabajo"><b>Observaciones del trabajo</b><p>{{ itemDetalle.observaciones_trabajo }}</p></div>
-          <div class="detalle-campo" v-if="itemDetalle.informe_trabajo"><b>Informe del trabajo</b><p>{{ itemDetalle.informe_trabajo }}</p></div>
-          <div class="detalle-campo" v-if="itemDetalle.fotografia_trabajo_url"><b>Fotografía del trabajo</b><a :href="itemDetalle.fotografia_trabajo_url" target="_blank">Abrir imagen →</a></div>
-          <div class="detalle-campo" v-if="itemDetalle.evidencia_archivo_url"><b>Evidencia adjunta</b><a :href="itemDetalle.evidencia_archivo_url" target="_blank">Abrir archivo →</a></div>
+          <div class="detalle-campo"><b>Descripción</b><p>{{ detalle.descripcion }}</p></div>
+          <div class="detalle-campo"><b>Ubicación</b><span>{{ detalle.ubicacion || 's/d' }}</span></div>
+          <div class="detalle-campo" v-if="detalle.motivo_rechazo"><b>Motivo del rechazo</b><p>{{ detalle.motivo_rechazo }}</p></div>
+          <div class="detalle-campo" v-if="detalle.diagnostico"><b>Diagnóstico</b><p>{{ detalle.diagnostico }}</p></div>
+          <div class="detalle-campo" v-if="detalle.plan_solucion"><b>Plan de solución</b><p>{{ detalle.plan_solucion }}</p></div>
+          <div class="detalle-campo" v-if="detalle.producto_requerido"><b>Componente requerido</b><p>{{ detalle.producto_requerido }} — Bs. {{ detalle.costo_estimado || 's/d' }}</p></div>
+          <div class="detalle-campo" v-if="detalle.motivo_no_viable"><b>Compra no viable</b><p>{{ detalle.motivo_no_viable }}</p></div>
+          <div class="detalle-campo" v-if="detalle.codigo_compra_vinculada"><b>Expediente de compra</b><span>{{ detalle.codigo_compra_vinculada }}</span></div>
+          <div class="detalle-campo" v-if="detalle.trabajo_realizado"><b>Trabajo realizado</b><p>{{ detalle.trabajo_realizado }}</p></div>
+          <div class="detalle-campo" v-if="detalle.resultado_pruebas"><b>Pruebas técnicas</b><p>{{ detalle.resultado_pruebas }}</p></div>
+          <div class="detalle-campo" v-if="detalle.informe_trabajo"><b>Informe del técnico</b><p>{{ detalle.informe_trabajo }}</p></div>
+          <div class="detalle-campo" v-if="detalle.informe_final"><b>Informe final</b><p>{{ detalle.informe_final }}</p></div>
+          <div class="detalle-campo" v-if="detalle.evidencia_archivo_url"><b>Evidencia</b><a :href="detalle.evidencia_archivo_url" target="_blank">Abrir archivo →</a></div>
         </div>
       </div>
     </div>
@@ -173,83 +280,87 @@ const router = useRouter()
 const usuario = ref(JSON.parse(localStorage.getItem('sigta_usuario') || '{}'))
 const vista = ref('resumen')
 const menuAbierto = ref(false)
-const requerimientos = ref([])
-const auxiliares = ref([])
+const items = ref([])
+const tecnicos = ref([])
 const cargando = ref(false)
 const procesando = ref(false)
 const itemActivo = ref(null)
-const reporte = reactive({ anio: new Date().getFullYear(), mes: new Date().getMonth() + 1, requerimientos: [] })
+const detalle = ref(null)
+const reporte = ref(null)
 
-const nombre = computed(() => usuario.value.nombre || usuario.value.nombre_completo || 'Servicios Generales')
+const nombre = computed(() => usuario.value.nombre || usuario.value.nombre_completo || 'Jefe de Mantenimiento')
 const primerNombre = computed(() => nombre.value.split(' ')[0])
 const iniciales = computed(() => nombre.value.split(' ').slice(0, 2).map(x => x[0]).join('').toUpperCase())
 const saludo = computed(() => new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 19 ? 'Buenas tardes' : 'Buenas noches')
 
-const porDerivar = computed(() => requerimientos.value.filter(r => r.estado_codigo === 'RECIBIDO'))
-const enCurso = computed(() => requerimientos.value.filter(r => ['DERIVADO', 'REVISION_ALMACEN', 'EN_ESPERA_COMPRA', 'EN_MANTENIMIENTO', 'INFORME_REGISTRADO'].includes(r.estado_codigo)))
-const porFinalizar = computed(() => requerimientos.value.filter(r => r.estado_codigo === 'INFORME_REGISTRADO'))
-const comprasPorValidar = computed(() => requerimientos.value.filter(r => r.estado_codigo === 'EN_ESPERA_COMPRA' && !r.derivado_compra))
-const finalizadosMes = computed(() => {
-  const ahora = new Date()
-  return requerimientos.value.filter(r => r.estado_codigo === 'FINALIZADO' && r.finalizado_en && new Date(r.finalizado_en).getMonth() === ahora.getMonth() && new Date(r.finalizado_en).getFullYear() === ahora.getFullYear())
-})
+/* Bandejas del BPMN */
+const porValidar = computed(() => items.value.filter(r => r.estado_codigo === 'RECIBIDO'))
+const porClasificar = computed(() => items.value.filter(r => r.estado_codigo === 'VALIDADO' && !r.prioridad_jefatura))
+const porDesignar = computed(() => items.value.filter(r => r.estado_codigo === 'VALIDADO' && !!r.prioridad_jefatura))
+const porEvaluarCompra = computed(() => items.value.filter(r => r.estado_compra_componente === 'SOLICITADA'))
+const porVerificar = computed(() => items.value.filter(r => r.estado_codigo === 'INFORME_REGISTRADO' && !r.verificado_en))
+const porConformar = computed(() => items.value.filter(r => r.estado_codigo === 'INFORME_REGISTRADO' && !!r.verificado_en))
+const porInformar = computed(() => items.value.filter(r => r.estado_codigo === 'CONFORMIDAD_INFORMADA'))
 
 const menu = computed(() => [
   { id: 'resumen', icono: '⌂', nombre: 'Dashboard' },
-  { id: 'derivar', icono: 'DR', nombre: 'Derivar a auxiliar', total: porDerivar.value.length },
-  { id: 'compra', icono: 'CO', nombre: 'Validar y elevar compra', total: comprasPorValidar.value.length },
-  { id: 'seguimiento', icono: 'EC', nombre: 'En curso', total: enCurso.value.length },
-  { id: 'finalizar', icono: 'FI', nombre: 'Finalizar y archivar', total: porFinalizar.value.length },
+  { id: 'validar', icono: 'VA', nombre: 'Validar tickets', total: porValidar.value.length },
+  { id: 'clasificar', icono: 'CL', nombre: 'Clasificar prioridad', total: porClasificar.value.length },
+  { id: 'designar', icono: 'DE', nombre: 'Designar técnico', total: porDesignar.value.length },
+  { id: 'compra', icono: 'CO', nombre: 'Evaluar compra', total: porEvaluarCompra.value.length },
+  { id: 'verificar', icono: 'VF', nombre: 'Verificar funcionamiento', total: porVerificar.value.length },
+  { id: 'informe', icono: 'IF', nombre: 'Conformidad e informe', total: porConformar.value.length + porInformar.value.length },
   { id: 'reporte', icono: 'RM', nombre: 'Reporte mensual' },
 ])
 
 const titulo = computed(() => ({
-  resumen: 'Dashboard de Mantenimiento',
-  derivar: 'Derivar a auxiliar',
-  compra: 'Validar y elevar compra',
-  seguimiento: 'Requerimientos en curso',
-  finalizar: 'Finalizar y archivar',
+  resumen: 'Dashboard del Jefe de Mantenimiento',
+  validar: 'Recibir y validar tickets',
+  clasificar: 'Clasificar prioridad',
+  designar: 'Designar revisión al equipo',
+  compra: 'Recibir requerimiento y cotización',
+  verificar: 'Verificar funcionamiento',
+  informe: 'Conformidad e informe final',
   reporte: 'Reporte mensual',
 }[vista.value]))
 
-function formatoFecha(v) { return v ? new Date(v).toLocaleDateString('es-BO') : '—' }
-function headersJson() { return { Authorization: `Token ${localStorage.getItem('sigta_token')}`, 'Content-Type': 'application/json' } }
-function headersAuth() { return { Authorization: `Token ${localStorage.getItem('sigta_token')}` } }
+const subtitulo = computed(() => ({
+  resumen: 'Validación, clasificación y seguimiento de los requerimientos de mantenimiento.',
+  validar: 'Requerimientos registrados por los usuarios, pendientes de validación.',
+  clasificar: 'Defina la urgencia de cada requerimiento validado.',
+  designar: 'Asigne el técnico responsable de la revisión.',
+  compra: 'Evalúe la viabilidad de los componentes solicitados por el técnico.',
+  verificar: 'Confirme si la intervención resolvió el problema reportado.',
+  informe: 'Cierre del caso y elevación del informe a la Dirección.',
+  reporte: 'Consolidado mensual de mantenimientos finalizados.',
+}[vista.value]))
+
+const base = '/api/mantenimiento/requerimientos'
+const token = () => localStorage.getItem('sigta_token')
 
 async function cargar() {
   cargando.value = true
   try {
-    const r = await fetch('/api/mantenimiento/requerimientos/', { headers: headersAuth() })
+    const r = await fetch(`${base}/`, { headers: { Authorization: `Token ${token()}` } })
     const d = await r.json()
-    requerimientos.value = Array.isArray(d) ? d : (d.results || [])
-    const ra = await fetch('/api/usuarios/usuarios-por-rol/?rol=AUXILIAR_SERVICIOS_GENERALES', { headers: headersAuth() })
-    auxiliares.value = ra.ok ? await ra.json() : []
+    items.value = Array.isArray(d) ? d : (d.results || [])
+    const rt = await fetch('/api/usuarios/usuarios-por-rol/?rol=AUXILIAR_SERVICIOS_GENERALES', {
+      headers: { Authorization: `Token ${token()}` },
+    })
+    tecnicos.value = rt.ok ? await rt.json() : []
   } finally {
     cargando.value = false
   }
 }
 
-async function cargarReporte() {
-  const r = await fetch(`/api/mantenimiento/requerimientos/reporte-mensual/?anio=${reporte.anio}&mes=${reporte.mes}`, { headers: headersAuth() })
-  const d = await r.json().catch(() => ({}))
-  reporte.requerimientos = d.requerimientos || []
-}
-
-function salir() {
-  localStorage.removeItem('sigta_token')
-  localStorage.removeItem('sigta_usuario')
-  router.push('/login')
-}
-
-const itemDetalle = ref(null)
-function verItem(r) {
-  itemDetalle.value = r
-}
-
 async function postAccion(item, endpoint, body) {
   procesando.value = true
   try {
-    const r = await fetch(`/api/mantenimiento/requerimientos/${item.id}/${endpoint}/`, { method: 'POST', headers: headersJson(), body: JSON.stringify(body || {}) })
+    const r = await fetch(`${base}/${item.id}/${endpoint}/`, {
+      method: 'POST',
+      headers: { Authorization: `Token ${token()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    })
     const d = await r.json().catch(() => ({}))
     if (!r.ok) throw new Error(d.detalle || Object.values(d)[0] || 'No fue posible completar la acción.')
     await cargar()
@@ -260,31 +371,108 @@ async function postAccion(item, endpoint, body) {
   }
 }
 
-const formDerivar = reactive({ auxiliar_id: '', prioridad: 'MEDIA', criterio_prioridad: '' })
-function abrirDerivacion(item) {
+function irA(id) {
+  vista.value = id
+  menuAbierto.value = false
+  itemActivo.value = null
+}
+
+function abrir(item) {
   itemActivo.value = item
-  Object.assign(formDerivar, { auxiliar_id: '', prioridad: 'MEDIA', criterio_prioridad: '' })
+  formClasificar.prioridad = ''
+  formClasificar.criterio_prioridad = ''
+  formDesignar.tecnico_id = ''
+  formCompra.viable = true
+  formCompra.motivo_no_viable = ''
+  formInforme.informe_final = ''
 }
-async function derivarAuxiliar() {
-  try { await postAccion(itemActivo.value, 'derivar-auxiliar', { auxiliar_id: Number(formDerivar.auxiliar_id), prioridad: formDerivar.prioridad, criterio_prioridad: formDerivar.criterio_prioridad }) }
+
+function verItem(item) { detalle.value = item }
+
+function fecha(valor) {
+  return valor ? new Date(valor).toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' }) : 's/d'
+}
+
+function salir() {
+  localStorage.removeItem('sigta_token')
+  localStorage.removeItem('sigta_usuario')
+  router.push('/login')
+}
+
+/* Acciones del flujo */
+async function validar(item) {
+  try { await postAccion(item, 'validar-ticket', { es_valido: true }) } catch (e) { alert(e.message) }
+}
+
+async function rechazar(item) {
+  const motivo = prompt('Indique el motivo del rechazo:')
+  if (!motivo?.trim()) return
+  try { await postAccion(item, 'validar-ticket', { es_valido: false, motivo_rechazo: motivo.trim() }) }
   catch (e) { alert(e.message) }
 }
 
-async function elevarCompra(item) {
-  if (!confirm(`¿Validar y elevar a DAF la compra de ${item.producto_requerido || item.titulo}?`)) return
-  try { const data = await postAccion(item, 'validar-elevar-compra', {}); alert(data?.mensaje || 'Solicitud elevada a DAF correctamente.') }
+const formClasificar = reactive({ prioridad: '', criterio_prioridad: '' })
+async function clasificar() {
+  try {
+    await postAccion(itemActivo.value, 'clasificar-prioridad', {
+      prioridad: formClasificar.prioridad,
+      criterio_prioridad: formClasificar.criterio_prioridad.trim(),
+    })
+  } catch (e) { alert(e.message) }
+}
+
+const formDesignar = reactive({ tecnico_id: '' })
+async function designar() {
+  try { await postAccion(itemActivo.value, 'designar-revision', { tecnico_id: Number(formDesignar.tecnico_id) }) }
   catch (e) { alert(e.message) }
 }
 
-async function finalizarRequerimiento(r) {
-  if (!confirm(`¿Finalizar y archivar ${r.codigo}?`)) return
-  try { await postAccion(r, 'finalizar', {}) }
-  catch (e) { alert(e.message) }
+const formCompra = reactive({ viable: true, motivo_no_viable: '' })
+async function evaluarCompra() {
+  try {
+    const d = await postAccion(itemActivo.value, 'evaluar-viabilidad-compra', {
+      viable: formCompra.viable,
+      motivo_no_viable: formCompra.motivo_no_viable.trim(),
+    })
+    alert(d?.mensaje || 'Evaluación registrada.')
+  } catch (e) { alert(e.message) }
 }
 
-onMounted(() => { cargar(); cargarReporte() })
+async function verificar(item, resuelto) {
+  try {
+    const d = await postAccion(item, 'verificar-funcionamiento', { problema_resuelto: resuelto })
+    alert(d?.mensaje || 'Verificación registrada.')
+  } catch (e) { alert(e.message) }
+}
+
+async function conformar(item) {
+  try { await postAccion(item, 'informar-conformidad', {}) } catch (e) { alert(e.message) }
+}
+
+const formInforme = reactive({ informe_final: '' })
+async function elaborarInforme() {
+  try {
+    await postAccion(itemActivo.value, 'elaborar-informe-final', { informe_final: formInforme.informe_final.trim() })
+    alert('Informe final validado y elevado a la Dirección.')
+  } catch (e) { alert(e.message) }
+}
+
+const periodo = reactive({ anio: new Date().getFullYear(), mes: new Date().getMonth() + 1 })
+async function cargarReporte() {
+  procesando.value = true
+  try {
+    const r = await fetch(`${base}/reporte-mensual/?anio=${periodo.anio}&mes=${periodo.mes}`, {
+      headers: { Authorization: `Token ${token()}` },
+    })
+    reporte.value = r.ok ? await r.json() : null
+  } finally {
+    procesando.value = false
+  }
+}
+
+onMounted(cargar)
 </script>
 
 <style scoped>
-*{box-sizing:border-box}.layout{min-height:100vh;background:#f5f6fa;color:#232f4a;font-family:Inter,Segoe UI,sans-serif}aside{position:fixed;inset:0 auto 0 0;width:278px;background:#222f55;color:white;padding:22px 16px;display:flex;flex-direction:column}.brand,.profile{display:flex;align-items:center;gap:12px}.brand{padding:0 10px 20px;border-bottom:1px solid #ffffff20}.brand>b{background:#e6b941;color:#243155;padding:14px 10px;border-radius:9px}.brand strong,.brand small,.profile b,.profile small{display:block}.brand strong{font-size:23px}.brand small,.profile small{color:#c0c9e1;margin-top:3px}.profile{padding:22px 10px}.profile>i{width:42px;height:42px;border-radius:50%;background:#e6b941;color:#253154;display:grid;place-items:center;font-style:normal;font-weight:900}aside>p{font-size:10px;color:#929fc5;font-weight:800;letter-spacing:1.4px;margin:14px 10px 8px}aside button{border:0;background:transparent;color:#dfe4f2;border-radius:8px;padding:12px;display:flex;gap:11px;align-items:center;text-align:left;cursor:pointer;margin:2px 0;width:100%}aside button>span{font-size:10px;font-weight:900;width:28px}aside button em{margin-left:auto;background:#ffffff1c;padding:2px 8px;border-radius:10px;font-style:normal}aside button.active,aside button:hover{background:#ffffff14;box-shadow:inset 3px 0 #e6b941}.bottom{margin-top:auto;border-top:1px solid #ffffff20;padding-top:10px}.bottom button{width:100%}main{margin-left:278px;padding:30px 38px 55px;max-width:1650px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:27px}header small{color:#78839e}h1{font-size:29px;margin:6px 0}header p{margin:0;color:#737e96}.refresh{border:1px solid #d9deea;background:white;color:#313e69;padding:10px 14px;border-radius:8px}.hero{background:linear-gradient(120deg,#25335a,#3b4d7d);color:white;border-radius:13px;padding:28px 30px;display:flex;justify-content:space-between;align-items:center}.hero small,.panel-head small{font-size:10px;font-weight:800;letter-spacing:1.4px;color:#edc65a}.hero h2{font-size:24px;margin:7px 0}.hero p{margin:0;color:#dce1ee}.hero>span{width:68px;height:68px;border:1px solid #edc65a88;border-radius:50%;display:grid;place-items:center;font-weight:900}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0}.stats article{background:white;border:1px solid #e0e3ec;border-radius:10px;padding:19px;display:flex;gap:13px}.stats i,.flow i{font-style:normal;width:37px;height:37px;border-radius:8px;display:grid;place-items:center;color:white;font-size:10px;font-weight:900}.blue{background:#3b7fba}.gold{background:#c89c2d}.green{background:#38936e}.navy{background:#34456e}.stats small,.stats b,.stats p{display:block}.stats b{font-size:25px;margin:3px 0}.stats p{font-size:11px;color:#858da0;margin:0}.panels{display:grid;grid-template-columns:2fr 1fr;gap:18px}.panel{background:white;border:1px solid #e0e3ec;border-radius:11px;padding:22px}.panel-head h3{margin:5px 0 14px}.flow{width:100%;border:0;border-top:1px solid #e9ebf1;background:white;padding:15px 2px;display:flex;gap:13px;align-items:center;text-align:left;cursor:pointer}.flow div{flex:1}.flow b,.flow small{display:block}.flow small{color:#81899b;margin-top:4px}.flow>strong{font-size:20px}.copy{color:#707b91;font-size:12px;line-height:1.7}.wide{width:100%;padding:10px;border-radius:7px}.toolbar{display:flex;gap:12px;align-items:flex-end;margin-bottom:17px}.primary{background:#293b67!important;color:white!important;border-color:#293b67!important}.instruction{background:#fff8e7;border-left:4px solid #d4a632;padding:14px 17px;margin-bottom:17px;border-radius:7px}.instruction b,.instruction span{display:block}.instruction span{font-size:12px;color:#766b4d;margin-top:4px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.cards article{background:white;border:1px solid #dfe3eb;border-radius:10px;padding:19px}.top{display:flex;justify-content:space-between}.top span{font-size:12px;font-weight:800;color:#3d5d96}.top em{font-size:10px;background:#eff0f5;padding:4px 8px;border-radius:10px;font-style:normal}.cards h3{font-size:17px;margin:15px 0 7px}.cards article>p{font-size:12px;color:#778096;min-height:42px}.actions{display:flex;gap:7px;border-top:1px solid #e8eaf0;padding-top:13px;margin-top:10px}.actions button{flex:1;padding:9px 6px;border-radius:7px;border:1px solid #cdd3e0;background:white;color:#3e4b69;font-weight:700;cursor:pointer}.empty{text-align:center;background:white;border:1px dashed #cbd0dc;padding:65px;border-radius:10px;color:#798196}.empty>span{font-size:31px;color:#38936e}.campo{display:block;margin:14px 0;font-size:12px;font-weight:700;color:#465170}.campo.inline{margin:0}.campo input,.campo select,.campo textarea{display:block;width:100%;margin-top:6px;padding:9px 11px;border:1px solid #d9deea;border-radius:7px;font-family:inherit;font-size:13px;font-weight:400;color:#232f4a}.table{background:white;border:1px solid #dfe3eb;border-radius:10px;overflow:hidden}.thead,.row{display:grid;grid-template-columns:1fr 1.6fr 1fr .8fr 1.2fr;gap:10px;align-items:center;padding:14px 18px}.thead{background:#eff0f5;color:#737b90;font-size:10px;font-weight:800}.row{border-top:1px solid #e8eaf0;font-size:12px}.row em{font-style:normal;color:#318266}@media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.panels{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}@media(max-width:720px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}header,.toolbar{align-items:flex-start;flex-direction:column;gap:12px}.table{overflow:auto}.thead,.row{min-width:760px}}
+*{box-sizing:border-box}.layout{min-height:100vh;background:var(--sigta-fondo);color:var(--sigta-texto);font-family:var(--sigta-fuente)}aside{position:fixed;inset:0 auto 0 0;width:var(--sigta-sidebar);background:var(--sigta-azul);color:var(--sigta-blanco);padding:22px 16px;display:flex;flex-direction:column}.brand,.profile{display:flex;align-items:center;gap:12px}.brand{padding:0 10px 20px;border-bottom:1px solid rgba(255,255,255,.2)}.brand>b{background:var(--sigta-mostaza);color:var(--sigta-azul);padding:14px 10px;border-radius:9px}.brand strong,.brand small,.profile b,.profile small{display:block}.brand strong{font-size:23px}.brand small,.profile small{color:var(--sigta-azul-texto-claro);margin-top:3px}.profile{padding:22px 10px}.profile>i{width:42px;height:42px;border-radius:50%;background:var(--sigta-mostaza);color:var(--sigta-azul);display:grid;place-items:center;font-style:normal;font-weight:900}aside>p{font-size:10px;color:var(--sigta-azul-texto-claro);font-weight:800;letter-spacing:1.4px;margin:14px 10px 8px}aside button{border:0;background:transparent;color:var(--sigta-blanco);border-radius:8px;padding:12px;display:flex;gap:11px;align-items:center;text-align:left;cursor:pointer;margin:2px 0;width:100%}aside button>span{font-size:10px;font-weight:900;width:28px}aside button em{margin-left:auto;background:rgba(255,255,255,.16);padding:2px 8px;border-radius:10px;font-style:normal}aside button.active,aside button:hover{background:rgba(255,255,255,.13)}.bottom{margin-top:auto;border-top:1px solid rgba(255,255,255,.2);padding-top:10px}.bottom button{width:100%}main{margin-left:var(--sigta-sidebar);padding:30px 38px 55px;max-width:1650px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:27px}header small{color:var(--sigta-texto-suave)}h1{font-size:var(--sigta-titulo);margin:6px 0}header p{margin:0;color:var(--sigta-texto-suave)}.refresh{border:1px solid var(--sigta-borde);background:var(--sigta-blanco);color:var(--sigta-azul);padding:10px 14px;border-radius:8px;cursor:pointer}.hero{background:linear-gradient(120deg,var(--sigta-azul),var(--sigta-azul-medio));color:var(--sigta-blanco);border-radius:13px;padding:28px 30px;display:flex;justify-content:space-between;align-items:center}.hero small,.panel-head small{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--sigta-mostaza-clara)}.hero h2{font-size:24px;margin:7px 0}.hero p{margin:0;color:var(--sigta-azul-texto-claro)}.hero>span{width:68px;height:68px;border:1px solid var(--sigta-mostaza);border-radius:50%;display:grid;place-items:center;font-weight:900}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0}.stats article{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:10px;padding:19px;display:flex;gap:13px;cursor:pointer}.stats i,.flow i{font-style:normal;width:37px;height:37px;border-radius:8px;display:grid;place-items:center;color:var(--sigta-blanco);font-size:10px;font-weight:900}.blue{background:var(--sigta-azul)}.gold{background:var(--sigta-mostaza);color:var(--sigta-texto)!important}.green{background:var(--sigta-azul-medio)}.navy{background:var(--sigta-azul-medio)}.stats small,.stats b,.stats p{display:block}.stats b{font-size:25px;margin:3px 0}.stats p{font-size:11px;color:var(--sigta-texto-suave);margin:0}.panels{display:grid;grid-template-columns:2fr 1fr;gap:18px}.panel{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:11px;padding:22px}.panel-head h3{margin:5px 0 14px}.flow{width:100%;border:0;border-top:1px solid var(--sigta-borde-suave);background:var(--sigta-blanco);padding:15px 2px;display:flex;gap:13px;align-items:center;text-align:left;cursor:pointer}.flow div{flex:1}.flow b,.flow small{display:block}.flow small{color:var(--sigta-texto-suave);margin-top:4px}.flow>strong{font-size:20px}.copy{color:var(--sigta-texto-suave);font-size:12px;line-height:1.7}.wide{width:100%;padding:10px;border-radius:7px;border:1px solid var(--sigta-borde);cursor:pointer}.primary{background:var(--sigta-azul)!important;color:var(--sigta-blanco)!important;border-color:var(--sigta-azul)!important}.instruction{background:var(--sigta-mostaza-suave);border-left:4px solid var(--sigta-mostaza);padding:14px 17px;margin-bottom:17px;border-radius:7px}.instruction b,.instruction span{display:block}.instruction span{font-size:12px;color:var(--sigta-alerta);margin-top:4px}.mini-alerta{background:var(--sigta-error-fondo);color:var(--sigta-error);font-size:11px;font-weight:700;padding:7px 9px;border-radius:6px;margin-bottom:10px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}.cards article{background:var(--sigta-blanco);border:1px solid var(--sigta-borde);border-radius:10px;padding:19px}.cards article.retorno{border-color:var(--sigta-error);box-shadow:inset 3px 0 var(--sigta-error)}.top{display:flex;justify-content:space-between;gap:8px}.top span{font-size:12px;font-weight:800;color:var(--sigta-azul)}.top em{font-size:10px;background:var(--sigta-azul-tenue);padding:4px 8px;border-radius:10px;font-style:normal}.cards h3{font-size:17px;margin:15px 0 7px}.cards article>p{font-size:12px;color:var(--sigta-texto-suave);min-height:42px}.datos{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:4px}.datos li{display:flex;justify-content:space-between;gap:10px;font-size:11px;border-bottom:1px dashed var(--sigta-borde-suave);padding-bottom:3px}.datos b{color:var(--sigta-texto-suave)}.datos span{color:var(--sigta-texto-suave);text-align:right}.adjunto{display:inline-block;font-size:11px;color:var(--sigta-azul);margin-bottom:10px;text-decoration:none}.actions{display:flex;gap:7px;border-top:1px solid var(--sigta-borde-suave);padding-top:13px;margin-top:10px;align-items:flex-end}.actions button{flex:1;padding:9px 6px;border-radius:7px;border:1px solid var(--sigta-borde);background:var(--sigta-blanco);color:var(--sigta-texto);font-weight:700;cursor:pointer}.actions button:disabled{opacity:.55;cursor:not-allowed}.reject{color:var(--sigta-error)!important;border-color:var(--sigta-error)!important}.empty{text-align:center;background:var(--sigta-blanco);border:1px dashed var(--sigta-borde);padding:65px;border-radius:10px;color:var(--sigta-texto-suave)}.empty>span{font-size:31px;color:var(--sigta-exito)}.campo{display:block;margin:14px 0;font-size:12px;font-weight:700;color:var(--sigta-texto)}.campo input,.campo select,.campo textarea{display:block;width:100%;margin-top:6px;padding:9px 11px;border:1px solid var(--sigta-borde);border-radius:7px;font-family:inherit;font-size:13px;font-weight:400;color:var(--sigta-texto)}.reporte-item{padding:9px 0;border-top:1px solid var(--sigta-borde-suave);font-size:13px}.detalle-modal-backdrop{position:fixed;inset:0;background:rgba(18,58,107,.55);display:grid;place-items:center;padding:20px;z-index:20}.detalle-modal{background:var(--sigta-blanco);border-radius:14px;width:min(700px,100%);max-height:88vh;display:flex;flex-direction:column}.detalle-modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--sigta-borde-suave)}.detalle-modal-header h3{margin:0}.detalle-modal-header small{color:var(--sigta-texto-suave)}.detalle-modal-close{border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--sigta-texto-suave)}.detalle-modal-body{padding:20px 24px;overflow-y:auto;display:grid;gap:14px}.detalle-fila{display:grid;grid-template-columns:1fr 1fr;gap:14px}.detalle-campo b{display:block;font-size:11px;color:var(--sigta-texto-suave);margin-bottom:4px}.detalle-campo span,.detalle-campo p{font-size:13px;color:var(--sigta-texto);margin:0}@media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.panels{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}@media(max-width:760px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column;gap:12px}.detalle-fila{grid-template-columns:1fr}}
 </style>

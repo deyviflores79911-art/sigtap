@@ -29,9 +29,7 @@
           type="button"
           @click="router.push('/superuser/usuarios')"
         >
-          <div class="quick-icon">
-            👥
-          </div>
+          <IconoSigta class="quick-icon" nombre="usuarios" :tamano="22" />
 
           <div>
             <strong>
@@ -51,9 +49,7 @@
           type="button"
           @click="router.push('/superuser/roles-permisos')"
         >
-          <div class="quick-icon">
-            🔐
-          </div>
+          <IconoSigta class="quick-icon" nombre="roles" :tamano="22" />
 
           <div>
             <strong>
@@ -73,9 +69,7 @@
           type="button"
           @click="router.push('/superuser/auditoria')"
         >
-          <div class="quick-icon">
-            📜
-          </div>
+          <IconoSigta class="quick-icon" nombre="auditoria" :tamano="22" />
 
           <div>
             <strong>
@@ -117,9 +111,7 @@
           type="button"
           @click="router.push('/superuser/preferencias')"
         >
-          <div class="quick-icon">
-            ⚙️
-          </div>
+          <IconoSigta class="quick-icon" nombre="configuracion" :tamano="22" />
 
           <div>
             <strong>
@@ -143,6 +135,7 @@
 
 
 <script setup>
+import IconoSigta from '../components/IconoSigta.vue'
 
 import {
   useRouter
@@ -172,8 +165,8 @@ const router =
 .layout {
   min-height: 100vh;
   display: flex;
-  background: #f2f5f9;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--sigta-azul-tenue);
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -196,14 +189,14 @@ const router =
 
 .page-header h1 {
   margin: 0;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 33px;
 }
 
 
 .page-header p {
   margin: 5px 0 0;
-  color: #718294;
+  color: var(--sigta-texto-suave);
   font-size: 17px;
 }
 
@@ -225,9 +218,9 @@ const router =
   align-items: center;
   gap: 15px;
   padding: 19px;
-  border: 1px solid #dae2e8;
+  border: 1px solid var(--sigta-borde);
   border-radius: 9px;
-  background: #fbfcfd;
+  background: var(--sigta-azul-tenue);
   text-align: left;
   cursor: pointer;
   transition:
@@ -238,7 +231,7 @@ const router =
 
 
 .quick-card:hover {
-  border-color: #6576B4;
+  border-color: var(--sigta-azul);
   box-shadow: 0 5px 14px rgba(0,0,0,.07);
 }
 
@@ -256,14 +249,14 @@ const router =
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: #6576B4;
+  background: var(--sigta-azul);
   font-size: 22px;
 }
 
 
 .quick-card strong {
   display: block;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 18px;
 }
 
@@ -271,7 +264,7 @@ const router =
 .quick-card span {
   display: block;
   margin-top: 4px;
-  color: #6f7e8b;
+  color: var(--sigta-texto-suave);
   font-size: 15px;
   line-height: 1.5;
 }

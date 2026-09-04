@@ -101,7 +101,7 @@
               :class="{ activo: form.categoria === 'MANTENIMIENTO' }"
               @click="form.categoria = 'MANTENIMIENTO'"
             >
-              <span class="categoria-icon">🛠️</span>
+              <IconoSigta class="categoria-icon" nombre="mantenimiento" :tamano="22" />
               <span>Mantenimiento</span>
             </button>
 
@@ -443,6 +443,7 @@
 
 
 <script setup>
+import IconoSigta from '../components/IconoSigta.vue'
 
 import {
   computed,
@@ -1465,12 +1466,9 @@ function cerrarSesion() {
 
   display: flex;
 
-  background: #eef3f8;
+  background: var(--sigta-azul-tenue);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -1528,7 +1526,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #111111;
+  color: var(--sigta-texto);
 
   font-size: 36px;
 }
@@ -1541,7 +1539,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 17px;
 }
@@ -1596,9 +1594,9 @@ function cerrarSesion() {
 
   border-radius: 50%;
 
-  background: #f2c400;
+  background: var(--sigta-mostaza);
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 17px;
 
@@ -1615,7 +1613,7 @@ function cerrarSesion() {
 
 .user-card strong {
 
-  color: #111111;
+  color: var(--sigta-texto);
 
   font-size: 19px;
 }
@@ -1625,7 +1623,7 @@ function cerrarSesion() {
 
   margin-top: 2px;
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 16px;
 }
@@ -1643,7 +1641,7 @@ function cerrarSesion() {
 
   border-radius: 10px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
   box-shadow:
     0
@@ -1657,7 +1655,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #111111;
+  color: var(--sigta-texto);
 
   font-size: 24px;
 }
@@ -1670,7 +1668,7 @@ function cerrarSesion() {
     0
     17px;
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 17px;
 }
@@ -1713,13 +1711,13 @@ function cerrarSesion() {
   min-height: 56px;
 
   border:
-    2px solid #dae2e8;
+    2px solid var(--sigta-borde);
 
   border-radius: 9px;
 
-  background: #fbfcfd;
+  background: var(--sigta-azul-tenue);
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 18px;
 
@@ -1736,17 +1734,17 @@ function cerrarSesion() {
 
 .categoria-btn:hover {
 
-  border-color: #6576B4;
+  border-color: var(--sigta-azul);
 }
 
 
 .categoria-btn.activo {
 
-  border-color: #6576B4;
+  border-color: var(--sigta-azul);
 
-  background: #eef0fa;
+  background: var(--sigta-azul-tenue);
 
-  color: #6576B4;
+  color: var(--sigta-azul);
 }
 
 
@@ -1768,7 +1766,7 @@ function cerrarSesion() {
 
 .field label {
 
-  color: #111111;
+  color: var(--sigta-texto);
 
   font-size: 17px;
 
@@ -1778,7 +1776,7 @@ function cerrarSesion() {
 
 .field label span {
 
-  color: #c0392b;
+  color: var(--sigta-error);
 }
 
 
@@ -1790,13 +1788,13 @@ function cerrarSesion() {
     15px;
 
   border:
-    1px solid #cdd7e0;
+    1px solid var(--sigta-borde);
 
   border-radius: 8px;
 
   background: white;
 
-  color: #111111;
+  color: var(--sigta-texto);
 
   font-family: inherit;
 
@@ -1815,7 +1813,7 @@ function cerrarSesion() {
 
   outline: none;
 
-  border-color: #6576B4;
+  border-color: var(--sigta-azul);
 }
 
 
@@ -1836,13 +1834,13 @@ function cerrarSesion() {
   min-height: 56px;
 
   border:
-    2px dashed #cdd7e0;
+    2px dashed var(--sigta-borde);
 
   border-radius: 8px;
 
-  background: #fbfcfd;
+  background: var(--sigta-azul-tenue);
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 16px;
 
@@ -1855,7 +1853,7 @@ function cerrarSesion() {
 
 .file-drop:hover {
 
-  border-color: #6576B4;
+  border-color: var(--sigta-azul);
 }
 
 
@@ -1870,11 +1868,11 @@ function cerrarSesion() {
   padding: 10px;
 
   border:
-    1px solid #cdd7e0;
+    1px solid var(--sigta-borde);
 
   border-radius: 8px;
 
-  background: #fbfcfd;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -1902,7 +1900,7 @@ function cerrarSesion() {
 
   white-space: nowrap;
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 15px;
 }
@@ -1918,9 +1916,9 @@ function cerrarSesion() {
 
   border-radius: 6px;
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 
   font-size: 15px;
 
@@ -1940,9 +1938,9 @@ function cerrarSesion() {
 
   border-radius: 7px;
 
-  background: #e8f7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #267449;
+  color: var(--sigta-exito);
 
   font-size: 16px;
 }
@@ -1950,9 +1948,9 @@ function cerrarSesion() {
 
 .form-mensaje.error {
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 }
 
 
@@ -1976,7 +1974,7 @@ function cerrarSesion() {
 
   border-radius: 8px;
 
-  background: #6576B4;
+  background: var(--sigta-azul);
 
   color: white;
 
@@ -2027,7 +2025,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #111111;
+  color: var(--sigta-texto);
 
   font-size: 22px;
 }
@@ -2040,7 +2038,7 @@ function cerrarSesion() {
     0
     22px;
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 16px;
 
@@ -2091,7 +2089,7 @@ function cerrarSesion() {
 
   border-radius: 9px;
 
-  background: #d8e4f7;
+  background: var(--sigta-azul-texto-claro);
 }
 
 
@@ -2099,7 +2097,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #111111;
+  color: var(--sigta-texto);
 
   font-size: 24px;
 }
@@ -2112,7 +2110,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 17px;
 }
@@ -2127,13 +2125,13 @@ function cerrarSesion() {
     11px;
 
   border:
-    1px solid #cdd7e0;
+    1px solid var(--sigta-borde);
 
   border-radius: 6px;
 
   background: white;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 17px;
 
@@ -2171,7 +2169,7 @@ function cerrarSesion() {
     4px;
 
   border-top:
-    1px solid #edf0f2;
+    1px solid var(--sigta-azul-tenue);
 }
 
 
@@ -2195,7 +2193,7 @@ function cerrarSesion() {
 
 .ticket-list strong {
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 17px;
 }
@@ -2207,7 +2205,7 @@ function cerrarSesion() {
     5px
     0;
 
-  color: #111111;
+  color: var(--sigta-texto);
 
   font-size: 20px;
 }
@@ -2231,9 +2229,9 @@ function cerrarSesion() {
 
   border-radius: 4px;
 
-  background: #f0f4f7;
+  background: var(--sigta-azul-tenue);
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 15px;
 }
@@ -2261,9 +2259,9 @@ function cerrarSesion() {
 
   border-radius: 5px;
 
-  background: #eaf3fb;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 16px;
 
@@ -2306,71 +2304,71 @@ function cerrarSesion() {
 .estado.status-new,
 .status-dot.status-new {
 
-  background: #e8f2fb;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 }
 
 
 .status-dot.status-new {
 
-  background: #2782c5;
+  background: var(--sigta-texto-suave);
 }
 
 
 .estado.status-process {
 
-  background: #fff3d7;
+  background: var(--sigta-mostaza-suave);
 
-  color: #946700;
+  color: var(--sigta-mostaza-oscuro);
 }
 
 
 .status-dot.status-process {
 
-  background: #e7a70b;
+  background: var(--sigta-mostaza);
 }
 
 
 .estado.status-closed {
 
-  background: #e8f7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #267449;
+  color: var(--sigta-exito);
 }
 
 
 .status-dot.status-closed {
 
-  background: #2baa62;
+  background: var(--sigta-exito);
 }
 
 
 .estado.status-cancelled {
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 }
 
 
 .status-dot.status-cancelled {
 
-  background: #db4545;
+  background: var(--sigta-error);
 }
 
 
 .estado.status-default {
 
-  background: #eef2f5;
+  background: var(--sigta-azul-tenue);
 
-  color: #687c8d;
+  color: var(--sigta-texto-suave);
 }
 
 
 .status-dot.status-default {
 
-  background: #8798a6;
+  background: var(--sigta-texto-suave);
 }
 
 
@@ -2384,7 +2382,7 @@ function cerrarSesion() {
 
   text-align: center;
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 18px;
 }
@@ -2419,9 +2417,9 @@ function cerrarSesion() {
 
   border-radius: 50%;
 
-  background: #eaf3fb;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 17px;
 
@@ -2433,7 +2431,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #111111;
+  color: var(--sigta-texto);
 
   font-size: 21px;
 }
@@ -2448,7 +2446,7 @@ function cerrarSesion() {
     auto
     14px;
 
-  color: #3a3a3a;
+  color: var(--sigta-texto);
 
   font-size: 17px;
 
@@ -2466,9 +2464,9 @@ function cerrarSesion() {
 
   border-radius: 7px;
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 
   font-size: 18px;
 }

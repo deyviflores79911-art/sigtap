@@ -83,14 +83,11 @@ const titulo = computed(() => {
   background:
     linear-gradient(
       135deg,
-      #0a2f54,
-      #1f628f
+      var(--sigta-azul),
+      var(--sigta-texto-suave)
     );
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 .card {
@@ -104,7 +101,7 @@ const titulo = computed(() => {
   background: white;
 
   border-top:
-    4px solid #f2c400;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 14px;
 
@@ -126,11 +123,11 @@ const titulo = computed(() => {
   justify-content: center;
 
   border:
-    3px solid #f2c400;
+    3px solid var(--sigta-mostaza);
 
   border-radius: 12px;
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
   color: white;
 
@@ -141,11 +138,11 @@ h1 {
   margin:
     0 0 10px;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 }
 
 p {
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 
@@ -164,7 +161,7 @@ button {
 
   border-radius: 7px;
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
   color: white;
 

@@ -15,7 +15,9 @@ class SolicitudCompra(models.Model):
     ]
 
     # Estados vigentes del flujo real de Caja Chica (único
-    # flujo implementado hoy). Los estados de un diseño
+    # flujo implementado hoy). El BPMN lleva la certificación de la
+    # DAF directamente a la autorización del Director: Tesorería solo
+    # desembolsa, por lo que no existe un paso de verificación previo. Los estados de un diseño
     # "Finanzas" anterior (NUEVO, EN_COTIZACION, EN_APROBACION,
     # APROBADO, ORDEN_EMITIDA, EN_TRANSITO, RECIBIDO,
     # EN_VERIFICACION, CERRADO) fueron retirados por no usarse
@@ -23,13 +25,12 @@ class SolicitudCompra(models.Model):
     ESTADOS = [
         ("CREADO_PENDIENTE_DAF", "Creado - pendiente DAF"),
         ("EVALUADO_PENDIENTE_CERTIFICACION", "Evaluado - pendiente de certificación"),
-        ("CERTIFICADO_PENDIENTE_VERIFICACION", "Certificado - pendiente de verificación"),
-        ("VERIFICADO_PENDIENTE_AUTORIZACION", "Verificado - pendiente de autorización"),
+        ("VERIFICADO_PENDIENTE_AUTORIZACION", "Certificado - pendiente de autorización"),
         ("APROBADO_PARA_DESEMBOLSO", "Aprobado para desembolso"),
         ("FONDOS_DESEMBOLSADOS", "Fondos desembolsados"),
         ("COMPRA_REGISTRADA", "Compra realizada - pendiente de entrega"),
         ("COMPRADO_Y_ENTREGADO", "Comprado y entregado"),
-        ("DESCARGO_PENDIENTE_LIQUIDACION", "Descargo pendiente de liquidación"),
+        ("DESCARGO_PENDIENTE_LIQUIDACION", "Acta firmada - pendiente de recepción"),
         ("CERRADO_ARCHIVADO", "Cerrado y archivado"),
         ("RECHAZADO", "Rechazado"),
         ("ANULADO", "Anulado"),
@@ -196,6 +197,24 @@ class SolicitudCompra(models.Model):
 
     motivo_rechazo = models.TextField(blank=True)
     monto_desembolsado = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+
+    # El dinero sale de Tesorería, pero alguien tiene que recogerlo: hasta
+    # que el Encargado confirme la recepción, el expediente muestra que los
+    # fondos están listos para retirar y Tesorería sabe que sigue pendiente.
+    fondos_recibidos_en = models.DateTimeField(null=True, blank=True)
+    fondos_recibidos_por = models.CharField(max_length=150, blank=True)
+
+    # Avance visible mientras el Encargado gestiona la compra, para que el
+    # resto del proceso sepa que el expediente está siendo trabajado y no
+    # detenido.
+    GESTIONES = [
+        ("BUSCANDO", "Buscando producto o proveedor"),
+        ("COMPRANDO", "Compra en curso"),
+    ]
+
+    gestion_estado = models.CharField(max_length=20, choices=GESTIONES, blank=True)
+    gestion_nota = models.CharField(max_length=200, blank=True)
+    gestion_actualizada_en = models.DateTimeField(null=True, blank=True)
     responsable_adquisicion = models.CharField(max_length=150, blank=True)
     monto_real = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     proveedor = models.CharField(max_length=180, blank=True)
@@ -207,12 +226,39 @@ class SolicitudCompra(models.Model):
     componente_verificado = models.BooleanField(default=False)
     observacion_verificacion = models.TextField(blank=True)
 
-    # "Registrar ingreso al almacén" y "Registrar despacho desde
-    # almacén" son dos confirmaciones separadas en la UI (dos
-    # casos de uso distintos) aunque compartan el mismo estado
-    # COMPRA_REGISTRADA -> COMPRADO_Y_ENTREGADO del BPMN.
+    # Sin comprobante no hay compra: el registro debe quedar respaldado
+    # con la factura o recibo del proveedor.
+    comprobante_compra = models.FileField(
+        upload_to="compras/comprobantes/%Y/%m/",
+        null=True,
+        blank=True,
+        help_text="Factura o recibo que respalda la compra realizada."
+    )
+
+    fecha_compra = models.DateTimeField(null=True, blank=True)
+
+    # BPMN: entrada de almacén -> salida de almacén -> entrega del bien
+    # con acta de conformidad. Son tres registros distintos y en ese orden.
     fecha_ingreso_almacen = models.DateTimeField(null=True, blank=True)
+
+    # Control de almacén: qué cantidad ingresó, quién la recibió y qué
+    # observaciones dejó la recepción.
+    cantidad_recibida = models.PositiveIntegerField(null=True, blank=True)
+    responsable_recepcion = models.CharField(max_length=150, blank=True)
+    observacion_ingreso = models.TextField(blank=True)
+
     fecha_despacho_almacen = models.DateTimeField(null=True, blank=True)
+
+    # Control de salida: qué cantidad salió y a quién se entregó.
+    cantidad_entregada = models.PositiveIntegerField(null=True, blank=True)
+    entregado_a = models.CharField(max_length=150, blank=True)
+    observacion_salida = models.TextField(blank=True)
+
+    fecha_entrega_solicitante = models.DateTimeField(null=True, blank=True)
+
+    # Cierre en el carril del solicitante: firma el acta y recibe el bien.
+    acta_firmada_en = models.DateTimeField(null=True, blank=True)
+    solicitud_recibida_en = models.DateTimeField(null=True, blank=True)
 
     cerrado_inmutable = models.BooleanField(default=False)
 

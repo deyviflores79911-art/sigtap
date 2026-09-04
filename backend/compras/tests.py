@@ -14,7 +14,7 @@ class FlujoCajaChicaTests(APITestCase):
 
         self.area = Area.objects.create(codigo="TEST", nombre="Área de prueba")
         self.usuarios = {}
-        for codigo in ("SOLICITANTE", "DAF", "TESORERIA", "DIRECTOR", "ENCARGADO_COMPRAS_ALMACEN"):
+        for codigo in ("SOLICITANTE", "DAF", "TESORERIA", "DIRECTOR", "ENCARGADO_COMPRAS_ALMACEN", "ADMIN"):
             rol = Rol.objects.get(codigo=codigo)
             usuario = Usuario.objects.create_user(
                 username=codigo.lower(), email=f"{codigo.lower()}@emi.edu.bo",
@@ -47,10 +47,8 @@ class FlujoCajaChicaTests(APITestCase):
         r = self.client.post(f"/api/compras/solicitudes/{pk}/evaluar-daf/", {"califica": True}, format="json")
         self.assertEqual(r.data["estado"], "EVALUADO_PENDIENTE_CERTIFICACION")
         r = self.client.post(f"/api/compras/solicitudes/{pk}/certificar-daf/", {"certificacion_presupuestaria": self.archivo("certificacion.pdf")}, format="multipart")
-        self.assertEqual(r.data["estado"], "CERTIFICADO_PENDIENTE_VERIFICACION")
-
-        self.autenticar("TESORERIA")
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/verificar-tesoreria/", {}, format="json")
+        # La certificación de la DAF pasa directo al Director: Tesorería
+        # solo desembolsa (no hay verificación previa en el BPMN).
         self.assertEqual(r.data["estado"], "VERIFICADO_PENDIENTE_AUTORIZACION")
 
         self.autenticar("DIRECTOR")
@@ -66,18 +64,22 @@ class FlujoCajaChicaTests(APITestCase):
         self.assertEqual(r.data["estado"], "COMPRA_REGISTRADA", r.data)
         r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-ingreso-almacen/", {}, format="json")
         self.assertEqual(r.status_code, 200, r.data)
+        # Salida de almacén y entrega con acta son dos registros distintos.
         r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-despacho-almacen/", {}, format="json")
+        self.assertEqual(r.data["estado"], "COMPRA_REGISTRADA", r.data)
+
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/entregar-con-acta/", {
+            "acta_conformidad": self.archivo("acta.pdf"),
+        }, format="multipart")
         self.assertEqual(r.data["estado"], "COMPRADO_Y_ENTREGADO", r.data)
 
+        # El cierre ocurre en el carril del solicitante: firma el acta y
+        # recibe formalmente el bien.
         self.autenticar("SOLICITANTE")
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/presentar-descargo/", {
-            "factura": self.archivo("factura.pdf"), "acta_conformidad": self.archivo("acta.pdf"),
-            "fotograma": self.archivo("foto.pdf"),
-        }, format="multipart")
-        self.assertEqual(r.data["estado"], "DESCARGO_PENDIENTE_LIQUIDACION")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/firmar-acta/", {}, format="json")
+        self.assertEqual(r.data["estado"], "DESCARGO_PENDIENTE_LIQUIDACION", r.data)
 
-        self.autenticar("TESORERIA")
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/cerrar-archivar/", {}, format="json")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/recibir-solicitud/", {}, format="json")
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(r.data["estado"], "CERRADO_ARCHIVADO")
         self.assertTrue(r.data["cerrado_inmutable"])
@@ -130,19 +132,20 @@ class SeguridadFlujoComprasTests(APITestCase):
         }, format="json")
         self.assertEqual(r.status_code, 409, r.data)
 
-    def test_no_se_puede_saltar_certificacion_e_ir_directo_a_verificar(self):
+    def test_tesoreria_no_puede_desembolsar_sin_autorizacion_del_director(self):
         pk = self.crear_solicitud()
         self.autenticar("DAF")
         self.client.post(f"/api/compras/solicitudes/{pk}/evaluar-daf/", {"califica": True}, format="json")
+        self.client.post(f"/api/compras/solicitudes/{pk}/certificar-daf/", {"certificacion_presupuestaria": self.archivo("cert.pdf")}, format="multipart")
 
         self.autenticar("TESORERIA")
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/verificar-tesoreria/", {}, format="json")
-        # Puede rechazar por documentos incompletos (400) o por
-        # estado (409): lo que importa es que NO avanza el flujo.
-        self.assertIn(r.status_code, (400, 409), r.data)
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/desembolsar/", {
+            "monto_desembolsado": "100.00", "responsable_adquisicion": "Almacén",
+        }, format="json")
+        self.assertEqual(r.status_code, 409, r.data)
 
         r = self.client.get(f"/api/compras/solicitudes/{pk}/")
-        self.assertEqual(r.data["estado"], "EVALUADO_PENDIENTE_CERTIFICACION")
+        self.assertEqual(r.data["estado"], "VERIFICADO_PENDIENTE_AUTORIZACION")
 
     def test_tesoreria_no_puede_ejecutar_accion_de_daf(self):
         pk = self.crear_solicitud()
@@ -196,8 +199,6 @@ class SeguridadFlujoComprasTests(APITestCase):
         self.autenticar("DAF")
         self.client.post(f"/api/compras/solicitudes/{pk}/evaluar-daf/", {"califica": True}, format="json")
         self.client.post(f"/api/compras/solicitudes/{pk}/certificar-daf/", {"certificacion_presupuestaria": self.archivo("cert.pdf")}, format="multipart")
-        self.autenticar("TESORERIA")
-        self.client.post(f"/api/compras/solicitudes/{pk}/verificar-tesoreria/", {}, format="json")
         self.autenticar("DIRECTOR")
         self.client.post(f"/api/compras/solicitudes/{pk}/visto-bueno-director/", {}, format="json")
         self.autenticar("TESORERIA")
@@ -206,15 +207,22 @@ class SeguridadFlujoComprasTests(APITestCase):
         self.client.post(f"/api/compras/solicitudes/{pk}/registrar-compra/", {"monto_real": "100.00", "proveedor": "Proveedor", "componente_verificado": True}, format="json")
         self.client.post(f"/api/compras/solicitudes/{pk}/registrar-ingreso-almacen/", {}, format="json")
         self.client.post(f"/api/compras/solicitudes/{pk}/registrar-despacho-almacen/", {}, format="json")
-        self.autenticar("SOLICITANTE")
-        self.client.post(f"/api/compras/solicitudes/{pk}/presentar-descargo/", {
-            "factura": self.archivo("f.pdf"), "acta_conformidad": self.archivo("a.pdf"), "fotograma": self.archivo("g.pdf"),
+        self.client.post(f"/api/compras/solicitudes/{pk}/entregar-con-acta/", {
+            "acta_conformidad": self.archivo("a.pdf"),
         }, format="multipart")
+
+        # Solo la sección solicitante cierra el proceso.
         self.autenticar("TESORERIA")
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/cerrar-archivar/", {}, format="json")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/firmar-acta/", {}, format="json")
+        self.assertEqual(r.status_code, 403, r.data)
+
+        self.autenticar("SOLICITANTE")
+        self.client.post(f"/api/compras/solicitudes/{pk}/firmar-acta/", {}, format="json")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/recibir-solicitud/", {}, format="json")
         self.assertEqual(r.status_code, 200, r.data)
 
         # Ya cerrado: ninguna transición vuelve a aplicarse,
         # ni con el rol correcto.
+        self.autenticar("TESORERIA")
         r = self.client.post(f"/api/compras/solicitudes/{pk}/desembolsar/", {"monto_desembolsado": "1.00", "responsable_adquisicion": "X"}, format="json")
         self.assertEqual(r.status_code, 409, r.data)

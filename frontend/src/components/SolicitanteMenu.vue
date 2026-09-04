@@ -70,9 +70,7 @@
         class="menu-item"
       >
 
-        <span class="icon">
-          🏠
-        </span>
+        <IconoSigta class="icon" nombre="inicio" />
 
         Inicio
 
@@ -86,9 +84,7 @@
         class="menu-item"
       >
 
-        <span class="icon">
-          📋
-        </span>
+        <IconoSigta class="icon" nombre="solicitudes" />
 
         Mis solicitudes
 
@@ -102,9 +98,7 @@
         class="menu-item"
       >
 
-        <span class="icon">
-          👤
-        </span>
+        <IconoSigta class="icon" nombre="perfil" />
 
         Mi perfil
 
@@ -114,7 +108,7 @@
         to="/usuario/configuracion"
         class="menu-item"
       >
-        <span class="icon">⚙️</span>
+        <IconoSigta class="icon" nombre="configuracion" />
         Configuración
       </router-link>
 
@@ -140,6 +134,8 @@
 
 
 <script setup>
+
+import IconoSigta from './IconoSigta.vue'
 
 import {
   ref
@@ -232,9 +228,9 @@ function cerrarSesion() {
 
 .sidebar {
 
-  width: 235px;
+  width: var(--sigta-sidebar);
 
-  min-width: 235px;
+  min-width: var(--sigta-sidebar);
 
   height: 100vh;
 
@@ -256,16 +252,13 @@ function cerrarSesion() {
 
 
   background:
-    #6576B4;
+    var(--sigta-azul);
 
   color:
-    #ffffff;
+    var(--sigta-blanco);
 
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -333,7 +326,7 @@ function cerrarSesion() {
 
 
   background:
-    #FFFF00;
+    var(--sigta-mostaza);
 }
 
 
@@ -365,7 +358,7 @@ function cerrarSesion() {
 
 
   color:
-    #afc2d4;
+    var(--sigta-texto-suave);
 
 
   font-size: 10px;
@@ -385,7 +378,7 @@ function cerrarSesion() {
 
 
   color:
-    #82a5c6;
+    var(--sigta-texto-suave);
 
 
   font-size: 10px;
@@ -434,7 +427,7 @@ nav {
 
 
   color:
-    #e7eef5;
+    var(--sigta-azul-tenue);
 
 
   text-decoration: none;
@@ -493,7 +486,7 @@ nav {
 
   border-left:
     3px solid
-    #FFFF00;
+    var(--sigta-mostaza);
 
 
   background:
@@ -506,7 +499,7 @@ nav {
 
 
   color:
-    #FFFF00;
+    var(--sigta-mostaza);
 
 
   font-weight: 700;
@@ -517,7 +510,7 @@ nav {
 .icon {
 
   color:
-    #FFFF00;
+    var(--sigta-mostaza);
 }
 
 
@@ -549,11 +542,11 @@ nav {
 
 
   background:
-    #FFFF00;
+    var(--sigta-mostaza);
 
 
   color:
-    #17324a;
+    var(--sigta-texto);
 
 
   font-size: 16px;
@@ -630,7 +623,7 @@ nav {
 
 
   background:
-    #ffffff;
+    var(--sigta-blanco);
 
 
   transition:

@@ -5,6 +5,7 @@ from usuarios.models import (
     Rol,
     Permiso,
     RolPermiso,
+    UsuarioRol,
     Area,
 )
 
@@ -102,21 +103,12 @@ class Command(BaseCommand):
         },
 
         {
-            "codigo": "JEFE_DAF",
-            "nombre": "Jefe DAF",
-            "descripcion": (
-                "Supervisa al personal técnico DAF, evalúa expedientes "
-                "de compra y registra la certificación presupuestaria."
-            ),
-            "es_global": True,
-        },
-
-        {
             "codigo": "DAF",
-            "nombre": "Técnico de la DAF",
+            "nombre": "Dirección de Asuntos Financieros",
             "descripcion": (
-                "Evalúa expedientes de compra y registra "
-                "la certificación presupuestaria."
+                "Recibe la solicitud de compra, verifica que cumpla los "
+                "requisitos (informe, proforma y POA) y, cuando cumple, "
+                "emite la certificación presupuestaria."
             ),
             "es_global": True,
         },
@@ -313,8 +305,9 @@ class Command(BaseCommand):
             "codigo": "VERIFICAR_FUNCIONAMIENTO",
             "nombre": "Verificar funcionamiento",
             "descripcion": (
-                "Permite verificar el funcionamiento "
-                "del equipo o servicio."
+                "Permite al Jefe de UTIC verificar el funcionamiento "
+                "del equipo tras la intervención y decidir si el "
+                "problema quedó resuelto."
             ),
             "modulo": "SOPORTE",
         },
@@ -335,6 +328,17 @@ class Command(BaseCommand):
             "descripcion": (
                 "Permite elaborar y validar "
                 "el informe técnico final."
+            ),
+            "modulo": "SOPORTE",
+        },
+
+        {
+            "codigo": "RECIBIR_INFORME_ACTIVIDADES",
+            "nombre": "Recibir informe de actividades",
+            "descripcion": (
+                "Permite a la Dirección tomar conocimiento del informe "
+                "final de actividades que eleva la jefatura al cerrar "
+                "un ticket."
             ),
             "modulo": "SOPORTE",
         },
@@ -499,16 +503,6 @@ class Command(BaseCommand):
             "descripcion": (
                 "Permite registrar la certificación "
                 "presupuestaria correspondiente."
-            ),
-            "modulo": "COMPRAS",
-        },
-
-        {
-            "codigo": "VERIFICAR_EXPEDIENTE_TESORERIA",
-            "nombre": "Verificar expediente en Tesorería",
-            "descripcion": (
-                "Permite a Tesorería verificar "
-                "el expediente."
             ),
             "modulo": "COMPRAS",
         },
@@ -751,30 +745,25 @@ class Command(BaseCommand):
             "DERIVAR_COMPRA_CAJA_CHICA",
         ],
 
-        # JEFE DAF
-        "JEFE_DAF": [
-            "VER_COMPRAS",
-        ],
-
-        # TÉCNICO DAF
+        # DAF (Dirección de Asuntos Financieros)
         "DAF": [
             "VER_COMPRAS",
             "EVALUAR_EXPEDIENTE",
             "CERTIFICAR_PRESUPUESTO",
         ],
 
-        # TESORERÍA
+        # TESORERÍA: en el BPMN de Caja Chica su única tarea es
+        # "DESEMBOLZAR DINERO", una vez que el Director autoriza.
         "TESORERIA": [
             "VER_COMPRAS",
-            "VERIFICAR_EXPEDIENTE_TESORERIA",
             "REGISTRAR_DESEMBOLSO",
-            "CERRAR_ARCHIVAR_EXPEDIENTE",
         ],
 
         # DIRECTOR
         "DIRECTOR": [
             "VER_COMPRAS",
             "DAR_VISTO_BUENO",
+            "RECIBIR_INFORME_ACTIVIDADES",
             "VER_MANTENIMIENTO",
             "RECIBIR_REPORTE_MENSUAL_MANTENIMIENTO",
             "VER_SOPORTE_TECNICO",
@@ -862,6 +851,44 @@ class Command(BaseCommand):
         self.stdout.write(
             f"Roles ya existentes: {roles_existentes}"
         )
+
+        # La institución no tiene un Jefe de carrera en este proceso: el
+        # informe de actividades lo recibe únicamente la Dirección.
+        Rol.objects.filter(codigo="JEFE_CARRERA").update(activo=False)
+
+        RolPermiso.objects.filter(rol__codigo="JEFE_CARRERA").update(activo=False)
+
+        # El proceso no contempla una verificación de Tesorería previa a la
+        # autorización del Director: el permiso se desactiva en lugar de
+        # borrarse para conservar el historial de la bitácora.
+        Permiso.objects.filter(
+            codigo="VERIFICAR_EXPEDIENTE_TESORERIA"
+        ).update(activo=False)
+
+        RolPermiso.objects.filter(
+            permiso__codigo="VERIFICAR_EXPEDIENTE_TESORERIA"
+        ).update(activo=False)
+
+        # El proceso de Caja Chica no contempla una jefatura de la DAF:
+        # la solicitud llega directamente a la DAF. El rol se conserva
+        # inactivo para no perder el historial ya registrado con él.
+        rol_jefe_daf = Rol.objects.filter(codigo="JEFE_DAF").first()
+
+        if rol_jefe_daf:
+
+            if rol_jefe_daf.activo:
+                rol_jefe_daf.activo = False
+                rol_jefe_daf.save(update_fields=["activo"])
+
+            RolPermiso.objects.filter(rol=rol_jefe_daf, activo=True).update(activo=False)
+
+            UsuarioRol.objects.filter(rol=rol_jefe_daf, activo=True).update(activo=False)
+
+            self.stdout.write(
+                self.style.WARNING(
+                    "Rol JEFE_DAF desactivado: la DAF recibe la solicitud directamente."
+                )
+            )
 
         for codigo, nombre in (
             ("DAF", "DAF"),

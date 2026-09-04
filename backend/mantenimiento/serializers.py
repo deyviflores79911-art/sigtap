@@ -185,6 +185,44 @@ class RequerimientoMantenimientoSerializer(
 
             "compra_completada",
 
+            "motivo_rechazo",
+
+            "validado_en",
+
+            "clasificado_en",
+
+            "diagnostico",
+
+            "plan_solucion",
+
+            "diagnosticado_en",
+
+            "estado_compra_componente",
+
+            "costo_estimado",
+
+            "cotizacion_archivo",
+
+            "motivo_no_viable",
+
+            "resultado_pruebas",
+
+            "pruebas_en",
+
+            "verificado_en",
+
+            "rework_count",
+
+            "conformidad_en",
+
+            "informe_final",
+
+            "informe_elevado_en",
+
+            "informe_recibido_director_en",
+
+            "proceso_finalizado_en",
+
             "trabajo_realizado",
 
             "observaciones_trabajo",
@@ -216,6 +254,14 @@ class RequerimientoMantenimientoSerializer(
 
 
         read_only_fields = [
+
+            "motivo_rechazo", "validado_en", "clasificado_en",
+            "diagnostico", "plan_solucion", "diagnosticado_en",
+            "estado_compra_componente", "costo_estimado", "cotizacion_archivo",
+            "motivo_no_viable", "resultado_pruebas", "pruebas_en",
+            "verificado_en", "rework_count", "conformidad_en",
+            "informe_final", "informe_elevado_en",
+            "informe_recibido_director_en", "proceso_finalizado_en",
 
             "codigo",
 

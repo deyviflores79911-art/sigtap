@@ -2485,12 +2485,9 @@ function cerrarSesion() {
 
   display: flex;
 
-  background: #f2f5f9;
+  background: var(--sigta-azul-tenue);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -2522,7 +2519,7 @@ function cerrarSesion() {
 
   margin-bottom: 7px;
 
-  color: #8493a0;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 }
@@ -2532,7 +2529,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 28px;
 }
@@ -2547,7 +2544,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 
   font-size: 17px;
 
@@ -2575,17 +2572,17 @@ function cerrarSesion() {
 
 .message.success {
 
-  background: #e8f7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #237345;
+  color: var(--sigta-exito);
 }
 
 
 .message.error {
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 }
 
 
@@ -2615,7 +2612,7 @@ function cerrarSesion() {
   background: white;
 
   border-top:
-    4px solid #f2c400;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 9px;
 
@@ -2631,7 +2628,7 @@ function cerrarSesion() {
 
   display: block;
 
-  color: #647484;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 
@@ -2650,7 +2647,7 @@ function cerrarSesion() {
     0
     5px;
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 25px;
 }
@@ -2658,7 +2655,7 @@ function cerrarSesion() {
 
 .summary-card small {
 
-  color: #8995a0;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 }
@@ -2680,7 +2677,7 @@ function cerrarSesion() {
 
   border-radius: 9px;
 
-  background: #e8edf2;
+  background: var(--sigta-azul-texto-claro);
 }
 
 
@@ -2700,7 +2697,7 @@ function cerrarSesion() {
 
   background: transparent;
 
-  color: #617586;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 
@@ -2714,7 +2711,7 @@ function cerrarSesion() {
 
   background: white;
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   box-shadow:
     0
@@ -2733,7 +2730,7 @@ function cerrarSesion() {
   padding: 21px;
 
   border-top:
-    4px solid #f2c400;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 10px;
 
@@ -2768,7 +2765,7 @@ function cerrarSesion() {
 
   margin-bottom: 5px;
 
-  color: #0b5795;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 
@@ -2782,7 +2779,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 17px;
 }
@@ -2795,7 +2792,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 }
@@ -2830,9 +2827,9 @@ function cerrarSesion() {
 
   border: none;
 
-  background: #f2c400;
+  background: var(--sigta-mostaza);
 
-  color: #183750;
+  color: var(--sigta-azul);
 }
 
 
@@ -2840,7 +2837,7 @@ function cerrarSesion() {
 
   border: none;
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
   color: white;
 }
@@ -2850,20 +2847,20 @@ function cerrarSesion() {
 
   border: none;
 
-  background: #e7f1f9;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 }
 
 
 .secondary-button {
 
   border:
-    1px solid #ccd6de;
+    1px solid var(--sigta-borde);
 
   background: white;
 
-  color: #526677;
+  color: var(--sigta-texto-suave);
 }
 
 
@@ -2897,11 +2894,11 @@ function cerrarSesion() {
   padding: 15px;
 
   border:
-    1px solid #dce3e9;
+    1px solid var(--sigta-borde);
 
   border-radius: 9px;
 
-  background: #fbfcfd;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -2924,7 +2921,7 @@ function cerrarSesion() {
 
   margin-bottom: 4px;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 13px;
 
@@ -2936,7 +2933,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 18px;
 }
@@ -2950,7 +2947,7 @@ function cerrarSesion() {
     9px
     0;
 
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 
@@ -2975,10 +2972,10 @@ function cerrarSesion() {
     0;
 
   border-top:
-    1px solid #e8edf1;
+    1px solid var(--sigta-borde);
 
   border-bottom:
-    1px solid #e8edf1;
+    1px solid var(--sigta-borde);
 }
 
 
@@ -2991,7 +2988,7 @@ function cerrarSesion() {
 
 .role-info span {
 
-  color: #8a97a2;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 }
@@ -3001,7 +2998,7 @@ function cerrarSesion() {
 
   margin-top: 3px;
 
-  color: #29475e;
+  color: var(--sigta-azul);
 
   font-size: 15px;
 }
@@ -3040,17 +3037,17 @@ function cerrarSesion() {
 
 .status-badge.active {
 
-  background: #e8f7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #237345;
+  color: var(--sigta-exito);
 }
 
 
 .status-badge.inactive {
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 }
 
 
@@ -3082,13 +3079,13 @@ function cerrarSesion() {
     11px;
 
   border:
-    1px solid #ccd6de;
+    1px solid var(--sigta-borde);
 
   border-radius: 7px;
 
   background: white;
 
-  color: #344b5e;
+  color: var(--sigta-azul);
 
   font-size: 15px;
 
@@ -3107,7 +3104,7 @@ function cerrarSesion() {
   overflow: hidden;
 
   border:
-    1px solid #dce3e9;
+    1px solid var(--sigta-borde);
 
   border-radius: 8px;
 }
@@ -3126,7 +3123,7 @@ function cerrarSesion() {
     12px
     14px;
 
-  background: #eef3f7;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -3134,7 +3131,7 @@ function cerrarSesion() {
 
   display: block;
 
-  color: #84919c;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 }
@@ -3147,7 +3144,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 17px;
 }
@@ -3167,7 +3164,7 @@ function cerrarSesion() {
 
   border-radius: 50%;
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
   color: white;
 
@@ -3191,13 +3188,13 @@ function cerrarSesion() {
     14px;
 
   border-top:
-    1px solid #edf0f2;
+    1px solid var(--sigta-azul-tenue);
 }
 
 
 .permission-row strong {
 
-  color: #29475e;
+  color: var(--sigta-azul);
 
   font-size: 15px;
 }
@@ -3209,7 +3206,7 @@ function cerrarSesion() {
 
   margin-top: 4px;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 13px;
 
@@ -3224,7 +3221,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #7c8a95;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 }
@@ -3266,9 +3263,9 @@ function cerrarSesion() {
     11px
     13px;
 
-  background: #f4f7f9;
+  background: var(--sigta-azul-tenue);
 
-  color: #617586;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 
@@ -3284,9 +3281,9 @@ function cerrarSesion() {
     13px;
 
   border-top:
-    1px solid #edf0f2;
+    1px solid var(--sigta-azul-tenue);
 
-  color: #526777;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 }
@@ -3294,7 +3291,7 @@ function cerrarSesion() {
 
 .area-row > strong {
 
-  color: #07518d;
+  color: var(--sigta-azul);
 }
 
 
@@ -3341,7 +3338,7 @@ function cerrarSesion() {
   padding: 23px;
 
   border-top:
-    4px solid #f2c400;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 11px;
 
@@ -3380,7 +3377,7 @@ function cerrarSesion() {
 
   display: block;
 
-  color: #0b5795;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 
@@ -3395,7 +3392,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 18px;
 }
@@ -3408,7 +3405,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #7c8a95;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 }
@@ -3420,7 +3417,7 @@ function cerrarSesion() {
 
   background: transparent;
 
-  color: #697b89;
+  color: var(--sigta-texto-suave);
 
   font-size: 25px;
 
@@ -3446,7 +3443,7 @@ function cerrarSesion() {
 
 .field label {
 
-  color: #344b5e;
+  color: var(--sigta-azul);
 
   font-size: 15px;
 
@@ -3464,11 +3461,11 @@ function cerrarSesion() {
     11px;
 
   border:
-    1px solid #ccd6de;
+    1px solid var(--sigta-borde);
 
   border-radius: 7px;
 
-  color: #344b5e;
+  color: var(--sigta-azul);
 
   font-family: inherit;
 
@@ -3488,7 +3485,7 @@ function cerrarSesion() {
 
 .field small {
 
-  color: #87939d;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 }
@@ -3508,7 +3505,7 @@ function cerrarSesion() {
   padding: 11px;
 
   border:
-    1px solid #e0e6eb;
+    1px solid var(--sigta-borde);
 
   border-radius: 7px;
 
@@ -3525,7 +3522,7 @@ function cerrarSesion() {
 
 .check-card strong {
 
-  color: #344b5e;
+  color: var(--sigta-azul);
 
   font-size: 15px;
 }
@@ -3535,7 +3532,7 @@ function cerrarSesion() {
 
   margin-top: 3px;
 
-  color: #84919b;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 }
@@ -3568,9 +3565,9 @@ function cerrarSesion() {
 
   border-radius: 7px;
 
-  background: #edf4fa;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 14px;
 
@@ -3593,7 +3590,7 @@ function cerrarSesion() {
   margin-bottom: 14px;
 
   border:
-    1px solid #dce3e9;
+    1px solid var(--sigta-borde);
 
   border-radius: 8px;
 
@@ -3614,7 +3611,7 @@ function cerrarSesion() {
     10px
     12px;
 
-  background: #eef3f7;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -3622,7 +3619,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 16px;
 }
@@ -3630,7 +3627,7 @@ function cerrarSesion() {
 
 .role-permission-title span {
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 14px;
 
@@ -3652,7 +3649,7 @@ function cerrarSesion() {
     12px;
 
   border-top:
-    1px solid #edf0f2;
+    1px solid var(--sigta-azul-tenue);
 
   cursor: pointer;
 }
@@ -3673,7 +3670,7 @@ function cerrarSesion() {
 
 .permission-checkbox strong {
 
-  color: #29475e;
+  color: var(--sigta-azul);
 
   font-size: 15px;
 }
@@ -3683,7 +3680,7 @@ function cerrarSesion() {
 
   margin-top: 3px;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 13px;
 }
@@ -3696,7 +3693,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #7d8a95;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 }
@@ -3713,7 +3710,7 @@ function cerrarSesion() {
 
   text-align: center;
 
-  color: #788794;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 }

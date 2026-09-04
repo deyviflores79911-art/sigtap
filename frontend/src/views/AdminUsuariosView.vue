@@ -1026,7 +1026,7 @@ function codigoRolInterno() {
   if (form.tipo_usuario === 'USUARIO') return 'SOLICITANTE'
   const area = String(areaSeleccionada.value?.codigo || '').toUpperCase()
   if (form.tipo_usuario === 'JEFE') {
-    return { UTIC: 'JEFE_UTIC', DAF: 'JEFE_DAF', MANTENIMIENTO: 'SERVICIOS_GENERALES' }[area]
+    return { UTIC: 'JEFE_UTIC', MANTENIMIENTO: 'SERVICIOS_GENERALES' }[area]
   }
   if (form.tipo_usuario === 'TECNICO') {
     if (area === 'UTIC') return 'ESPECIALISTA'
@@ -1353,7 +1353,7 @@ function editarUsuario(
   const codigoRol = asignacion.rol_codigo
   const mapaTipo = {
     SUPERUSER: 'SUPERUSER', ADMIN: 'DIRECTOR', DIRECTOR: 'DIRECTOR', SOLICITANTE: 'USUARIO',
-    JEFE_UTIC: 'JEFE', JEFE_DAF: 'JEFE', SERVICIOS_GENERALES: 'JEFE',
+    JEFE_UTIC: 'JEFE', SERVICIOS_GENERALES: 'JEFE',
     ESPECIALISTA: 'TECNICO', AUXILIAR_SERVICIOS_GENERALES: 'TECNICO', DAF: 'TECNICO',
     ENCARGADO_COMPRAS_ALMACEN: 'TECNICO', TESORERIA: 'TECNICO',
   }
@@ -1374,7 +1374,7 @@ function editarUsuario(
   if (!form.area_id) {
     const codigoArea = {
       JEFE_UTIC: 'UTIC', ESPECIALISTA: 'UTIC',
-      JEFE_DAF: 'DAF', DAF: 'DAF', ENCARGADO_COMPRAS_ALMACEN: 'DAF', TESORERIA: 'DAF',
+      DAF: 'DAF', ENCARGADO_COMPRAS_ALMACEN: 'DAF', TESORERIA: 'DAF',
       SERVICIOS_GENERALES: 'MANTENIMIENTO', AUXILIAR_SERVICIOS_GENERALES: 'MANTENIMIENTO',
     }[codigoRol]
     form.area_id = areas.value.find(area => area.codigo === codigoArea)?.id || ''
@@ -1468,6 +1468,18 @@ async function guardarUsuario() {
 
     mensajeModal.value =
       'Complete los campos obligatorios.'
+
+    return
+  }
+
+  if (
+    form.tipo_usuario === 'JEFE'
+    &&
+    String(areaSeleccionada.value?.codigo || '').toUpperCase() === 'DAF'
+  ) {
+
+    mensajeModal.value =
+      'La DAF no tiene jefatura: la solicitud de compra llega directamente a la DAF.'
 
     return
   }
@@ -2073,12 +2085,9 @@ function cerrarSesion() {
 
   display: flex;
 
-  background: #f2f5f9;
+  background: var(--sigta-azul-tenue);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -2119,7 +2128,7 @@ function cerrarSesion() {
 
   margin-bottom: 7px;
 
-  color: #8493a0;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 }
@@ -2129,7 +2138,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 28px;
 }
@@ -2142,7 +2151,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #748391;
+  color: var(--sigta-texto-suave);
 
   font-size: 18px;
 }
@@ -2160,9 +2169,9 @@ function cerrarSesion() {
 
   border-radius: 8px;
 
-  background: #f2c400;
+  background: var(--sigta-mostaza);
 
-  color: #143250;
+  color: var(--sigta-azul);
 
   font-size: 17px;
 
@@ -2174,7 +2183,7 @@ function cerrarSesion() {
 
 .btn-primary:hover {
 
-  background: #e2b800;
+  background: var(--sigta-mostaza);
 }
 
 
@@ -2202,7 +2211,7 @@ function cerrarSesion() {
   padding: 16px;
 
   border-top:
-    3px solid #f2c400;
+    3px solid var(--sigta-mostaza);
 
   border-radius: 9px;
 
@@ -2220,7 +2229,7 @@ function cerrarSesion() {
 
   display: block;
 
-  color: #637789;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 
@@ -2238,7 +2247,7 @@ function cerrarSesion() {
     7px
     0;
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 25px;
 }
@@ -2246,7 +2255,7 @@ function cerrarSesion() {
 
 .stat-card small {
 
-  color: #8996a1;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 }
@@ -2271,7 +2280,7 @@ function cerrarSesion() {
 
   border-radius: 9px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
   box-shadow:
     0
@@ -2294,7 +2303,7 @@ function cerrarSesion() {
 
 .filters-card label {
 
-  color: #52687b;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 
@@ -2314,13 +2323,13 @@ function cerrarSesion() {
     12px;
 
   border:
-    1px solid #d2dbe3;
+    1px solid var(--sigta-borde);
 
   border-radius: 7px;
 
   background: white;
 
-  color: #30495d;
+  color: var(--sigta-azul);
 
   font-size: 17px;
 
@@ -2331,7 +2340,7 @@ function cerrarSesion() {
 .filters-card input:focus,
 .filters-card select:focus {
 
-  border-color: #0b5795;
+  border-color: var(--sigta-texto-suave);
 
   box-shadow:
     0
@@ -2362,17 +2371,17 @@ function cerrarSesion() {
 
 .alert.success {
 
-  background: #eaf7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #227442;
+  color: var(--sigta-exito);
 }
 
 
 .alert.error {
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 }
 
 
@@ -2412,7 +2421,7 @@ function cerrarSesion() {
     18px;
 
   border-bottom:
-    1px solid #e8edf1;
+    1px solid var(--sigta-borde);
 }
 
 
@@ -2420,7 +2429,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 21px;
 }
@@ -2433,7 +2442,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #82909c;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 }
@@ -2447,9 +2456,9 @@ function cerrarSesion() {
 
   border-radius: 15px;
 
-  background: #eef4f8;
+  background: var(--sigta-azul-tenue);
 
-  color: #5d7385;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 
@@ -2482,9 +2491,9 @@ th {
     13px
     14px;
 
-  background: #f8fafb;
+  background: var(--sigta-azul-tenue);
 
-  color: #586b7b;
+  color: var(--sigta-texto-suave);
 
   text-align: left;
 
@@ -2503,9 +2512,9 @@ td {
     14px;
 
   border-top:
-    1px solid #edf0f2;
+    1px solid var(--sigta-azul-tenue);
 
-  color: #405464;
+  color: var(--sigta-texto-suave);
 
   font-size: 16px;
 
@@ -2515,7 +2524,7 @@ td {
 
 td strong {
 
-  color: #173a59;
+  color: var(--sigta-azul);
 }
 
 
@@ -2549,9 +2558,9 @@ td strong {
 
   border-radius: 50%;
 
-  background: #e8f1f8;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 15px;
 
@@ -2570,7 +2579,7 @@ td strong {
 
   margin-top: 2px;
 
-  color: #9aa5ae;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 }
@@ -2598,17 +2607,17 @@ td strong {
 
 .badge.activo {
 
-  background: #e8f7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #1f7845;
+  color: var(--sigta-exito);
 }
 
 
 .badge.inactivo {
 
-  background: #fbeaea;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 }
 
 
@@ -2622,9 +2631,9 @@ td strong {
 
   border-radius: 5px;
 
-  background: #edf3f8;
+  background: var(--sigta-azul-tenue);
 
-  color: #405f79;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 }
@@ -2640,13 +2649,13 @@ td strong {
 
 .first-login.pending {
 
-  color: #a36d00;
+  color: var(--sigta-mostaza-oscuro);
 }
 
 
 .first-login.completed {
 
-  color: #3f6c56;
+  color: var(--sigta-exito);
 }
 
 
@@ -2682,25 +2691,25 @@ td strong {
 
 .btn-edit {
 
-  background: #eaf3fb;
+  background: var(--sigta-azul-tenue);
 
-  color: #07518d;
+  color: var(--sigta-azul);
 }
 
 
 .btn-disable {
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a42828;
+  color: var(--sigta-error);
 }
 
 
 .btn-enable {
 
-  background: #e8f7ef;
+  background: var(--sigta-exito-fondo);
 
-  color: #1e7544;
+  color: var(--sigta-exito);
 }
 
 
@@ -2715,7 +2724,7 @@ td strong {
 
   text-align: center;
 
-  color: #758391;
+  color: var(--sigta-texto-suave);
 
   font-size: 17px;
 }
@@ -2759,7 +2768,7 @@ td strong {
   padding: 24px;
 
   border-top:
-    4px solid #f2c400;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 12px;
 
@@ -2792,7 +2801,7 @@ td strong {
 
   margin-bottom: 5px;
 
-  color: #7e8f9c;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 
@@ -2807,7 +2816,7 @@ td strong {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 20px;
 }
@@ -2820,7 +2829,7 @@ td strong {
     0
     0;
 
-  color: #788794;
+  color: var(--sigta-texto-suave);
 
   font-size: 16px;
 }
@@ -2832,7 +2841,7 @@ td strong {
 
   background: transparent;
 
-  color: #687987;
+  color: var(--sigta-texto-suave);
 
   font-size: 27px;
 
@@ -2875,7 +2884,7 @@ td strong {
 
 .field label {
 
-  color: #34495b;
+  color: var(--sigta-azul);
 
   font-size: 16px;
 
@@ -2885,7 +2894,7 @@ td strong {
 
 .field label span {
 
-  color: #b83232;
+  color: var(--sigta-error);
 }
 
 
@@ -2901,13 +2910,13 @@ td strong {
     12px;
 
   border:
-    1px solid #ccd6de;
+    1px solid var(--sigta-borde);
 
   border-radius: 7px;
 
   background: white;
 
-  color: #31495c;
+  color: var(--sigta-azul);
 
   outline: none;
 
@@ -2918,7 +2927,7 @@ td strong {
 .field input:focus,
 .field select:focus {
 
-  border-color: #0b5795;
+  border-color: var(--sigta-texto-suave);
 
   box-shadow:
     0
@@ -2931,9 +2940,9 @@ td strong {
 
 .field select:disabled {
 
-  background: #f1f3f5;
+  background: var(--sigta-azul-tenue);
 
-  color: #88949e;
+  color: var(--sigta-texto-suave);
 
   cursor: not-allowed;
 }
@@ -2941,7 +2950,7 @@ td strong {
 
 .field small {
 
-  color: #7a8995;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 
@@ -2961,9 +2970,9 @@ td strong {
 
   border-radius: 6px;
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #aa2f2f;
+  color: var(--sigta-error);
 
   font-size: 16px;
 }
@@ -3008,11 +3017,11 @@ td strong {
 .btn-cancel {
 
   border:
-    1px solid #d0d9e1;
+    1px solid var(--sigta-borde);
 
   background: white;
 
-  color: #506273;
+  color: var(--sigta-texto-suave);
 }
 
 
@@ -3020,7 +3029,7 @@ td strong {
 
   border: none;
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
   color: white;
 }

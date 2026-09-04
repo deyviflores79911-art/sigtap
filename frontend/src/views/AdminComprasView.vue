@@ -206,7 +206,7 @@
         <div class="detalle-modal-header">
           <div class="documento-header-titulo">
 
-            <span class="documento-header-icono">📄</span>
+            <IconoSigta class="documento-header-icono" nombre="auditoria" :tamano="22" />
 
             <div>
               <h3>{{ compraSeleccionada?.codigo }}</h3>
@@ -242,7 +242,7 @@
           <div class="documento-seccion">
 
             <div class="documento-titulo-fila">
-              <span class="documento-icono">📦</span>
+              <IconoSigta class="documento-icono" nombre="almacen" :tamano="22" />
               <span class="documento-titulo">
                 Producto o servicio a comprar
               </span>
@@ -294,7 +294,7 @@
           <div class="documento-seccion">
 
             <div class="documento-titulo-fila">
-              <span class="documento-icono">📁</span>
+              <IconoSigta class="documento-icono" nombre="solicitudes" :tamano="22" />
               <span class="documento-titulo">
                 Datos del expediente
               </span>
@@ -355,7 +355,7 @@
           <div class="documento-seccion">
 
             <div class="documento-titulo-fila">
-              <span class="documento-icono">📄</span>
+              <IconoSigta class="documento-icono" nombre="auditoria" :tamano="22" />
               <span class="documento-titulo">
                 Documentos del expediente
               </span>
@@ -374,7 +374,7 @@
                   target="_blank"
                   class="documento-item ok"
                 >
-                  <span class="documento-item-icono">📄</span>
+                  <IconoSigta class="documento-item-icono" nombre="auditoria" :tamano="22" />
                   <span class="documento-item-label">{{ doc.label }}</span>
                   <span class="documento-item-accion">
                     Ver archivo
@@ -386,7 +386,7 @@
                   v-else
                   class="documento-item falta"
                 >
-                  <span class="documento-item-icono">📄</span>
+                  <IconoSigta class="documento-item-icono" nombre="auditoria" :tamano="22" />
                   <span class="documento-item-label">{{ doc.label }}</span>
                   <small>{{ doc.pendienteTexto || 'No adjuntado' }}</small>
                 </div>
@@ -629,6 +629,7 @@
 
 
 <script setup>
+import IconoSigta from '../components/IconoSigta.vue'
 
 import {
   computed,
@@ -1059,7 +1060,6 @@ async function aprobarCompra() {
 
   const endpointsPorEstado = {
     CREADO_PENDIENTE_DAF: 'evaluar-daf',
-    CERTIFICADO_PENDIENTE_VERIFICACION: 'verificar-tesoreria',
     VERIFICADO_PENDIENTE_AUTORIZACION: 'visto-bueno-director',
   }
 
@@ -1364,7 +1364,7 @@ async function cargarCompras() {
 //
 // Estados reales del modelo SolicitudCompra (flujo de Caja
 // Chica): CREADO_PENDIENTE_DAF, EVALUADO_PENDIENTE_CERTIFICACION,
-// CERTIFICADO_PENDIENTE_VERIFICACION, VERIFICADO_PENDIENTE_AUTORIZACION,
+// VERIFICADO_PENDIENTE_AUTORIZACION,
 // APROBADO_PARA_DESEMBOLSO, FONDOS_DESEMBOLSADOS, COMPRA_REGISTRADA,
 // COMPRADO_Y_ENTREGADO, DESCARGO_PENDIENTE_LIQUIDACION,
 // CERRADO_ARCHIVADO, RECHAZADO, ANULADO.
@@ -1561,8 +1561,8 @@ function cerrarSesion() {
 .layout {
   min-height: 100vh;
   display: flex;
-  background: #f2f5f9;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--sigta-azul-tenue);
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -1589,14 +1589,14 @@ function cerrarSesion() {
 
 .page-header h1 {
   margin: 0;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 33px;
 }
 
 
 .page-header p {
   margin: 5px 0 0;
-  color: #718294;
+  color: var(--sigta-texto-suave);
   font-size: 17px;
 }
 
@@ -1611,10 +1611,10 @@ function cerrarSesion() {
 .filtro-estado {
   min-height: 41px;
   padding: 0 12px;
-  border: 1px solid #d0dae2;
+  border: 1px solid var(--sigta-borde);
   border-radius: 7px;
   background: white;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-family: inherit;
   font-size: 15px;
   outline: none;
@@ -1624,10 +1624,10 @@ function cerrarSesion() {
 .refresh-button {
   min-height: 41px;
   padding: 0 15px;
-  border: 1px solid #073b6f;
+  border: 1px solid var(--sigta-azul);
   border-radius: 7px;
   background: white;
-  color: #073b6f;
+  color: var(--sigta-azul);
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
@@ -1664,7 +1664,7 @@ function cerrarSesion() {
   justify-content: space-between;
   gap: 20px;
   padding: 17px 20px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--sigta-azul-tenue);
 }
 
 
@@ -1684,7 +1684,7 @@ function cerrarSesion() {
 
 .request-code strong {
   display: block;
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 15px;
 }
 
@@ -1692,14 +1692,14 @@ function cerrarSesion() {
 .request-code small {
   display: block;
   margin-top: 4px;
-  color: #81909c;
+  color: var(--sigta-texto-suave);
   font-size: 13px;
 }
 
 
 .request-info h3 {
   margin: 0 0 5px;
-  color: #29475e;
+  color: var(--sigta-azul);
   font-size: 18px;
 }
 
@@ -1714,8 +1714,8 @@ function cerrarSesion() {
 .meta span {
   padding: 4px 6px;
   border-radius: 4px;
-  background: #f3f6f8;
-  color: #687986;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-texto-suave);
   font-size: 13px;
 }
 
@@ -1743,20 +1743,20 @@ function cerrarSesion() {
 
 
 .status.working {
-  background: #fff6d9;
-  color: #866400;
+  background: var(--sigta-mostaza-suave);
+  color: var(--sigta-mostaza-oscuro);
 }
 
 
 .status.closed {
-  background: #e8f6ee;
-  color: #237345;
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
 }
 
 
 .status.cancelled {
-  background: #fdeaea;
-  color: #a53232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
 }
 
 
@@ -1781,20 +1781,20 @@ function cerrarSesion() {
 
 
 .view {
-  background: #edf3f8;
-  color: #435a6e;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-texto-suave);
 }
 
 
 .row-aprobar {
-  background: #e5f3ea;
-  color: #237345;
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
 }
 
 
 .row-rechazar {
-  background: #fdecec;
-  color: #a53232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
 }
 
 
@@ -1806,7 +1806,7 @@ function cerrarSesion() {
 .empty {
   padding: 45px 20px;
   text-align: center;
-  color: #798793;
+  color: var(--sigta-texto-suave);
   font-size: 16px;
 }
 
@@ -1881,26 +1881,26 @@ function cerrarSesion() {
 
 
 .estado-banner.working {
-  background: #fff6d9;
-  color: #866400;
+  background: var(--sigta-mostaza-suave);
+  color: var(--sigta-mostaza-oscuro);
 }
 
 
 .estado-banner.closed {
-  background: #e8f6ee;
-  color: #237345;
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
 }
 
 
 .estado-banner.cancelled {
-  background: #fdeaea;
-  color: #a53232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
 }
 
 
 .documento-seccion {
   padding: 16px 0;
-  border-top: 1px solid #edf0f2;
+  border-top: 1px solid var(--sigta-azul-tenue);
 }
 
 
@@ -1925,7 +1925,7 @@ function cerrarSesion() {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: #fdf3d9;
+  background: var(--sigta-mostaza-suave);
   font-size: 17px;
 }
 
@@ -1946,7 +1946,7 @@ function cerrarSesion() {
   width: 26px;
   height: 26px;
   border-radius: 6px;
-  background: #eef1f8;
+  background: var(--sigta-azul-tenue);
   font-size: 13px;
 }
 
@@ -1954,7 +1954,7 @@ function cerrarSesion() {
 .documento-titulo {
   display: block;
   margin-bottom: 8px;
-  color: #8592a0;
+  color: var(--sigta-texto-suave);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: .6px;
@@ -1969,14 +1969,14 @@ function cerrarSesion() {
 
 .documento-seccion h4 {
   margin: 0 0 6px;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 20px;
 }
 
 
 .documento-seccion > p {
   margin: 0 0 10px;
-  color: #354d60;
+  color: var(--sigta-azul);
   font-size: 16px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -1986,7 +1986,7 @@ function cerrarSesion() {
 .documento-seccion b {
   display: block;
   margin-bottom: 4px;
-  color: #8592a0;
+  color: var(--sigta-texto-suave);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: .5px;
@@ -2009,7 +2009,7 @@ function cerrarSesion() {
 
 .documento-fila > div span {
   display: block;
-  color: #26333f;
+  color: var(--sigta-texto);
   font-size: 16px;
 }
 
@@ -2028,7 +2028,7 @@ function cerrarSesion() {
 
 .solicitante-link span {
   display: block;
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 14px;
   font-weight: 700;
   text-decoration: underline;
@@ -2036,14 +2036,14 @@ function cerrarSesion() {
 
 
 .solicitante-link:hover span {
-  color: #073b6f;
+  color: var(--sigta-azul);
 }
 
 
 .solicitante-link small {
   display: block;
   margin-top: 2px;
-  color: #26333f;
+  color: var(--sigta-texto);
   font-size: 13px;
 }
 
@@ -2090,7 +2090,7 @@ function cerrarSesion() {
 
 .documento-item-label {
   flex: 1;
-  color: #26333f;
+  color: var(--sigta-texto);
   font-size: 14px;
   font-weight: 700;
 }
@@ -2123,23 +2123,23 @@ function cerrarSesion() {
 
 
 .documento-item.ok {
-  background: #e8f6ee;
+  background: var(--sigta-exito-fondo);
 }
 
 
 .documento-item.ok .documento-item-accion {
-  color: #237345;
+  color: var(--sigta-exito);
   font-weight: 700;
 }
 
 
 .documento-item.falta {
-  background: #f3f6f8;
+  background: var(--sigta-azul-tenue);
 }
 
 
 .documento-item.falta small {
-  color: #8a97a2;
+  color: var(--sigta-texto-suave);
 }
 
 
@@ -2147,18 +2147,18 @@ function cerrarSesion() {
   padding: 14px;
   border: none;
   border-radius: 8px;
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 }
 
 
 .motivo-rechazo .documento-titulo {
-  color: #a53232;
+  color: var(--sigta-error);
 }
 
 
 .motivo-rechazo p {
   margin: 0;
-  color: #7a2828;
+  color: var(--sigta-error);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -2171,7 +2171,7 @@ function cerrarSesion() {
 .documento-acciones {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #edf0f2;
+  border-top: 1px solid var(--sigta-azul-tenue);
 }
 
 
@@ -2179,8 +2179,8 @@ function cerrarSesion() {
   margin: 0;
   padding: 12px 14px;
   border-radius: 7px;
-  background: #eef3f8;
-  color: #536575;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-texto-suave);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -2190,8 +2190,8 @@ function cerrarSesion() {
   margin: 0 0 10px;
   padding: 10px 12px;
   border-radius: 7px;
-  background: #fdecec;
-  color: #a53232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
   font-size: 14px;
 }
 
@@ -2217,20 +2217,20 @@ function cerrarSesion() {
 
 
 .btn-aprobar {
-  background: #237345;
+  background: var(--sigta-exito);
   color: white;
 }
 
 
 .btn-rechazar {
-  background: #a53232;
+  background: var(--sigta-error);
   color: white;
 }
 
 
 .btn-cancelar {
-  background: #edf0f2;
-  color: #435a6e;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-texto-suave);
 }
 
 
@@ -2245,14 +2245,14 @@ function cerrarSesion() {
 .form-rechazo label {
   display: block;
   margin-bottom: 6px;
-  color: #344a5d;
+  color: var(--sigta-azul);
   font-size: 14px;
   font-weight: 700;
 }
 
 
 .form-rechazo label span {
-  color: #a53232;
+  color: var(--sigta-error);
 }
 
 
@@ -2260,10 +2260,10 @@ function cerrarSesion() {
   width: 100%;
   margin-bottom: 10px;
   padding: 10px 12px;
-  border: 1px solid #d0dae2;
+  border: 1px solid var(--sigta-borde);
   border-radius: 7px;
   background: white;
-  color: #26333f;
+  color: var(--sigta-texto);
   font-family: inherit;
   font-size: 14px;
   resize: vertical;
@@ -2279,14 +2279,14 @@ function cerrarSesion() {
 .form-certificacion label {
   display: block;
   margin-bottom: 6px;
-  color: #344a5d;
+  color: var(--sigta-azul);
   font-size: 14px;
   font-weight: 700;
 }
 
 
 .form-certificacion label span {
-  color: #a53232;
+  color: var(--sigta-error);
 }
 
 
@@ -2300,7 +2300,7 @@ function cerrarSesion() {
 .archivo-seleccionado {
   display: block;
   margin-bottom: 10px;
-  color: #536575;
+  color: var(--sigta-texto-suave);
   font-size: 13px;
 }
 

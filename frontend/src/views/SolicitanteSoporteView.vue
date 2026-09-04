@@ -146,12 +146,12 @@
           <div class="grid">
 
 
-            <!-- UBICACIÓN -->
+            <!-- AULA O AMBIENTE -->
 
             <div class="field">
 
               <label>
-                Ubicación
+                Aula o ambiente
                 <span>*</span>
               </label>
 
@@ -159,8 +159,26 @@
                 v-model="form.ubicacion"
                 type="text"
                 maxlength="200"
-                placeholder="Ej.: Laboratorio de Redes - Aula C0-07"
+                placeholder="Ej.: Aula C0-07, Laboratorio de Redes, Biblioteca"
                 required
+              />
+
+            </div>
+
+
+            <!-- REFERENCIA -->
+
+            <div class="field">
+
+              <label>
+                Referencia
+              </label>
+
+              <input
+                v-model="form.referencia_ubicacion"
+                type="text"
+                maxlength="200"
+                placeholder="Ej.: Bloque B, segundo piso, frente a la cafetería"
               />
 
             </div>
@@ -550,6 +568,7 @@ const form =
     categoria: '',
 
     ubicacion: '',
+    referencia_ubicacion: '',
 
     equipo_afectado: '',
 
@@ -1083,6 +1102,7 @@ async function crearTicket() {
 
     datosFormulario.append(
       'ubicacion',
+      'referencia_ubicacion',
       form.ubicacion.trim()
     )
 
@@ -1401,12 +1421,9 @@ function cerrarSesion() {
 
   display: flex;
 
-  background: #eef3f8;
+  background: var(--sigta-azul-tenue);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -1446,7 +1463,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17344f;
+  color: var(--sigta-azul);
 
   font-size: 31px;
 }
@@ -1459,7 +1476,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #718294;
+  color: var(--sigta-texto-suave);
 
   font-size: 17px;
 }
@@ -1480,11 +1497,11 @@ function cerrarSesion() {
   overflow: hidden;
 
   border-top:
-    4px solid #f2c400;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 10px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
   box-shadow:
     0
@@ -1501,7 +1518,7 @@ function cerrarSesion() {
     26px;
 
   border-bottom:
-    1px solid #e7ebef;
+    1px solid var(--sigta-borde);
 }
 
 
@@ -1537,9 +1554,9 @@ function cerrarSesion() {
 
   border-radius: 50%;
 
-  background: #153f73;
+  background: var(--sigta-azul);
 
-  color: #ffffff;
+  color: var(--sigta-blanco);
 
   font-size: 15px;
 
@@ -1551,7 +1568,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #253f57;
+  color: var(--sigta-azul);
 
   font-size: 20px;
 }
@@ -1564,7 +1581,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #83919e;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 }
@@ -1611,7 +1628,7 @@ function cerrarSesion() {
 
 .field label {
 
-  color: #344d63;
+  color: var(--sigta-azul);
 
   font-size: 16px;
 
@@ -1621,7 +1638,7 @@ function cerrarSesion() {
 
 .field label span {
 
-  color: #c13434;
+  color: var(--sigta-error);
 }
 
 
@@ -1630,7 +1647,7 @@ function cerrarSesion() {
 
   margin-left: 4px;
 
-  color: #8c99a5;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 
@@ -1649,13 +1666,13 @@ function cerrarSesion() {
     15px;
 
   border:
-    1px solid #ccd7e1;
+    1px solid var(--sigta-azul-texto-claro);
 
   border-radius: 7px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
-  color: #263d50;
+  color: var(--sigta-azul);
 
   font-family: inherit;
 
@@ -1693,7 +1710,7 @@ function cerrarSesion() {
 .field select:focus,
 .field textarea:focus {
 
-  border-color: #175b96;
+  border-color: var(--sigta-texto-suave);
 
   box-shadow:
     0
@@ -1706,7 +1723,7 @@ function cerrarSesion() {
 
 .field small {
 
-  color: #8c99a5;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 }
@@ -1759,11 +1776,11 @@ function cerrarSesion() {
   padding: 20px;
 
   border:
-    2px dashed #c9d6e1;
+    2px dashed var(--sigta-azul-texto-claro);
 
   border-radius: 9px;
 
-  background: #f8fafc;
+  background: var(--sigta-azul-tenue);
 
   cursor: pointer;
 
@@ -1777,9 +1794,9 @@ function cerrarSesion() {
 
 .upload-box:hover {
 
-  border-color: #175b96;
+  border-color: var(--sigta-texto-suave);
 
-  background: #f2f7fb;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -1799,9 +1816,9 @@ function cerrarSesion() {
 
   border-radius: 50%;
 
-  background: #e6eef6;
+  background: var(--sigta-azul-tenue);
 
-  color: #153f73;
+  color: var(--sigta-azul);
 
   font-size: 25px;
 
@@ -1811,7 +1828,7 @@ function cerrarSesion() {
 
 .upload-box strong {
 
-  color: #29475f;
+  color: var(--sigta-azul);
 
   font-size: 17px;
 }
@@ -1819,7 +1836,7 @@ function cerrarSesion() {
 
 .upload-box span {
 
-  color: #728596;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 }
@@ -1827,7 +1844,7 @@ function cerrarSesion() {
 
 .upload-box small {
 
-  color: #9aa6af;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 }
@@ -1848,11 +1865,11 @@ function cerrarSesion() {
   padding: 13px;
 
   border:
-    1px solid #d5dfe7;
+    1px solid var(--sigta-azul-texto-claro);
 
   border-radius: 9px;
 
-  background: #f8fafc;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -1868,7 +1885,7 @@ function cerrarSesion() {
 
   border-radius: 7px;
 
-  background: #e6edf3;
+  background: var(--sigta-azul-texto-claro);
 }
 
 
@@ -1898,13 +1915,13 @@ function cerrarSesion() {
 
   border-radius: 7px;
 
-  background: #f8e9e9;
+  background: var(--sigta-error-fondo);
 }
 
 
 .pdf-icon {
 
-  color: #a53636;
+  color: var(--sigta-error);
 
   font-size: 18px;
 
@@ -1927,7 +1944,7 @@ function cerrarSesion() {
 
   margin-bottom: 3px;
 
-  color: #81909d;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 }
@@ -1939,7 +1956,7 @@ function cerrarSesion() {
 
   overflow: hidden;
 
-  color: #29475f;
+  color: var(--sigta-azul);
 
   font-size: 16px;
 
@@ -1955,7 +1972,7 @@ function cerrarSesion() {
 
   margin-top: 4px;
 
-  color: #8b99a4;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 }
@@ -1973,9 +1990,9 @@ function cerrarSesion() {
 
   border-radius: 6px;
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 
   font-size: 14px;
 
@@ -2003,11 +2020,11 @@ function cerrarSesion() {
   padding: 13px;
 
   border-left:
-    4px solid #f2c400;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 7px;
 
-  background: #f5f8fb;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -2027,7 +2044,7 @@ function cerrarSesion() {
 
   border-radius: 50%;
 
-  background: #153f73;
+  background: var(--sigta-azul);
 
   color: white;
 
@@ -2039,7 +2056,7 @@ function cerrarSesion() {
 
 .priority-notice strong {
 
-  color: #334e65;
+  color: var(--sigta-azul);
 
   font-size: 16px;
 }
@@ -2052,7 +2069,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #758796;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 
@@ -2083,17 +2100,17 @@ function cerrarSesion() {
 
 .message-error {
 
-  background: #fdecec;
+  background: var(--sigta-error-fondo);
 
-  color: #a83232;
+  color: var(--sigta-error);
 }
 
 
 .message-success {
 
-  background: #e8f7ee;
+  background: var(--sigta-exito-fondo);
 
-  color: #267349;
+  color: var(--sigta-exito);
 }
 
 
@@ -2113,7 +2130,7 @@ function cerrarSesion() {
     19px
     26px;
 
-  background: #fafbfc;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -2146,22 +2163,22 @@ function cerrarSesion() {
 .cancel {
 
   border:
-    1px solid #ccd6df;
+    1px solid var(--sigta-borde);
 
   background: white;
 
-  color: #536777;
+  color: var(--sigta-texto-suave);
 }
 
 
 .secondary {
 
   border:
-    1px solid #153f73;
+    1px solid var(--sigta-azul);
 
   background: white;
 
-  color: #153f73;
+  color: var(--sigta-azul);
 }
 
 
@@ -2169,7 +2186,7 @@ function cerrarSesion() {
 
   border: none;
 
-  background: #153f73;
+  background: var(--sigta-azul);
 
   color: white;
 }
@@ -2177,7 +2194,7 @@ function cerrarSesion() {
 
 .primary:hover:not(:disabled) {
 
-  background: #0e315b;
+  background: var(--sigta-azul);
 }
 
 

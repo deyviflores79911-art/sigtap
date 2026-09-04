@@ -1,4 +1,5 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from django.core.management import call_command
 from rest_framework.test import APITestCase
 
@@ -6,7 +7,7 @@ from usuarios.models import Area, Rol, Usuario, UsuarioRol
 
 from compras.models import SolicitudCompra
 
-from .models import CategoriaTicket
+from .models import CategoriaTicket, Ticket
 
 
 class FlujoSoporteCompraTests(APITestCase):
@@ -128,8 +129,20 @@ class FlujoSoporteCompraTests(APITestCase):
         }, format="json")
         self.assertEqual(r.status_code, 409, r.data)
 
-        # Con la compra ya autorizada, el Especialista puede reparar.
+        # Aprobar la viabilidad no basta: el flujo técnico sigue en pausa
+        # hasta que Almacén entregue físicamente el componente.
         self.autenticar("ESPECIALISTA")
+        r = self.client.post(f"/api/soporte/tickets/{pk}/registrar-intervencion/", {
+            "solucion": "Se reemplazó la fuente.",
+        }, format="json")
+        self.assertEqual(r.status_code, 409, r.data)
+
+        # Almacén despacha el componente: eso reanuda la atención técnica.
+        ticket = Ticket.objects.get(pk=pk)
+        ticket.estado_compra_componente = "ENTREGADA"
+        ticket.componente_entregado_en = timezone.now()
+        ticket.save(update_fields=["estado_compra_componente", "componente_entregado_en"])
+
         r = self.client.post(f"/api/soporte/tickets/{pk}/registrar-intervencion/", {
             "solucion": "Se reemplazó la fuente.",
         }, format="json")

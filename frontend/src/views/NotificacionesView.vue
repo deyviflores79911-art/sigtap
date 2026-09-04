@@ -165,8 +165,8 @@ onMounted(async () => {
 .page {
   min-height: 100vh;
   padding: 30px;
-  background: #f4f6f8;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--sigta-azul-tenue);
+  font-family: var(--sigta-fuente);
 }
 
 header {
@@ -178,16 +178,16 @@ header {
 
 h1 {
   margin: 0;
-  color: #17324a;
+  color: var(--sigta-texto);
 }
 
 header p {
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 }
 
 header button {
   border: none;
-  background: #073b6f;
+  background: var(--sigta-azul);
   color: white;
   padding: 0 18px;
   border-radius: 7px;
@@ -205,7 +205,7 @@ article {
   display: flex;
   gap: 13px;
   padding: 18px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--sigta-azul-tenue);
 }
 
 .dot {
@@ -213,21 +213,21 @@ article {
   height: 10px;
   margin-top: 5px;
   border-radius: 50%;
-  background: #f2c400;
+  background: var(--sigta-mostaza);
 }
 
 article strong {
-  color: #17324a;
+  color: var(--sigta-texto);
 }
 
 article p {
   margin: 5px 0;
-  color: #617381;
+  color: var(--sigta-texto-suave);
   font-size: 12px;
 }
 
 article small {
-  color: #87939d;
+  color: var(--sigta-texto-suave);
 }
 
 .empty {

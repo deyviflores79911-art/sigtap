@@ -976,12 +976,9 @@ function cerrarSesion() {
 
   display: flex;
 
-  background: #f2f5f9;
+  background: var(--sigta-azul-tenue);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -1020,7 +1017,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 34px;
 }
@@ -1033,7 +1030,7 @@ function cerrarSesion() {
     0
     0;
 
-  color: #758391;
+  color: var(--sigta-texto-suave);
 
   font-size: 18px;
 }
@@ -1059,7 +1056,7 @@ function cerrarSesion() {
     10px
     14px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
   border-radius: 9px;
 
@@ -1087,9 +1084,9 @@ function cerrarSesion() {
 
   border-radius: 50%;
 
-  background: #f2c400;
+  background: var(--sigta-mostaza);
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 15px;
 
@@ -1106,7 +1103,7 @@ function cerrarSesion() {
 
 .user-box strong {
 
-  color: #1c3449;
+  color: var(--sigta-azul);
 
   font-size: 17px;
 }
@@ -1116,7 +1113,7 @@ function cerrarSesion() {
 
   margin-top: 2px;
 
-  color: #788693;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 }
@@ -1147,10 +1144,10 @@ function cerrarSesion() {
 
   padding: 18px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
   border-top:
-    4px solid #f2c400;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 10px;
 
@@ -1186,7 +1183,7 @@ function cerrarSesion() {
 
   margin-bottom: 7px;
 
-  color: #647484;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 
@@ -1202,7 +1199,7 @@ function cerrarSesion() {
 
   margin-bottom: 6px;
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 
   font-size: 34px;
 }
@@ -1210,7 +1207,7 @@ function cerrarSesion() {
 
 .stat-card small {
 
-  color: #8995a0;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 
@@ -1232,9 +1229,9 @@ function cerrarSesion() {
 
   border-radius: 7px;
 
-  background: #fff2d9;
+  background: var(--sigta-mostaza-suave);
 
-  color: #775600;
+  color: var(--sigta-mostaza-oscuro);
 
   font-size: 16px;
 }
@@ -1250,7 +1247,7 @@ function cerrarSesion() {
 
   padding: 22px;
 
-  background: #ffffff;
+  background: var(--sigta-blanco);
 
   border-radius: 10px;
 
@@ -1268,7 +1265,7 @@ function cerrarSesion() {
 
   margin-bottom: 5px;
 
-  color: #0b5795;
+  color: var(--sigta-texto-suave);
 
   font-size: 14px;
 
@@ -1294,7 +1291,7 @@ function cerrarSesion() {
 
   margin: 0;
 
-  color: #1b3449;
+  color: var(--sigta-azul);
 
   font-size: 24px;
 }
@@ -1307,7 +1304,7 @@ function cerrarSesion() {
     0
     18px;
 
-  color: #778590;
+  color: var(--sigta-texto-suave);
 
   font-size: 16px;
 }
@@ -1325,9 +1322,9 @@ function cerrarSesion() {
 
   border-radius: 50%;
 
-  background: #f1f3f6;
+  background: var(--sigta-azul-tenue);
 
-  color: #4a5a6a;
+  color: var(--sigta-texto-suave);
 
   font-size: 15px;
 
@@ -1339,7 +1336,7 @@ function cerrarSesion() {
 
 .close-panel:hover {
 
-  background: #e5e8ee;
+  background: var(--sigta-borde);
 }
 
 
@@ -1356,13 +1353,13 @@ function cerrarSesion() {
     14px;
 
   border:
-    1px solid #d0dae2;
+    1px solid var(--sigta-borde);
 
   border-radius: 8px;
 
   background: white;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-family: inherit;
 
@@ -1374,7 +1371,7 @@ function cerrarSesion() {
 
 .stat-search:focus {
 
-  border-color: #0a5794;
+  border-color: var(--sigta-texto-suave);
 }
 
 
@@ -1408,7 +1405,7 @@ function cerrarSesion() {
 
   padding: 12px 4px;
 
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--sigta-azul-tenue);
 }
 
 
@@ -1428,7 +1425,7 @@ function cerrarSesion() {
 
   display: block;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 
   font-size: 15px;
 }
@@ -1440,7 +1437,7 @@ function cerrarSesion() {
 
   margin-top: 2px;
 
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 
   font-size: 13px;
 }
@@ -1466,9 +1463,9 @@ function cerrarSesion() {
 
   border-radius: 12px;
 
-  background: #edf3f7;
+  background: var(--sigta-azul-tenue);
 
-  color: #557185;
+  color: var(--sigta-texto-suave);
 
   font-size: 12px;
   font-weight: 700;
@@ -1483,7 +1480,7 @@ function cerrarSesion() {
 
   background: transparent;
 
-  color: #07518d;
+  color: var(--sigta-azul);
 
   font-size: 13px;
   font-weight: 700;
@@ -1496,7 +1493,7 @@ function cerrarSesion() {
 
 .stat-item-revisar:hover {
 
-  color: #073b6f;
+  color: var(--sigta-azul);
 }
 
 

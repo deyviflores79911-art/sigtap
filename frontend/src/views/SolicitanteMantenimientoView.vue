@@ -1068,8 +1068,8 @@ function cerrarSesion() {
 .layout {
   min-height: 100vh;
   display: flex;
-  background: #eef3f8;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--sigta-azul-tenue);
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -1091,14 +1091,14 @@ function cerrarSesion() {
 
 .topbar h1 {
   margin: 0;
-  color: #17344f;
+  color: var(--sigta-azul);
   font-size: 31px;
 }
 
 
 .topbar p {
   margin: 6px 0 0;
-  color: #718294;
+  color: var(--sigta-texto-suave);
   font-size: 17px;
 }
 
@@ -1108,16 +1108,16 @@ function cerrarSesion() {
   max-width: 1040px;
   margin: auto;
   overflow: hidden;
-  border-top: 4px solid #f2c400;
+  border-top: 4px solid var(--sigta-mostaza);
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--sigta-blanco);
   box-shadow: 0 4px 18px rgba(0,0,0,.06);
 }
 
 
 .form-section {
   padding: 22px 26px;
-  border-bottom: 1px solid #e7ebef;
+  border-bottom: 1px solid var(--sigta-borde);
 }
 
 
@@ -1137,8 +1137,8 @@ function cerrarSesion() {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #153f73;
-  color: #ffffff;
+  background: var(--sigta-azul);
+  color: var(--sigta-blanco);
   font-size: 15px;
   font-weight: 800;
 }
@@ -1146,14 +1146,14 @@ function cerrarSesion() {
 
 .section-heading h2 {
   margin: 0;
-  color: #253f57;
+  color: var(--sigta-azul);
   font-size: 20px;
 }
 
 
 .section-heading p {
   margin: 4px 0 0;
-  color: #83919e;
+  color: var(--sigta-texto-suave);
   font-size: 15px;
 }
 
@@ -1179,20 +1179,20 @@ function cerrarSesion() {
 
 
 .field label {
-  color: #344d63;
+  color: var(--sigta-azul);
   font-size: 16px;
   font-weight: 700;
 }
 
 
 .field label span {
-  color: #c13434;
+  color: var(--sigta-error);
 }
 
 
 .field label .optional {
   margin-left: 4px;
-  color: #8c99a5;
+  color: var(--sigta-texto-suave);
   font-size: 14px;
   font-weight: 400;
 }
@@ -1203,10 +1203,10 @@ function cerrarSesion() {
 .field textarea {
   width: 100%;
   padding: 14px 15px;
-  border: 1px solid #ccd7e1;
+  border: 1px solid var(--sigta-azul-texto-claro);
   border-radius: 7px;
-  background: #ffffff;
-  color: #263d50;
+  background: var(--sigta-blanco);
+  color: var(--sigta-azul);
   font-family: inherit;
   font-size: 17px;
   outline: none;
@@ -1234,13 +1234,13 @@ function cerrarSesion() {
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: #175b96;
+  border-color: var(--sigta-texto-suave);
   box-shadow: 0 0 0 3px rgba(23,91,150,.09);
 }
 
 
 .field small {
-  color: #8c99a5;
+  color: var(--sigta-texto-suave);
   font-size: 14px;
 }
 
@@ -1272,17 +1272,17 @@ function cerrarSesion() {
   justify-content: center;
   gap: 6px;
   padding: 20px;
-  border: 2px dashed #c9d6e1;
+  border: 2px dashed var(--sigta-azul-texto-claro);
   border-radius: 9px;
-  background: #f8fafc;
+  background: var(--sigta-azul-tenue);
   cursor: pointer;
   text-align: center;
 }
 
 
 .upload-box:hover {
-  border-color: #175b96;
-  background: #f2f7fb;
+  border-color: var(--sigta-texto-suave);
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -1294,27 +1294,27 @@ function cerrarSesion() {
   justify-content: center;
   margin-bottom: 4px;
   border-radius: 50%;
-  background: #e6eef6;
-  color: #153f73;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-azul);
   font-size: 25px;
   font-weight: 700;
 }
 
 
 .upload-box strong {
-  color: #29475f;
+  color: var(--sigta-azul);
   font-size: 17px;
 }
 
 
 .upload-box span {
-  color: #728596;
+  color: var(--sigta-texto-suave);
   font-size: 15px;
 }
 
 
 .upload-box small {
-  color: #9aa6af;
+  color: var(--sigta-texto-suave);
   font-size: 14px;
 }
 
@@ -1324,9 +1324,9 @@ function cerrarSesion() {
   align-items: center;
   gap: 13px;
   padding: 13px;
-  border: 1px solid #d5dfe7;
+  border: 1px solid var(--sigta-azul-texto-claro);
   border-radius: 9px;
-  background: #f8fafc;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -1336,7 +1336,7 @@ function cerrarSesion() {
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 7px;
-  background: #e6edf3;
+  background: var(--sigta-azul-texto-claro);
 }
 
 
@@ -1355,8 +1355,8 @@ function cerrarSesion() {
   align-items: center;
   justify-content: center;
   border-radius: 7px;
-  background: #f8e9e9;
-  color: #a53636;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
   font-size: 18px;
   font-weight: 900;
 }
@@ -1377,14 +1377,14 @@ function cerrarSesion() {
 
 .file-information span {
   margin-bottom: 3px;
-  color: #81909d;
+  color: var(--sigta-texto-suave);
   font-size: 14px;
 }
 
 
 .file-information strong {
   overflow: hidden;
-  color: #29475f;
+  color: var(--sigta-azul);
   font-size: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1393,7 +1393,7 @@ function cerrarSesion() {
 
 .file-information small {
   margin-top: 4px;
-  color: #8b99a4;
+  color: var(--sigta-texto-suave);
   font-size: 14px;
 }
 
@@ -1403,8 +1403,8 @@ function cerrarSesion() {
   padding: 7px 10px;
   border: none;
   border-radius: 6px;
-  background: #fdecec;
-  color: #a83232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -1416,9 +1416,9 @@ function cerrarSesion() {
   display: flex;
   gap: 10px;
   padding: 13px;
-  border-left: 4px solid #f2c400;
+  border-left: 4px solid var(--sigta-mostaza);
   border-radius: 7px;
-  background: #f5f8fb;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -1430,7 +1430,7 @@ function cerrarSesion() {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #153f73;
+  background: var(--sigta-azul);
   color: white;
   font-size: 16px;
   font-weight: 700;
@@ -1438,14 +1438,14 @@ function cerrarSesion() {
 
 
 .process-notice strong {
-  color: #334e65;
+  color: var(--sigta-azul);
   font-size: 16px;
 }
 
 
 .process-notice p {
   margin: 3px 0 0;
-  color: #758796;
+  color: var(--sigta-texto-suave);
   font-size: 15px;
   line-height: 1.4;
 }
@@ -1460,14 +1460,14 @@ function cerrarSesion() {
 
 
 .message-error {
-  background: #fdecec;
-  color: #a83232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
 }
 
 
 .message-success {
-  background: #e8f7ee;
-  color: #267349;
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
 }
 
 
@@ -1476,7 +1476,7 @@ function cerrarSesion() {
   justify-content: flex-end;
   gap: 9px;
   padding: 19px 26px;
-  background: #fafbfc;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -1497,28 +1497,28 @@ function cerrarSesion() {
 
 
 .cancel {
-  border: 1px solid #ccd6df;
+  border: 1px solid var(--sigta-borde);
   background: white;
-  color: #536777;
+  color: var(--sigta-texto-suave);
 }
 
 
 .secondary {
-  border: 1px solid #153f73;
+  border: 1px solid var(--sigta-azul);
   background: white;
-  color: #153f73;
+  color: var(--sigta-azul);
 }
 
 
 .primary {
   border: none;
-  background: #153f73;
+  background: var(--sigta-azul);
   color: white;
 }
 
 
 .primary:hover:not(:disabled) {
-  background: #0e315b;
+  background: var(--sigta-azul);
 }
 
 

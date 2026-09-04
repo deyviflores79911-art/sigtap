@@ -2638,10 +2638,40 @@ async function actualizarSeleccionado() {
 
 async function derivarAuxiliar() {
 
+  // El BPMN separa la derivación en tres actos de la jefatura: validar el
+  // ticket, clasificar su prioridad y designar al técnico. Desde este panel
+  // de supervisión se ejecutan en secuencia.
+  if (!formDerivar.auxiliar_id) {
+
+    mensaje.value = 'Seleccione al técnico responsable.'
+    mensajeError.value = true
+
+    return
+  }
+
+  const estado =
+    requerimientoSeleccionado.value?.estado_codigo
+
+  if (estado === 'RECIBIDO') {
+
+    await ejecutarAccion('validar-ticket', { es_valido: true })
+  }
+
+  if (!requerimientoSeleccionado.value?.prioridad_jefatura) {
+
+    await ejecutarAccion(
+      'clasificar-prioridad',
+      {
+        prioridad: 'MEDIA',
+        criterio_prioridad: 'Prioridad asignada desde el panel de supervisión.',
+      }
+    )
+  }
+
   await ejecutarAccion(
-    'derivar-auxiliar',
+    'designar-revision',
     {
-      auxiliar_id:
+      tecnico_id:
         Number(
           formDerivar.auxiliar_id
         ),
@@ -2656,38 +2686,31 @@ async function derivarAuxiliar() {
 
 async function verificarReposicion() {
 
-  const body = {
-    requiere_reposicion:
-      formReposicion.requiere_reposicion,
+  // En el BPMN vigente el técnico no "verifica reposición": realiza un
+  // requerimiento de componente con su cotización, o registra el
+  // diagnóstico cuando no hace falta comprar nada.
+  if (formReposicion.requiere_reposicion) {
+
+    await ejecutarAccion(
+      'solicitar-requerimiento',
+      {
+        producto_requerido: formReposicion.producto_requerido,
+        cantidad_requerida: Number(formReposicion.cantidad_requerida) || 1,
+        especificacion_producto: formReposicion.especificacion_producto,
+      }
+    )
+
+    return
   }
-
-
-  if (
-    formReposicion.requiere_reposicion
-    === true
-  ) {
-
-    body.producto_requerido =
-      formReposicion
-        .producto_requerido
-        .trim()
-
-    body.cantidad_requerida =
-      Number(
-        formReposicion
-          .cantidad_requerida
-      )
-
-    body.especificacion_producto =
-      formReposicion
-        .especificacion_producto
-        .trim()
-  }
-
 
   await ejecutarAccion(
-    'verificar-reposicion',
-    body
+    'registrar-diagnostico',
+    {
+      diagnostico:
+        formReposicion.especificacion_producto
+        || 'Diagnóstico registrado desde el panel de supervisión.',
+      plan_solucion: 'Intervención sin requerimiento de componentes.',
+    }
   )
 }
 
@@ -2698,19 +2721,12 @@ async function verificarReposicion() {
 
 async function reportarExistencia() {
 
-  await ejecutarAccion(
-    'reportar-existencia',
-    {
-      producto_disponible:
-        formAlmacen
-          .producto_disponible,
+  // La consulta de stock desapareció del proceso: hoy la jefatura evalúa
+  // la viabilidad de la compra desde su propio panel.
+  mensaje.value =
+    'La viabilidad de la compra se evalúa desde el panel del Jefe de Mantenimiento.'
 
-      observacion_almacen:
-        formAlmacen
-          .observacion_almacen
-          .trim(),
-    }
-  )
+  mensajeError.value = true
 }
 
 
@@ -2721,7 +2737,7 @@ async function reportarExistencia() {
 async function registrarCompra() {
 
   // El backend ya no recibe un código a mano: confirma el
-  // expediente real vinculado (creado en reportar-existencia)
+  // expediente real vinculado al requerimiento
   // y exige que Compras lo haya cerrado y archivado.
   await ejecutarAccion(
     'registrar-compra',
@@ -2899,8 +2915,9 @@ async function registrarInforme() {
 
 async function finalizarRequerimiento() {
 
+  // El proceso termina cuando la Dirección acusa recibo del informe final.
   await ejecutarAccion(
-    'finalizar'
+    'recibir-informe'
   )
 }
 
@@ -3078,8 +3095,8 @@ function cerrarSesion() {
 .layout {
   min-height: 100vh;
   display: flex;
-  background: #f2f5f9;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--sigta-azul-tenue);
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -3107,21 +3124,21 @@ function cerrarSesion() {
 .breadcrumb {
   display: block;
   margin-bottom: 6px;
-  color: #8493a0;
+  color: var(--sigta-texto-suave);
   font-size: 9px;
 }
 
 
 .page-header h1 {
   margin: 0;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 27px;
 }
 
 
 .page-header p {
   margin: 5px 0 0;
-  color: #718294;
+  color: var(--sigta-texto-suave);
   font-size: 11px;
 }
 
@@ -3129,10 +3146,10 @@ function cerrarSesion() {
 .refresh-button {
   min-height: 38px;
   padding: 0 14px;
-  border: 1px solid #073b6f;
+  border: 1px solid var(--sigta-azul);
   border-radius: 7px;
   background: white;
-  color: #073b6f;
+  color: var(--sigta-azul);
   font-size: 9px;
   font-weight: 800;
   cursor: pointer;
@@ -3152,14 +3169,14 @@ function cerrarSesion() {
 
 
 .message.success {
-  background: #e8f7ef;
-  color: #237345;
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
 }
 
 
 .message.error {
-  background: #fdecec;
-  color: #a83232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
 }
 
 
@@ -3178,7 +3195,7 @@ function cerrarSesion() {
 .stats article {
   min-height: 105px;
   padding: 17px;
-  border-top: 4px solid #f2c400;
+  border-top: 4px solid var(--sigta-mostaza);
   border-radius: 9px;
   background: white;
   box-shadow: 0 3px 12px rgba(0,0,0,.05);
@@ -3187,7 +3204,7 @@ function cerrarSesion() {
 
 .stats span {
   display: block;
-  color: #718294;
+  color: var(--sigta-texto-suave);
   font-size: 8px;
   font-weight: 800;
   text-transform: uppercase;
@@ -3197,13 +3214,13 @@ function cerrarSesion() {
 .stats strong {
   display: block;
   margin: 7px 0 4px;
-  color: #073b6f;
+  color: var(--sigta-azul);
   font-size: 26px;
 }
 
 
 .stats small {
-  color: #8593a0;
+  color: var(--sigta-texto-suave);
   font-size: 8px;
 }
 
@@ -3219,7 +3236,7 @@ function cerrarSesion() {
   gap: 18px;
   margin-bottom: 20px;
   padding: 15px 17px;
-  border-left: 4px solid #f2c400;
+  border-left: 4px solid var(--sigta-mostaza);
   border-radius: 8px;
   background: white;
 }
@@ -3228,7 +3245,7 @@ function cerrarSesion() {
 .section-label {
   display: block;
   margin-bottom: 4px;
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 7px;
   font-weight: 900;
   letter-spacing: .8px;
@@ -3236,14 +3253,14 @@ function cerrarSesion() {
 
 
 .flow-summary strong {
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 11px;
 }
 
 
 .flow-summary p {
   margin: 4px 0 0;
-  color: #778895;
+  color: var(--sigta-texto-suave);
   font-size: 8px;
 }
 
@@ -3259,8 +3276,8 @@ function cerrarSesion() {
 .flow-steps span {
   padding: 5px 7px;
   border-radius: 5px;
-  background: #edf3f7;
-  color: #557185;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-texto-suave);
   font-size: 7px;
 }
 
@@ -3319,16 +3336,16 @@ function cerrarSesion() {
 
 
 .preventivo {
-  border-bottom: 2px solid #1e5c9a;
-  background: #edf4fb;
-  color: #174d81;
+  border-bottom: 2px solid var(--sigta-texto-suave);
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-azul);
 }
 
 
 .correctivo {
-  border-bottom: 2px solid #d76b12;
-  background: #fff4e9;
-  color: #a8500d;
+  border-bottom: 2px solid var(--sigta-mostaza);
+  background: var(--sigta-mostaza-suave);
+  color: var(--sigta-mostaza);
 }
 
 
@@ -3351,13 +3368,13 @@ function cerrarSesion() {
 
 
 .kanban-scroll::-webkit-scrollbar-track {
-  background: #e0e6eb;
+  background: var(--sigta-borde);
   border-radius: 10px;
 }
 
 
 .kanban-scroll::-webkit-scrollbar-thumb {
-  background: #71899f;
+  background: var(--sigta-texto-suave);
   border-radius: 10px;
 }
 
@@ -3385,13 +3402,13 @@ function cerrarSesion() {
   gap: 8px;
   padding: 9px 10px;
   border-radius: 7px 7px 0 0;
-  background: #dce8f5;
+  background: var(--sigta-azul-texto-claro);
 }
 
 
 .column-header strong {
   display: block;
-  color: #173a5b;
+  color: var(--sigta-azul);
   font-size: 9px;
 }
 
@@ -3399,7 +3416,7 @@ function cerrarSesion() {
 .column-header small {
   display: block;
   margin-top: 3px;
-  color: #718697;
+  color: var(--sigta-texto-suave);
   font-size: 7px;
 }
 
@@ -3412,7 +3429,7 @@ function cerrarSesion() {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #073b6f;
+  background: var(--sigta-azul);
   color: white;
   font-size: 8px;
   font-weight: 900;
@@ -3423,7 +3440,7 @@ function cerrarSesion() {
   min-height: 380px;
   padding: 8px;
   border-radius: 0 0 7px 7px;
-  background: #e9eef5;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -3434,7 +3451,7 @@ function cerrarSesion() {
 .request-card {
   margin-bottom: 8px;
   padding: 10px;
-  border-left: 3px solid #0b5795;
+  border-left: 3px solid var(--sigta-texto-suave);
   border-radius: 7px;
   background: white;
   box-shadow: 0 2px 7px rgba(0,0,0,.06);
@@ -3447,7 +3464,7 @@ function cerrarSesion() {
   align-items: center;
   justify-content: space-between;
   gap: 5px;
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 8px;
 }
 
@@ -3461,20 +3478,20 @@ function cerrarSesion() {
 
 
 .type-badge.preventive {
-  background: #e4effa;
-  color: #185789;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-texto-suave);
 }
 
 
 .type-badge.corrective {
-  background: #fff0df;
-  color: #a8500d;
+  background: var(--sigta-mostaza-suave);
+  color: var(--sigta-mostaza);
 }
 
 
 .request-card h3 {
   margin: 8px 0;
-  color: #263e53;
+  color: var(--sigta-azul);
   font-size: 10px;
   line-height: 1.4;
 }
@@ -3490,7 +3507,7 @@ function cerrarSesion() {
 .card-info span,
 .card-footer span {
   display: block;
-  color: #93a0aa;
+  color: var(--sigta-texto-suave);
   font-size: 6px;
 }
 
@@ -3499,7 +3516,7 @@ function cerrarSesion() {
 .card-footer strong {
   display: block;
   margin-top: 2px;
-  color: #607587;
+  color: var(--sigta-texto-suave);
   font-size: 7px;
 }
 
@@ -3511,7 +3528,7 @@ function cerrarSesion() {
   gap: 7px;
   margin-top: 9px;
   padding-top: 8px;
-  border-top: 1px solid #edf0f3;
+  border-top: 1px solid var(--sigta-azul-tenue);
 }
 
 
@@ -3520,8 +3537,8 @@ function cerrarSesion() {
   padding: 5px 7px;
   border: none;
   border-radius: 5px;
-  background: #e8f2fa;
-  color: #07518d;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-azul);
   font-size: 7px;
   cursor: pointer;
 }
@@ -3548,7 +3565,7 @@ function cerrarSesion() {
   max-width: 100%;
   max-height: 94vh;
   overflow-y: auto;
-  border-top: 4px solid #f2c400;
+  border-top: 4px solid var(--sigta-mostaza);
   border-radius: 11px;
   background: white;
   box-shadow: 0 20px 60px rgba(0,0,0,.28);
@@ -3560,12 +3577,12 @@ function cerrarSesion() {
   justify-content: space-between;
   gap: 14px;
   padding: 20px 22px;
-  border-bottom: 1px solid #e7ecef;
+  border-bottom: 1px solid var(--sigta-borde);
 }
 
 
 .modal-code {
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 8px;
   font-weight: 900;
 }
@@ -3573,14 +3590,14 @@ function cerrarSesion() {
 
 .modal-header h2 {
   margin: 5px 0 0;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 19px;
 }
 
 
 .modal-header p {
   margin: 4px 0 0;
-  color: #7b8994;
+  color: var(--sigta-texto-suave);
   font-size: 8px;
 }
 
@@ -3588,7 +3605,7 @@ function cerrarSesion() {
 .close-button {
   border: none;
   background: transparent;
-  color: #71818f;
+  color: var(--sigta-texto-suave);
   font-size: 25px;
   cursor: pointer;
 }
@@ -3603,7 +3620,7 @@ function cerrarSesion() {
   grid-template-columns: repeat(4,1fr);
   gap: 8px;
   padding: 13px 22px;
-  background: #f3f6f8;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -3621,14 +3638,14 @@ function cerrarSesion() {
 
 
 .status-grid span {
-  color: #8996a0;
+  color: var(--sigta-texto-suave);
   font-size: 7px;
 }
 
 
 .status-grid strong {
   margin-top: 4px;
-  color: #28475e;
+  color: var(--sigta-azul);
   font-size: 9px;
 }
 
@@ -3642,7 +3659,7 @@ function cerrarSesion() {
   align-items: flex-start;
   gap: 12px;
   padding: 17px 22px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--sigta-azul-tenue);
 }
 
 
@@ -3655,7 +3672,7 @@ function cerrarSesion() {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #073b6f;
+  background: var(--sigta-azul);
   color: white;
   font-size: 8px;
   font-weight: 900;
@@ -3670,7 +3687,7 @@ function cerrarSesion() {
 
 .section-content h3 {
   margin: 3px 0 11px;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 11px;
 }
 
@@ -3685,7 +3702,7 @@ function cerrarSesion() {
 .detail-grid > div {
   padding: 9px;
   border-radius: 6px;
-  background: #f6f8fa;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -3701,14 +3718,14 @@ function cerrarSesion() {
 
 
 .detail-grid span {
-  color: #8996a0;
+  color: var(--sigta-texto-suave);
   font-size: 7px;
 }
 
 
 .detail-grid strong {
   margin-top: 4px;
-  color: #435c70;
+  color: var(--sigta-texto-suave);
   font-size: 9px;
 }
 
@@ -3716,8 +3733,8 @@ function cerrarSesion() {
 .text-box {
   padding: 10px;
   border-radius: 6px;
-  background: #f6f8fa;
-  color: #536b7e;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-texto-suave);
   font-size: 9px;
   line-height: 1.55;
 }
@@ -3734,7 +3751,7 @@ function cerrarSesion() {
 
 
 .mini-title {
-  color: #27475f;
+  color: var(--sigta-azul);
   font-size: 8px;
 }
 
@@ -3745,22 +3762,22 @@ function cerrarSesion() {
 
 .evidence-box {
   padding: 11px;
-  border: 1px dashed #9eb4c5;
+  border: 1px dashed var(--sigta-texto-suave);
   border-radius: 7px;
-  background: #f8fafb;
+  background: var(--sigta-azul-tenue);
 }
 
 
 .evidence-box p {
   margin: 0 0 8px;
-  color: #536b7e;
+  color: var(--sigta-texto-suave);
   font-size: 8px;
 }
 
 
 .evidence-box a,
 .file-link {
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 8px;
   font-weight: 800;
   text-decoration: none;
@@ -3770,8 +3787,8 @@ function cerrarSesion() {
 .empty-evidence {
   padding: 10px;
   border-radius: 6px;
-  background: #f6f8fa;
-  color: #8996a0;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-texto-suave);
   font-size: 8px;
 }
 
@@ -3782,14 +3799,14 @@ function cerrarSesion() {
 
 .workflow-section {
   padding: 19px 22px;
-  background: #f8fafc;
+  background: var(--sigta-azul-tenue);
 }
 
 
 .action-card {
   margin-top: 9px;
   padding: 15px;
-  border: 1px solid #d9e2e9;
+  border: 1px solid var(--sigta-azul-texto-claro);
   border-radius: 8px;
   background: white;
 }
@@ -3804,14 +3821,14 @@ function cerrarSesion() {
 
 .action-heading h3 {
   margin: 2px 0 3px;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 11px;
 }
 
 
 .action-heading p {
   margin: 0;
-  color: #788994;
+  color: var(--sigta-texto-suave);
   font-size: 8px;
   line-height: 1.45;
 }
@@ -3830,7 +3847,7 @@ function cerrarSesion() {
 
 
 .field label {
-  color: #344b5e;
+  color: var(--sigta-azul);
   font-size: 8px;
   font-weight: 800;
 }
@@ -3841,10 +3858,10 @@ function cerrarSesion() {
 .field textarea {
   width: 100%;
   padding: 9px 10px;
-  border: 1px solid #ccd6de;
+  border: 1px solid var(--sigta-borde);
   border-radius: 6px;
   background: white;
-  color: #344b5e;
+  color: var(--sigta-azul);
   font-family: inherit;
   font-size: 9px;
   outline: none;
@@ -3858,7 +3875,7 @@ function cerrarSesion() {
 
 
 .field small {
-  color: #8795a0;
+  color: var(--sigta-texto-suave);
   font-size: 7px;
 }
 
@@ -3891,15 +3908,15 @@ function cerrarSesion() {
 .decision-grid label {
   min-height: 75px;
   padding: 11px;
-  border: 1px solid #d7e0e7;
+  border: 1px solid var(--sigta-borde);
   border-radius: 7px;
   cursor: pointer;
 }
 
 
 .decision-grid label.selected {
-  border-color: #07518d;
-  background: #edf4fa;
+  border-color: var(--sigta-azul);
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -3912,14 +3929,14 @@ function cerrarSesion() {
 
 .decision-grid strong {
   margin-top: -17px;
-  color: #344b5e;
+  color: var(--sigta-azul);
   font-size: 9px;
 }
 
 
 .decision-grid span {
   margin-top: 4px;
-  color: #80909c;
+  color: var(--sigta-texto-suave);
   font-size: 7px;
 }
 
@@ -3928,7 +3945,7 @@ function cerrarSesion() {
   margin-top: 12px;
   padding: 11px;
   border-radius: 7px;
-  background: #edf4fa;
+  background: var(--sigta-azul-tenue);
 }
 
 
@@ -3940,21 +3957,21 @@ function cerrarSesion() {
 
 
 .product-summary span {
-  color: #718697;
+  color: var(--sigta-texto-suave);
   font-size: 7px;
 }
 
 
 .product-summary strong {
   margin-top: 4px;
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 11px;
 }
 
 
 .product-summary small {
   margin-top: 3px;
-  color: #718697;
+  color: var(--sigta-texto-suave);
   font-size: 7px;
 }
 
@@ -3969,7 +3986,7 @@ function cerrarSesion() {
   padding: 0 14px;
   border: none;
   border-radius: 6px;
-  background: #073b6f;
+  background: var(--sigta-azul);
   color: white;
   font-size: 8px;
   font-weight: 800;
@@ -3984,7 +4001,7 @@ function cerrarSesion() {
 
 
 .purchase-card {
-  border-left: 4px solid #f2c400;
+  border-left: 4px solid var(--sigta-mostaza);
 }
 
 
@@ -3998,9 +4015,9 @@ function cerrarSesion() {
   gap: 12px;
   margin-top: 10px;
   padding: 14px;
-  border: 1px solid #b9dfc9;
+  border: 1px solid var(--sigta-exito);
   border-radius: 8px;
-  background: #e9f7ef;
+  background: var(--sigta-exito-fondo);
 }
 
 
@@ -4012,7 +4029,7 @@ function cerrarSesion() {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #2a9a5b;
+  background: var(--sigta-exito);
   color: white;
   font-weight: 900;
 }
@@ -4020,14 +4037,14 @@ function cerrarSesion() {
 
 .complete-card h3 {
   margin: 0;
-  color: #237345;
+  color: var(--sigta-exito);
   font-size: 10px;
 }
 
 
 .complete-card p {
   margin: 4px 0 0;
-  color: #658273;
+  color: var(--sigta-exito);
   font-size: 8px;
 }
 
@@ -4036,8 +4053,8 @@ function cerrarSesion() {
   margin-top: 10px;
   padding: 13px;
   border-radius: 7px;
-  background: #fdecec;
-  color: #a83232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
   font-size: 8px;
 }
 
@@ -4050,17 +4067,17 @@ function cerrarSesion() {
   display: flex;
   justify-content: flex-end;
   padding: 14px 22px;
-  border-top: 1px solid #edf0f2;
+  border-top: 1px solid var(--sigta-azul-tenue);
 }
 
 
 .secondary-button {
   min-height: 35px;
   padding: 0 13px;
-  border: 1px solid #ccd6de;
+  border: 1px solid var(--sigta-borde);
   border-radius: 6px;
   background: white;
-  color: #526777;
+  color: var(--sigta-texto-suave);
   font-size: 8px;
   font-weight: 700;
   cursor: pointer;
@@ -4070,7 +4087,7 @@ function cerrarSesion() {
 .loading,
 .empty-column {
   padding: 28px 8px;
-  color: #93a0ac;
+  color: var(--sigta-texto-suave);
   text-align: center;
   font-size: 8px;
 }

@@ -18,7 +18,7 @@ from django.utils import timezone
 from decimal import Decimal, InvalidOperation
 
 
-from usuarios.models import Usuario, UsuarioRol, RolPermiso, obtener_codigos_rol_efectivos
+from usuarios.models import RolPermiso, obtener_codigos_rol_efectivos
 
 from auditoria.utils import registrar_bitacora
 
@@ -78,6 +78,69 @@ def tiene_permiso(usuario, codigo_permiso):
     )
 
 
+def liberar_origen(solicitud, motivo, request):
+    """Un expediente rechazado deja sin efecto la compra, pero el ticket o
+    el requerimiento que lo originó seguía esperando el componente. Aquí se
+    les devuelve el control: quedan marcados como NO_VIABLE y vuelven a la
+    atención técnica para que el área decida cómo continuar."""
+
+    ticket = solicitud.ticket_soporte
+
+    if ticket and ticket.estado_compra_componente in ("SOLICITADA", "VIABLE"):
+
+        from soporte.models import EstadoTicket
+
+        ticket.estado_compra_componente = "NO_VIABLE"
+        ticket.motivo_no_viable = motivo
+
+        estado = EstadoTicket.objects.filter(codigo="EN_EJECUCION", activo=True).first()
+
+        if estado:
+            ticket.estado = estado
+
+        ticket.save()
+
+        registrar_bitacora(
+            request=request,
+            accion="LIBERAR_TICKET_POR_COMPRA_RECHAZADA",
+            modulo="Compras",
+            detalle=(
+                f"{solicitud.codigo} fue rechazado: el ticket {ticket.codigo} "
+                "vuelve a la atención técnica sin el componente."
+            ),
+            nivel="WARNING",
+        )
+
+    requerimiento = solicitud.requerimiento_mantenimiento
+
+    if requerimiento and requerimiento.estado_compra_componente in ("SOLICITADA", "VIABLE"):
+
+        from mantenimiento.models import EstadoMantenimiento
+
+        requerimiento.estado_compra_componente = "NO_VIABLE"
+        requerimiento.motivo_no_viable = motivo
+
+        estado = EstadoMantenimiento.objects.filter(
+            codigo="EN_MANTENIMIENTO", activo=True
+        ).first()
+
+        if estado:
+            requerimiento.estado = estado
+
+        requerimiento.save()
+
+        registrar_bitacora(
+            request=request,
+            accion="LIBERAR_REQUERIMIENTO_POR_COMPRA_RECHAZADA",
+            modulo="Compras",
+            detalle=(
+                f"{solicitud.codigo} fue rechazado: el requerimiento "
+                f"{requerimiento.codigo} vuelve a la atención técnica."
+            ),
+            nivel="WARNING",
+        )
+
+
 def respuesta_sin_permiso(codigo_permiso):
     return Response(
         {
@@ -130,11 +193,11 @@ class SolicitudCompraViewSet(
         )
 
 
-        # Actores del BPMN consultan la bandeja institucional.
+        # Actores del BPMN consultan la bandeja institucional. La DAF
+        # recibe directamente la solicitud de compra (no existe una
+        # jefatura que se la asigne previamente), así que ve la misma
+        # bandeja que el resto de los actores del proceso.
         if tiene_permiso(usuario, "VER_COMPRAS"):
-            roles = obtener_roles(usuario)
-            if "DAF" in roles and "JEFE_DAF" not in roles and not es_admin(usuario):
-                return queryset.filter(tecnico_daf=usuario)
             return queryset
 
 
@@ -406,33 +469,6 @@ class SolicitudCompraViewSet(
         registrar_bitacora(request=request, accion=accion, modulo="Compras", detalle=f"{solicitud.codigo}: {detalle}", nivel="INFO")
         return Response(self.get_serializer(solicitud).data)
 
-    @action(detail=True, methods=["post"], url_path="validar-asignar-daf")
-    def validar_asignar_daf(self, request, pk=None):
-        solicitud = self.get_object()
-        if "JEFE_DAF" not in obtener_roles(request.user) and not es_admin(request.user):
-            return Response({"detalle": "Solo el Jefe DAF puede validar y asignar el expediente."}, status=403)
-        if solicitud.estado != "CREADO_PENDIENTE_DAF":
-            return Response({"detalle": "El expediente ya no está pendiente de validación."}, status=409)
-        prioridad = str(request.data.get("prioridad", "")).upper()
-        criterio = str(request.data.get("criterio_prioridad", "")).strip()
-        tecnico_id = request.data.get("tecnico_daf_id")
-        if prioridad not in dict(SolicitudCompra.PRIORIDADES):
-            return Response({"prioridad": "Seleccione una prioridad válida."}, status=400)
-        if not criterio:
-            return Response({"criterio_prioridad": "Explique el criterio de prioridad."}, status=400)
-        try:
-            tecnico = Usuario.objects.get(id=tecnico_id, is_active=True, roles_asignados__rol__codigo="DAF", roles_asignados__activo=True)
-        except (Usuario.DoesNotExist, TypeError, ValueError):
-            return Response({"tecnico_daf_id": "Seleccione un Técnico DAF activo."}, status=400)
-        solicitud.tecnico_daf = tecnico
-        solicitud.validado_por_jefe_daf = request.user
-        solicitud.prioridad_daf = prioridad
-        solicitud.criterio_prioridad_daf = criterio
-        solicitud.asignado_daf_en = timezone.now()
-        solicitud.save(update_fields=["tecnico_daf", "validado_por_jefe_daf", "prioridad_daf", "criterio_prioridad_daf", "asignado_daf_en", "actualizado_en"])
-        registrar_bitacora(request=request, accion="VALIDAR_ASIGNAR_DAF", modulo="Compras", detalle=f"{solicitud.codigo} asignado a {tecnico.email} con prioridad {prioridad}.", nivel="INFO")
-        return Response(self.get_serializer(solicitud).data)
-
     @action(detail=True, methods=["post"], url_path="evaluar-daf")
     def evaluar_daf(self, request, pk=None):
         solicitud = self.get_object()
@@ -440,8 +476,6 @@ class SolicitudCompraViewSet(
             return respuesta_sin_permiso("EVALUAR_EXPEDIENTE")
         if solicitud.estado != "CREADO_PENDIENTE_DAF":
             return Response({"detalle": "El expediente no está pendiente de evaluación DAF."}, status=409)
-        if not es_admin(request.user) and solicitud.tecnico_daf_id != request.user.id:
-            return Response({"detalle": "El expediente debe estar asignado a este Técnico DAF."}, status=403)
         califica = str(request.data.get("califica", "")).lower() in ("true", "1", "si", "sí")
         if not califica:
             motivo = str(request.data.get("motivo", "")).strip()
@@ -449,6 +483,7 @@ class SolicitudCompraViewSet(
                 return Response({"detalle": "Debe registrar el motivo del rechazo."}, status=400)
             solicitud.estado, solicitud.motivo_rechazo, solicitud.activo = "RECHAZADO", motivo, False
             solicitud.save()
+            liberar_origen(solicitud, motivo, request)
             return Response(self.get_serializer(solicitud).data)
         return self._transicion(request, solicitud, "EVALUAR_EXPEDIENTE", ["CREADO_PENDIENTE_DAF"], "EVALUADO_PENDIENTE_CERTIFICACION", "EVALUAR_PRESUPUESTO", "La solicitud califica presupuestariamente.")
 
@@ -464,21 +499,16 @@ class SolicitudCompraViewSet(
             return Response({"detalle": "Debe adjuntar la certificación presupuestaria PDF."}, status=400)
         if not archivo.name.lower().endswith(".pdf"):
             return Response({"detalle": "La certificación debe ser un archivo PDF."}, status=400)
+        # BPMN: "verificar requisitos" es tarea de la DAF (informe, proforma
+        # y POA). Antes lo comprobaba Tesorería en un paso posterior que el
+        # proceso no contempla, así que el control se ejerce aquí.
+        if not all((solicitud.informe, solicitud.proforma, solicitud.poa)):
+            return Response({"detalle": "El expediente debe contener el informe, la proforma y el POA."}, status=400)
         solicitud.certificacion_presupuestaria = archivo
         solicitud.save(update_fields=["certificacion_presupuestaria", "actualizado_en"])
-        # El expediente certificado queda automáticamente disponible en la
-        # bandeja institucional de Tesorería (get_queryset filtra por
-        # VER_COMPRAS): no existe un paso de "derivar" independiente.
-        return self._transicion(request, solicitud, "CERTIFICAR_PRESUPUESTO", ["EVALUADO_PENDIENTE_CERTIFICACION"], "CERTIFICADO_PENDIENTE_VERIFICACION", "CERTIFICAR_PRESUPUESTO", "Certificación adjuntada; expediente derivado automáticamente a Tesorería.")
-
-    @action(detail=True, methods=["post"], url_path="verificar-tesoreria")
-    def verificar_tesoreria(self, request, pk=None):
-        s = self.get_object()
-        if not tiene_permiso(request.user, "VERIFICAR_EXPEDIENTE_TESORERIA"):
-            return respuesta_sin_permiso("VERIFICAR_EXPEDIENTE_TESORERIA")
-        if not all((s.informe, s.poa, s.pedido, s.proforma, s.certificacion_presupuestaria)):
-            return Response({"detalle": "El expediente no contiene los cinco documentos obligatorios."}, status=400)
-        return self._transicion(request, s, "VERIFICAR_EXPEDIENTE_TESORERIA", ["CERTIFICADO_PENDIENTE_VERIFICACION"], "VERIFICADO_PENDIENTE_AUTORIZACION", "VERIFICAR_EXPEDIENTE", "Tesorería verificó la integridad del expediente.")
+        # Emitida la certificación, el expediente queda disponible para la
+        # autorización del Director (BPMN: DAF -> DIRECTOR, sin escalas).
+        return self._transicion(request, solicitud, "CERTIFICAR_PRESUPUESTO", ["EVALUADO_PENDIENTE_CERTIFICACION"], "VERIFICADO_PENDIENTE_AUTORIZACION", "CERTIFICAR_PRESUPUESTO", "Certificación emitida; expediente derivado al Director para autorizar la compra.")
 
     @action(detail=True, methods=["post"], url_path="visto-bueno-director")
     def visto_bueno_director(self, request, pk=None):
@@ -504,7 +534,6 @@ class SolicitudCompraViewSet(
         estados_rechazables = [
             "CREADO_PENDIENTE_DAF",
             "EVALUADO_PENDIENTE_CERTIFICACION",
-            "CERTIFICADO_PENDIENTE_VERIFICACION",
             "VERIFICADO_PENDIENTE_AUTORIZACION",
         ]
 
@@ -520,6 +549,8 @@ class SolicitudCompraViewSet(
         solicitud.motivo_rechazo = motivo
         solicitud.activo = False
         solicitud.save()
+
+        liberar_origen(solicitud, motivo, request)
 
         registrar_bitacora(
             request=request,
@@ -547,6 +578,96 @@ class SolicitudCompraViewSet(
         s.save(update_fields=["monto_desembolsado", "responsable_adquisicion", "actualizado_en"])
         return self._transicion(request, s, "REGISTRAR_DESEMBOLSO", ["APROBADO_PARA_DESEMBOLSO"], "FONDOS_DESEMBOLSADOS", "DESEMBOLSAR_FONDOS", "Tesorería registró la entrega física del efectivo.")
 
+    @action(detail=True, methods=["post"], url_path="confirmar-recepcion-fondos")
+    def confirmar_recepcion_fondos(self, request, pk=None):
+        """Tesorería entrega el efectivo, pero el dinero lo retira una
+        persona. Este acuse deja constancia de quién lo recibió y cuándo:
+        hasta entonces el expediente muestra que los fondos están listos
+        para retirar y Tesorería ve que la entrega sigue pendiente."""
+
+        s = self.get_object()
+
+        if not tiene_permiso(request.user, "REALIZAR_COMPRA"):
+            return respuesta_sin_permiso("REALIZAR_COMPRA")
+
+        if s.estado != "FONDOS_DESEMBOLSADOS":
+            return Response(
+                {"detalle": "Tesorería todavía no desembolsó los fondos de este expediente."},
+                status=409
+            )
+
+        if s.fondos_recibidos_en:
+            return Response({"detalle": "La recepción de fondos ya fue confirmada."}, status=409)
+
+        quien = str(request.data.get("fondos_recibidos_por", "")).strip()
+
+        if not quien:
+            quien = request.user.nombre_completo
+
+        s.fondos_recibidos_en = timezone.now()
+        s.fondos_recibidos_por = quien
+
+        s.save(update_fields=["fondos_recibidos_en", "fondos_recibidos_por", "actualizado_en"])
+
+        registrar_bitacora(
+            request=request,
+            accion="CONFIRMAR_RECEPCION_FONDOS",
+            modulo="Compras",
+            detalle=(
+                f"{s.codigo}: {quien} confirmó haber recibido Bs "
+                f"{s.monto_desembolsado} de Tesorería."
+            ),
+            nivel="INFO",
+        )
+
+        return Response(self.get_serializer(s).data)
+
+    @action(detail=True, methods=["post"], url_path="actualizar-gestion")
+    def actualizar_gestion(self, request, pk=None):
+        """Deja ver al resto del proceso que el expediente está siendo
+        trabajado —buscando proveedor o comprando— en lugar de parecer
+        detenido entre el desembolso y el registro de la compra."""
+
+        s = self.get_object()
+
+        if not tiene_permiso(request.user, "REALIZAR_COMPRA"):
+            return respuesta_sin_permiso("REALIZAR_COMPRA")
+
+        if s.estado != "FONDOS_DESEMBOLSADOS":
+            return Response(
+                {"detalle": "Solo puede informar avances mientras gestiona la compra."},
+                status=409
+            )
+
+        gestion = str(request.data.get("gestion_estado", "")).strip().upper()
+
+        if gestion not in dict(SolicitudCompra.GESTIONES):
+            return Response(
+                {"gestion_estado": "Indique si está buscando el producto o comprando."},
+                status=400
+            )
+
+        s.gestion_estado = gestion
+        s.gestion_nota = str(request.data.get("gestion_nota", "")).strip()[:200]
+        s.gestion_actualizada_en = timezone.now()
+
+        s.save(update_fields=[
+            "gestion_estado", "gestion_nota", "gestion_actualizada_en", "actualizado_en",
+        ])
+
+        registrar_bitacora(
+            request=request,
+            accion="ACTUALIZAR_GESTION_COMPRA",
+            modulo="Compras",
+            detalle=(
+                f"{s.codigo}: {dict(SolicitudCompra.GESTIONES)[gestion]}"
+                + (f" — {s.gestion_nota}" if s.gestion_nota else "")
+            ),
+            nivel="INFO",
+        )
+
+        return Response(self.get_serializer(s).data)
+
     @action(detail=True, methods=["post"], url_path="registrar-compra")
     def registrar_compra(self, request, pk=None):
         s = self.get_object()
@@ -554,6 +675,11 @@ class SolicitudCompraViewSet(
             return respuesta_sin_permiso("REALIZAR_COMPRA")
         if s.estado != "FONDOS_DESEMBOLSADOS":
             return Response({"detalle": "Los fondos todavía no fueron desembolsados."}, status=409)
+        if not s.fondos_recibidos_en:
+            return Response(
+                {"detalle": "Primero debe confirmar en el sistema que recibió el efectivo de Tesorería."},
+                status=409
+            )
         try: monto = Decimal(str(request.data.get("monto_real", "")))
         except InvalidOperation: return Response({"detalle": "Monto real inválido."}, status=400)
         proveedor = str(request.data.get("proveedor", "")).strip()
@@ -564,11 +690,28 @@ class SolicitudCompraViewSet(
         # verificación separado en el BPMN de Caja Chica).
         verificado = str(request.data.get("componente_verificado", "")).lower() in ("true", "1", "si", "sí")
         if not verificado:
-            return Response({"detalle": "Debe confirmar la verificación de componentes antes de registrar la compra."}, status=400)
+            return Response({"detalle": "Debe confirmar que el producto adquirido corresponde a lo solicitado."}, status=400)
+
+        # La compra debe quedar respaldada: sin comprobante no hay registro.
+        comprobante = request.FILES.get("comprobante_compra")
+
+        if not comprobante:
+            return Response(
+                {"detalle": "Debe adjuntar la factura o recibo que respalda la compra."},
+                status=400
+            )
+
         s.monto_real, s.proveedor = monto, proveedor
         s.componente_verificado = True
         s.observacion_verificacion = str(request.data.get("observacion_verificacion", "")).strip()
-        s.save(update_fields=["monto_real", "proveedor", "componente_verificado", "observacion_verificacion", "actualizado_en"])
+        s.comprobante_compra = comprobante
+        s.fecha_compra = timezone.now()
+
+        s.save(update_fields=[
+            "monto_real", "proveedor", "componente_verificado",
+            "observacion_verificacion", "comprobante_compra",
+            "fecha_compra", "actualizado_en",
+        ])
         return self._transicion(request, s, "REALIZAR_COMPRA", ["FONDOS_DESEMBOLSADOS"], "COMPRA_REGISTRADA", "REGISTRAR_COMPRA", "Compra física registrada y componentes verificados.")
 
     @action(detail=True, methods=["post"], url_path="registrar-ingreso-almacen")
@@ -580,9 +723,59 @@ class SolicitudCompraViewSet(
             return Response({"detalle": "La compra todavía no fue registrada."}, status=409)
         if s.fecha_ingreso_almacen:
             return Response({"detalle": "El ingreso a almacén ya fue registrado."}, status=409)
+
+        # Control de almacén: qué cantidad ingresó y quién la recibió.
+        try:
+            cantidad = int(request.data.get("cantidad_recibida") or 0)
+        except (TypeError, ValueError):
+            return Response({"cantidad_recibida": "Cantidad inválida."}, status=400)
+
+        if cantidad <= 0:
+            return Response(
+                {"cantidad_recibida": "Indique la cantidad recibida en almacén."},
+                status=400
+            )
+
+        if cantidad > s.cantidad:
+            return Response(
+                {
+                    "cantidad_recibida": (
+                        f"La cantidad recibida no puede superar las {s.cantidad} "
+                        "unidades solicitadas."
+                    )
+                },
+                status=400
+            )
+
+        responsable = str(request.data.get("responsable_recepcion", "")).strip()
+
+        if not responsable:
+            return Response(
+                {"responsable_recepcion": "Indique quién recibe el producto en almacén."},
+                status=400
+            )
+
         s.fecha_ingreso_almacen = timezone.now()
-        s.save(update_fields=["fecha_ingreso_almacen", "actualizado_en"])
-        registrar_bitacora(request=request, accion="REGISTRAR_INGRESO_ALMACEN", modulo="Compras", detalle=f"{s.codigo}: ingreso a almacén registrado.", nivel="INFO")
+        s.cantidad_recibida = cantidad
+        s.responsable_recepcion = responsable
+        s.observacion_ingreso = str(request.data.get("observacion_ingreso", "")).strip()
+
+        s.save(update_fields=[
+            "fecha_ingreso_almacen", "cantidad_recibida",
+            "responsable_recepcion", "observacion_ingreso", "actualizado_en",
+        ])
+
+        registrar_bitacora(
+            request=request,
+            accion="REGISTRAR_INGRESO_ALMACEN",
+            modulo="Compras",
+            detalle=(
+                f"{s.codigo}: ingresaron {cantidad} unidad(es) a almacén, "
+                f"recibidas por {responsable}."
+            ),
+            nivel="INFO",
+        )
+
         return Response(self.get_serializer(s).data)
 
     @action(detail=True, methods=["post"], url_path="registrar-despacho-almacen")
@@ -594,37 +787,213 @@ class SolicitudCompraViewSet(
             return Response({"detalle": "La compra todavía no fue registrada."}, status=409)
         if not s.fecha_ingreso_almacen:
             return Response({"detalle": "Debe registrar primero el ingreso a almacén."}, status=409)
-        s.fecha_despacho_almacen = timezone.now()
-        s.save(update_fields=["fecha_despacho_almacen", "actualizado_en"])
-        return self._transicion(request, s, "ENTREGAR_PRODUCTO", ["COMPRA_REGISTRADA"], "COMPRADO_Y_ENTREGADO", "REGISTRAR_DESPACHO_ALMACEN", "Despacho desde almacén registrado; producto entregado a la unidad solicitante.")
+        if s.fecha_despacho_almacen:
+            return Response({"detalle": "La salida de almacén ya fue registrada."}, status=409)
 
-    @action(detail=True, methods=["post"], url_path="presentar-descargo")
-    def presentar_descargo(self, request, pk=None):
-        s = self.get_object()
-        if s.solicitante_id != request.user.id and not es_admin(request.user):
-            return Response({"detalle": "Solo el solicitante puede presentar el descargo."}, status=403)
-        if s.estado != "COMPRADO_Y_ENTREGADO":
-            return Response({"detalle": "La compra todavía no fue entregada."}, status=409)
-        archivos = {n: request.FILES.get(n) for n in ("factura", "acta_conformidad", "fotograma")}
-        if not all(archivos.values()):
-            return Response({"detalle": "Debe adjuntar Factura, Acta de Conformidad y Fotograma."}, status=400)
-        for nombre, archivo in archivos.items(): setattr(s, nombre, archivo)
-        s.estado = "DESCARGO_PENDIENTE_LIQUIDACION"
-        s.save()
-        registrar_bitacora(request=request, accion="REGISTRAR_DESCARGO", modulo="Compras", detalle=f"{s.codigo}: descargo presentado por el solicitante.", nivel="INFO")
+        # Control de salida: qué cantidad sale y para quién.
+        try:
+            cantidad = int(request.data.get("cantidad_entregada") or 0)
+        except (TypeError, ValueError):
+            return Response({"cantidad_entregada": "Cantidad inválida."}, status=400)
+
+        if cantidad <= 0:
+            return Response(
+                {"cantidad_entregada": "Indique la cantidad que sale de almacén."},
+                status=400
+            )
+
+        if s.cantidad_recibida and cantidad > s.cantidad_recibida:
+            return Response(
+                {
+                    "cantidad_entregada": (
+                        f"No puede salir más de lo que ingresó "
+                        f"({s.cantidad_recibida} unidad/es)."
+                    )
+                },
+                status=400
+            )
+
+        destinatario = str(request.data.get("entregado_a", "")).strip()
+
+        if not destinatario:
+            return Response(
+                {"entregado_a": "Indique a quién se entrega el producto."},
+                status=400
+            )
+
+        s.fecha_despacho_almacen = timezone.now()
+        s.cantidad_entregada = cantidad
+        s.entregado_a = destinatario
+        s.observacion_salida = str(request.data.get("observacion_salida", "")).strip()
+
+        s.save(update_fields=[
+            "fecha_despacho_almacen", "cantidad_entregada",
+            "entregado_a", "observacion_salida", "actualizado_en",
+        ])
+
+        registrar_bitacora(
+            request=request,
+            accion="REGISTRAR_SALIDA_ALMACEN",
+            modulo="Compras",
+            detalle=f"{s.codigo}: salieron {cantidad} unidad(es) de almacén con destino a {destinatario}.",
+            nivel="INFO",
+        )
+
         return Response(self.get_serializer(s).data)
 
-    @action(detail=True, methods=["post"], url_path="cerrar-archivar")
-    @transaction.atomic
-    def cerrar_archivar(self, request, pk=None):
+    @action(detail=True, methods=["post"], url_path="entregar-con-acta")
+    def entregar_con_acta(self, request, pk=None):
+        """BPMN: "Entregar la solicitud con un acta de conformidad".
+        El bien sale del almacén y se entrega formalmente al solicitante
+        acompañado del acta que respalda la recepción."""
+
         s = self.get_object()
-        if not tiene_permiso(request.user, "CERRAR_ARCHIVAR_EXPEDIENTE"):
-            return respuesta_sin_permiso("CERRAR_ARCHIVAR_EXPEDIENTE")
-        if s.estado != "DESCARGO_PENDIENTE_LIQUIDACION" or not all((s.factura, s.acta_conformidad, s.fotograma)):
-            return Response({"detalle": "El descargo no está completo."}, status=409)
-        if s.monto_desembolsado is not None and s.monto_real != s.monto_desembolsado:
-            return Response({"detalle": "El monto de la factura no coincide con el dinero desembolsado."}, status=400)
-        s.estado, s.cerrado_inmutable, s.activo = "CERRADO_ARCHIVADO", True, False
+
+        if not tiene_permiso(request.user, "ENTREGAR_PRODUCTO"):
+            return respuesta_sin_permiso("ENTREGAR_PRODUCTO")
+
+        if s.estado != "COMPRA_REGISTRADA":
+            return Response({"detalle": "La compra todavía no fue registrada."}, status=409)
+
+        if not s.fecha_despacho_almacen:
+            return Response({"detalle": "Debe registrar primero la salida de almacén."}, status=409)
+
+        acta = request.FILES.get("acta_conformidad")
+
+        if not acta:
+            return Response({"detalle": "Debe adjuntar el acta de conformidad de la entrega."}, status=400)
+
+        s.acta_conformidad = acta
+        s.fecha_entrega_solicitante = timezone.now()
+        s.save(update_fields=["acta_conformidad", "fecha_entrega_solicitante", "actualizado_en"])
+
+        # Si el expediente nació de un ticket de Soporte, la entrega física
+        # del componente es lo que reanuda la atención técnica: hasta aquí
+        # el especialista estuvo bloqueado esperando el repuesto.
+        ticket = s.ticket_soporte
+
+        if ticket and ticket.estado_compra_componente == "VIABLE":
+
+            ticket.estado_compra_componente = "ENTREGADA"
+            ticket.componente_entregado_en = s.fecha_entrega_solicitante
+
+            ticket.save(
+                update_fields=[
+                    "estado_compra_componente",
+                    "componente_entregado_en",
+                    "actualizado_en",
+                ]
+            )
+
+            registrar_bitacora(
+                request=request,
+                accion="ENTREGAR_COMPONENTE_SOPORTE",
+                modulo="Compras",
+                detalle=(
+                    f"{s.codigo}: componente entregado; el ticket "
+                    f"{ticket.codigo} queda habilitado para continuar "
+                    "la atención técnica."
+                ),
+                nivel="INFO",
+            )
+
+        # Lo mismo para un requerimiento de Mantenimiento: la entrega del
+        # componente reanuda el trabajo del técnico.
+        requerimiento = s.requerimiento_mantenimiento
+
+        if requerimiento and requerimiento.estado_compra_componente == "VIABLE":
+
+            requerimiento.estado_compra_componente = "ENTREGADA"
+            requerimiento.compra_completada = True
+            requerimiento.producto_entregado = True
+
+            from mantenimiento.models import EstadoMantenimiento
+
+            estado_mantenimiento = (
+                EstadoMantenimiento.objects
+                .filter(codigo="EN_MANTENIMIENTO", activo=True)
+                .first()
+            )
+
+            if estado_mantenimiento:
+                requerimiento.estado = estado_mantenimiento
+                requerimiento.inicio_mantenimiento_en = timezone.now()
+
+            requerimiento.save()
+
+            registrar_bitacora(
+                request=request,
+                accion="ENTREGAR_COMPONENTE_MANTENIMIENTO",
+                modulo="Compras",
+                detalle=(
+                    f"{s.codigo}: componente entregado; el requerimiento "
+                    f"{requerimiento.codigo} puede continuar."
+                ),
+                nivel="INFO",
+            )
+
+        return self._transicion(request, s, "ENTREGAR_PRODUCTO", ["COMPRA_REGISTRADA"], "COMPRADO_Y_ENTREGADO", "ENTREGAR_CON_ACTA", "Bien entregado a la sección solicitante con acta de conformidad.")
+
+    @action(detail=True, methods=["post"], url_path="firmar-acta")
+    def firmar_acta(self, request, pk=None):
+        """BPMN: "Firmar acta de conformidad". La sección solicitante
+        revisa la entrega y firma el acta como constancia de que recibió
+        el bien conforme."""
+
+        s = self.get_object()
+
+        if s.solicitante_id != request.user.id and not es_admin(request.user):
+            return Response({"detalle": "Solo la sección solicitante puede firmar el acta."}, status=403)
+
+        if s.estado != "COMPRADO_Y_ENTREGADO":
+            return Response({"detalle": "El bien todavía no fue entregado."}, status=409)
+
+        if s.acta_firmada_en:
+            return Response({"detalle": "El acta ya fue firmada."}, status=409)
+
+        s.acta_firmada_en = timezone.now()
+        s.save(update_fields=["acta_firmada_en", "actualizado_en"])
+
+        return self._transicion(
+            request, s, "REGISTRAR_DESCARGO",
+            ["COMPRADO_Y_ENTREGADO"], "DESCARGO_PENDIENTE_LIQUIDACION",
+            "FIRMAR_ACTA_CONFORMIDAD",
+            "La sección solicitante firmó el acta de conformidad.",
+        )
+
+    @action(detail=True, methods=["post"], url_path="recibir-solicitud")
+    @transaction.atomic
+    def recibir_solicitud(self, request, pk=None):
+        """BPMN: "Recibir la solicitud". Último paso del proceso: el
+        solicitante recibe formalmente el bien y el expediente queda
+        cerrado de forma inmutable."""
+
+        s = self.get_object()
+
+        if s.solicitante_id != request.user.id and not es_admin(request.user):
+            return Response({"detalle": "Solo la sección solicitante puede recibir la solicitud."}, status=403)
+
+        if not s.acta_firmada_en:
+            return Response({"detalle": "Debe firmar primero el acta de conformidad."}, status=409)
+
+        if s.estado != "DESCARGO_PENDIENTE_LIQUIDACION":
+            return Response({"detalle": "El expediente no está pendiente de recepción."}, status=409)
+
+        s.solicitud_recibida_en = timezone.now()
+        s.cerrado_inmutable = True
+        s.activo = False
+        s.estado = "CERRADO_ARCHIVADO"
         s.save()
-        registrar_bitacora(request=request, accion="CERRAR_CAJA_CHICA", modulo="Compras", detalle=f"{s.codigo}: expediente liquidado y archivado de forma inmutable.", nivel="INFO")
+
+        registrar_bitacora(
+            request=request,
+            accion="RECIBIR_SOLICITUD",
+            modulo="Compras",
+            detalle=(
+                f"{s.codigo}: la sección solicitante recibió el bien. "
+                "El proceso de compra quedó cerrado."
+            ),
+            nivel="INFO",
+        )
+
         return Response(self.get_serializer(s).data)

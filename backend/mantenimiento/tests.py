@@ -6,20 +6,20 @@ from usuarios.models import Area, Rol, Usuario, UsuarioRol
 
 from compras.models import SolicitudCompra
 
+from .models import RequerimientoMantenimiento
+
+
 class FlujoMantenimientoTests(APITestCase):
-    """Cubre el BPMN de Mantenimiento de punta a punta,
-    incluyendo el disparo real del subproceso de Compra
-    Caja Chica cuando no hay producto en almacén."""
+    """Recorre el BPMN de Mantenimiento: registro, validación,
+    clasificación, designación, diagnóstico, compra, reparación,
+    pruebas, verificación, conformidad e informe final."""
 
     def setUp(self):
         call_command("cargar_permisos_sigta")
 
-        # Los estados (RECIBIDO, DERIVADO, ...) ya se siembran
-        # con la migración de datos mantenimiento.0002_seed_estados.
-
         self.area = Area.objects.create(codigo="TEST", nombre="Área de prueba")
-
         self.usuarios = {}
+
         for codigo in (
             "SOLICITANTE",
             "SERVICIOS_GENERALES",
@@ -37,159 +37,217 @@ class FlujoMantenimientoTests(APITestCase):
             UsuarioRol.objects.create(usuario=usuario, rol=rol, activo=True)
             self.usuarios[codigo] = usuario
 
-    def autenticar(self, codigo):
-        self.client.force_authenticate(self.usuarios[codigo])
+    def autenticar(self, rol):
+        self.client.force_authenticate(self.usuarios[rol])
 
-    def test_flujo_completo_con_derivacion_a_compras(self):
-        # 1. Unidad Solicitante registra el requerimiento.
+    def imagen(self):
+        return SimpleUploadedFile("evidencia.jpg", b"\xff\xd8\xff", content_type="image/jpeg")
+
+    def registrar(self, titulo="Aire acondicionado sin enfriar"):
         self.autenticar("SOLICITANTE")
-        respuesta = self.client.post("/api/mantenimiento/requerimientos/", {
-            "titulo": "Impresora no enciende",
-            "descripcion": "La impresora del área no enciende.",
-            "area": self.area.id,
-            "ubicacion": "Oficina 3",
-            "tipo": "CORRECTIVO",
-            "evidencia_archivo": SimpleUploadedFile(
-                "evidencia.jpg", b"contenido-de-prueba", content_type="image/jpeg"
-            ),
+        r = self.client.post("/api/mantenimiento/requerimientos/", {
+            "titulo": titulo,
+            "descripcion": "No enfría desde ayer",
+            "ubicacion": "Aula C0-07",
+            "evidencia_archivo": self.imagen(),
         }, format="multipart")
-        self.assertEqual(respuesta.status_code, 201, respuesta.data)
-        pk = respuesta.data["requerimiento"]["id"]
-        self.assertEqual(respuesta.data["requerimiento"]["estado_codigo"], "RECIBIDO")
+        self.assertEqual(r.status_code, 201, r.data)
+        return r.data["requerimiento"]["id"]
 
-        # 2. Servicios Generales deriva a su auxiliar.
+    def test_ticket_invalido_no_procede(self):
+        pk = self.registrar("Solicitud incompleta")
+
         self.autenticar("SERVICIOS_GENERALES")
         r = self.client.post(
-            f"/api/mantenimiento/requerimientos/{pk}/derivar-auxiliar/",
-            {"auxiliar_id": self.usuarios["AUXILIAR_SERVICIOS_GENERALES"].id},
+            f"/api/mantenimiento/requerimientos/{pk}/validar-ticket/",
+            {"es_valido": False, "motivo_rechazo": "No indica el equipo afectado."},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "RECHAZADO")
+
+    def test_flujo_completo_sin_compra(self):
+        pk = self.registrar()
+
+        # Jefatura: validar, clasificar y designar.
+        self.autenticar("SERVICIOS_GENERALES")
+        r = self.client.post(f"/api/mantenimiento/requerimientos/{pk}/validar-ticket/", {"es_valido": True}, format="json")
+        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "VALIDADO", r.data)
+
+        r = self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/clasificar-prioridad/",
+            {"prioridad": "ALTA", "criterio_prioridad": "Aula en uso permanente."},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+
+        r = self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/designar-revision/",
+            {"tecnico_id": self.usuarios["AUXILIAR_SERVICIOS_GENERALES"].id},
             format="json",
         )
         self.assertEqual(r.data["requerimiento"]["estado_codigo"], "DERIVADO", r.data)
 
-        # 3. Auxiliar: requiere reposición de almacén.
+        # Técnico: diagnóstico, reparación y pruebas.
         self.autenticar("AUXILIAR_SERVICIOS_GENERALES")
         r = self.client.post(
-            f"/api/mantenimiento/requerimientos/{pk}/verificar-reposicion/",
-            {
-                "requiere_reposicion": True,
-                "producto_requerido": "Fuente de poder",
-                "cantidad_requerida": 1,
-                "especificacion_producto": "Fuente 220V para impresora HP",
-            },
+            f"/api/mantenimiento/requerimientos/{pk}/registrar-diagnostico/",
+            {"diagnostico": "Filtro saturado", "plan_solucion": "Limpieza profunda"},
             format="json",
-        )
-        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "REVISION_ALMACEN", r.data)
-
-        # 4. Encargado de Compras y Almacén: no hay producto ->
-        # debe crearse automáticamente un expediente real en Compras.
-        self.autenticar("ENCARGADO_COMPRAS_ALMACEN")
-        r = self.client.post(
-            f"/api/mantenimiento/requerimientos/{pk}/reportar-existencia/",
-            {"producto_disponible": False, "observacion_almacen": "Sin stock"},
-            format="json",
-        )
-        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "EN_ESPERA_COMPRA", r.data)
-
-        codigo_compra = r.data["requerimiento"]["codigo_compra_vinculada"]
-        self.assertTrue(codigo_compra)
-
-        solicitud = SolicitudCompra.objects.get(codigo=codigo_compra)
-        self.assertEqual(solicitud.origen_modulo, "MANTENIMIENTO")
-        self.assertEqual(solicitud.requerimiento_mantenimiento_id, pk)
-        self.assertEqual(solicitud.solicitante_id, self.usuarios["AUXILIAR_SERVICIOS_GENERALES"].id)
-        self.assertEqual(solicitud.estado, "CREADO_PENDIENTE_DAF")
-
-        # 5. Todavía no se puede confirmar la compra: el
-        # expediente de Compras aún no fue cerrado.
-        r = self.client.post(
-            f"/api/mantenimiento/requerimientos/{pk}/registrar-compra/",
-            {}, format="json",
-        )
-        self.assertEqual(r.status_code, 409, r.data)
-
-        # Se simula el cierre del expediente en Compras (el ciclo
-        # completo DAF->Tesorería->Director->Almacén ya se cubre
-        # en compras.tests.FlujoCajaChicaTests).
-        solicitud.estado = "CERRADO_ARCHIVADO"
-        solicitud.cerrado_inmutable = True
-        solicitud.save(update_fields=["estado", "cerrado_inmutable"])
-
-        r = self.client.post(
-            f"/api/mantenimiento/requerimientos/{pk}/registrar-compra/",
-            {}, format="json",
         )
         self.assertEqual(r.data["requerimiento"]["estado_codigo"], "EN_MANTENIMIENTO", r.data)
-        self.assertEqual(r.data["requerimiento"]["codigo_compra_vinculada"], solicitud.codigo)
 
-        # 6. Auxiliar realiza el mantenimiento y registra el informe.
-        self.autenticar("AUXILIAR_SERVICIOS_GENERALES")
         r = self.client.post(
             f"/api/mantenimiento/requerimientos/{pk}/realizar-mantenimiento/",
-            {"trabajo_realizado": "Se reemplazó la fuente de poder."},
+            {"trabajo_realizado": "Se limpió el filtro y se recargó gas."},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+
+        r = self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/pruebas-tecnicas/",
+            {"resultado_pruebas": "Enfría correctamente."},
             format="json",
         )
         self.assertEqual(r.status_code, 200, r.data)
 
         r = self.client.post(
             f"/api/mantenimiento/requerimientos/{pk}/registrar-informe/",
-            {"informe_trabajo": "Impresora operativa nuevamente."},
-            format="multipart",
+            {"informe_trabajo": "Mantenimiento correctivo concluido."},
+            format="json",
         )
         self.assertEqual(r.data["requerimiento"]["estado_codigo"], "INFORME_REGISTRADO", r.data)
 
-        # 7. Servicios Generales recibe el expediente y lo archiva.
+        # Jefatura: verificación con ciclo de retorno.
         self.autenticar("SERVICIOS_GENERALES")
         r = self.client.post(
-            f"/api/mantenimiento/requerimientos/{pk}/finalizar/",
-            {}, format="json",
+            f"/api/mantenimiento/requerimientos/{pk}/verificar-funcionamiento/",
+            {"problema_resuelto": False},
+            format="json",
         )
-        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "FINALIZADO", r.data)
+        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "EN_MANTENIMIENTO", r.data)
+        self.assertEqual(r.data["requerimiento"]["rework_count"], 1)
 
-        # 8. Director: solo lectura de lo finalizado + reporte mensual.
-        self.autenticar("DIRECTOR")
-        r = self.client.get("/api/mantenimiento/requerimientos/")
-        self.assertEqual(r.status_code, 200, r.data)
-        codigos = [item["id"] for item in r.data]
-        self.assertIn(pk, codigos)
-
-        r = self.client.get("/api/mantenimiento/requerimientos/reporte-mensual/")
-        self.assertEqual(r.status_code, 200, r.data)
-        self.assertGreaterEqual(r.data["total_finalizados"], 1)
-
-    def test_registrar_compra_sin_solicitud_vinculada(self):
-        self.autenticar("SOLICITANTE")
-        respuesta = self.client.post("/api/mantenimiento/requerimientos/", {
-            "titulo": "Aire acondicionado con fuga",
-            "descripcion": "Fuga de agua en el equipo de aire.",
-            "area": self.area.id,
-            "ubicacion": "Sala de servidores",
-            "tipo": "CORRECTIVO",
-            "evidencia_archivo": SimpleUploadedFile(
-                "evidencia.jpg", b"contenido-de-prueba", content_type="image/jpeg"
-            ),
-        }, format="multipart")
-        pk = respuesta.data["requerimiento"]["id"]
+        self.autenticar("AUXILIAR_SERVICIOS_GENERALES")
+        self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/pruebas-tecnicas/",
+            {"resultado_pruebas": "Segunda prueba conforme."}, format="json",
+        )
+        self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/registrar-informe/",
+            {"informe_trabajo": "Se sustituyó el termostato."}, format="json",
+        )
 
         self.autenticar("SERVICIOS_GENERALES")
-        self.client.post(
-            f"/api/mantenimiento/requerimientos/{pk}/derivar-auxiliar/",
-            {"auxiliar_id": self.usuarios["AUXILIAR_SERVICIOS_GENERALES"].id},
+        r = self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/verificar-funcionamiento/",
+            {"problema_resuelto": True},
             format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+
+        r = self.client.post(f"/api/mantenimiento/requerimientos/{pk}/informar-conformidad/", {}, format="json")
+        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "CONFORMIDAD_INFORMADA", r.data)
+
+        r = self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/elaborar-informe-final/",
+            {"informe_final": "Informe consolidado del mantenimiento."},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertTrue(r.data["requerimiento"]["informe_elevado_en"])
+
+        # Dirección: recibe el informe y el proceso termina.
+        self.autenticar("DIRECTOR")
+        r = self.client.post(f"/api/mantenimiento/requerimientos/{pk}/recibir-informe/", {}, format="json")
+        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "FINALIZADO", r.data)
+        self.assertTrue(r.data["requerimiento"]["proceso_finalizado_en"])
+
+    def test_requerimiento_con_compra_no_viable(self):
+        pk = self.registrar("Requiere compresor nuevo")
+
+        self.autenticar("SERVICIOS_GENERALES")
+        self.client.post(f"/api/mantenimiento/requerimientos/{pk}/validar-ticket/", {"es_valido": True}, format="json")
+        self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/clasificar-prioridad/",
+            {"prioridad": "MEDIA", "criterio_prioridad": "Puede esperar."}, format="json",
+        )
+        self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/designar-revision/",
+            {"tecnico_id": self.usuarios["AUXILIAR_SERVICIOS_GENERALES"].id}, format="json",
         )
 
         self.autenticar("AUXILIAR_SERVICIOS_GENERALES")
         self.client.post(
-            f"/api/mantenimiento/requerimientos/{pk}/verificar-reposicion/",
-            {"requiere_reposicion": False},
+            f"/api/mantenimiento/requerimientos/{pk}/registrar-diagnostico/",
+            {"diagnostico": "Compresor quemado", "plan_solucion": "Reemplazar"}, format="json",
+        )
+        r = self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/solicitar-requerimiento/",
+            {
+                "producto_requerido": "Compresor 12000 BTU",
+                "especificacion_producto": "Marca X",
+                "cantidad_requerida": 1,
+                "costo_estimado": "4500",
+            },
+            format="json",
+        )
+        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "EN_ESPERA_COMPRA", r.data)
+
+        # El técnico no puede continuar mientras la compra esté en curso.
+        r = self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/realizar-mantenimiento/",
+            {"trabajo_realizado": "x"}, format="json",
+        )
+        self.assertIn(r.status_code, (400, 409), r.data)
+
+        self.autenticar("SERVICIOS_GENERALES")
+        r = self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/evaluar-viabilidad-compra/",
+            {"viable": False, "motivo_no_viable": "Excede el presupuesto disponible."},
+            format="json",
+        )
+        self.assertEqual(r.data["requerimiento"]["estado_codigo"], "CERRADO_SIN_COMPRA", r.data)
+
+    def test_requerimiento_con_compra_viable_genera_expediente(self):
+        pk = self.registrar("Requiere repuesto")
+
+        self.autenticar("SERVICIOS_GENERALES")
+        self.client.post(f"/api/mantenimiento/requerimientos/{pk}/validar-ticket/", {"es_valido": True}, format="json")
+        self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/clasificar-prioridad/",
+            {"prioridad": "ALTA", "criterio_prioridad": "Urgente."}, format="json",
+        )
+        self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/designar-revision/",
+            {"tecnico_id": self.usuarios["AUXILIAR_SERVICIOS_GENERALES"].id}, format="json",
+        )
+
+        self.autenticar("AUXILIAR_SERVICIOS_GENERALES")
+        self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/registrar-diagnostico/",
+            {"diagnostico": "Falta repuesto", "plan_solucion": "Comprar"}, format="json",
+        )
+        self.client.post(
+            f"/api/mantenimiento/requerimientos/{pk}/solicitar-requerimiento/",
+            {"producto_requerido": "Ventilador", "cantidad_requerida": 1, "costo_estimado": "300"},
             format="json",
         )
 
-        # El requerimiento nunca pasó por EN_ESPERA_COMPRA, por lo
-        # que registrar-compra debe rechazar por estado, no por
-        # falta de código a mano.
-        self.autenticar("ENCARGADO_COMPRAS_ALMACEN")
+        self.autenticar("SERVICIOS_GENERALES")
         r = self.client.post(
-            f"/api/mantenimiento/requerimientos/{pk}/registrar-compra/",
-            {}, format="json",
+            f"/api/mantenimiento/requerimientos/{pk}/evaluar-viabilidad-compra/",
+            {"viable": True}, format="json",
         )
-        self.assertEqual(r.status_code, 400, r.data)
+        self.assertEqual(r.status_code, 200, r.data)
+
+        codigo = r.data["requerimiento"]["codigo_compra_vinculada"]
+        self.assertTrue(codigo)
+
+        solicitud = SolicitudCompra.objects.get(codigo=codigo)
+        self.assertEqual(solicitud.origen_modulo, "MANTENIMIENTO")
+        self.assertEqual(solicitud.requerimiento_mantenimiento_id, pk)
+        self.assertEqual(solicitud.estado, "CREADO_PENDIENTE_DAF")
+
+        requerimiento = RequerimientoMantenimiento.objects.get(pk=pk)
+        self.assertEqual(requerimiento.estado_compra_componente, "VIABLE")

@@ -56,9 +56,9 @@ header {
 
   padding: 0 11px;
 
-  background: #dce8f5;
+  background: var(--sigta-azul-texto-claro);
 
-  color: #173a5b;
+  color: var(--sigta-azul);
 
   font-size: 10px;
 }
@@ -73,9 +73,9 @@ header span {
 
   border-radius: 50%;
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
-  color: #ffffff;
+  color: var(--sigta-blanco);
 
   font-size: 8px;
 }
@@ -85,13 +85,13 @@ header span {
 
   padding: 9px;
 
-  background: #e9eef5;
+  background: var(--sigta-azul-tenue);
 }
 
 .empty {
   margin-top: 50px;
 
-  color: #98a5b1;
+  color: var(--sigta-texto-suave);
 
   text-align: center;
 

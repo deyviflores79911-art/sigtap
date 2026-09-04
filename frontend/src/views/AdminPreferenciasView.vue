@@ -712,8 +712,8 @@ function cerrarSesion() {
 .layout {
   min-height: 100vh;
   display: flex;
-  background: #f2f5f9;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--sigta-azul-tenue);
+  font-family: var(--sigta-fuente);
 }
 
 
@@ -741,21 +741,21 @@ function cerrarSesion() {
 .breadcrumb {
   display: block;
   margin-bottom: 6px;
-  color: #8493a0;
+  color: var(--sigta-texto-suave);
   font-size: 15px;
 }
 
 
 .topbar h1 {
   margin: 0;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 27px;
 }
 
 
 .topbar p {
   margin: 5px 0 0;
-  color: #718294;
+  color: var(--sigta-texto-suave);
   font-size: 17px;
   line-height: 1.45;
 }
@@ -770,8 +770,8 @@ function cerrarSesion() {
   padding: 0 15px;
   border: none;
   border-radius: 7px;
-  background: #f2c400;
-  color: #17324a;
+  background: var(--sigta-mostaza);
+  color: var(--sigta-texto);
   font-family: inherit;
   font-size: 15px;
   font-weight: 900;
@@ -780,7 +780,7 @@ function cerrarSesion() {
 
 
 .save-top:hover {
-  background: #e4b900;
+  background: var(--sigta-mostaza);
 }
 
 
@@ -804,14 +804,14 @@ function cerrarSesion() {
 
 
 .success {
-  background: #e8f7ef;
-  color: #237345;
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
 }
 
 
 .error {
-  background: #fdeaea;
-  color: #a53232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
 }
 
 
@@ -830,7 +830,7 @@ function cerrarSesion() {
 .setting-card {
   min-height: 310px;
   padding: 18px;
-  border-top: 4px solid #f2c400;
+  border-top: 4px solid var(--sigta-mostaza);
   border-radius: 9px;
   background: white;
   box-shadow: 0 4px 14px rgba(0,0,0,.04);
@@ -857,8 +857,8 @@ function cerrarSesion() {
   align-items: center;
   justify-content: center;
   border-radius: 7px;
-  background: #edf4fa;
-  color: #07518d;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-azul);
   font-size: 14px;
   font-weight: 900;
 }
@@ -866,14 +866,14 @@ function cerrarSesion() {
 
 .card-header h2 {
   margin: 0;
-  color: #29475e;
+  color: var(--sigta-azul);
   font-size: 20px;
 }
 
 
 .card-header p {
   margin: 4px 0 0;
-  color: #7a8995;
+  color: var(--sigta-texto-suave);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -903,7 +903,7 @@ function cerrarSesion() {
 
 
 .field label {
-  color: #43596b;
+  color: var(--sigta-texto-suave);
   font-size: 14px;
   font-weight: 800;
 }
@@ -913,10 +913,10 @@ function cerrarSesion() {
   width: 100%;
   height: 39px;
   padding: 0 10px;
-  border: 1px solid #ccd6de;
+  border: 1px solid var(--sigta-borde);
   border-radius: 6px;
   background: white;
-  color: #344b5e;
+  color: var(--sigta-azul);
   font-family: inherit;
   font-size: 15px;
   outline: none;
@@ -924,13 +924,13 @@ function cerrarSesion() {
 
 
 .field input:focus {
-  border-color: #0b5795;
+  border-color: var(--sigta-texto-suave);
   box-shadow: 0 0 0 3px rgba(11,87,149,.08);
 }
 
 
 .field small {
-  color: #87949e;
+  color: var(--sigta-texto-suave);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -956,11 +956,11 @@ function cerrarSesion() {
   padding: 0 10px;
   display: flex;
   align-items: center;
-  border: 1px solid #ccd6de;
+  border: 1px solid var(--sigta-borde);
   border-left: none;
   border-radius: 0 6px 6px 0;
-  background: #f1f4f6;
-  color: #687986;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-texto-suave);
   font-size: 14px;
 }
 
@@ -976,16 +976,16 @@ function cerrarSesion() {
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  border-left: 4px solid #07518d;
+  border-left: 4px solid var(--sigta-azul);
   border-radius: 8px;
-  background: #edf4fa;
+  background: var(--sigta-azul-tenue);
 }
 
 
 .section-label {
   display: block;
   margin-bottom: 4px;
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 13px;
   font-weight: 900;
   letter-spacing: .8px;
@@ -994,14 +994,14 @@ function cerrarSesion() {
 
 .system-note strong {
   display: block;
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 16px;
 }
 
 
 .system-note p {
   margin: 4px 0 0;
-  color: #678092;
+  color: var(--sigta-texto-suave);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -1012,7 +1012,7 @@ function cerrarSesion() {
   padding: 5px 8px;
   border-radius: 5px;
   background: white;
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 14px;
   font-weight: 900;
 }

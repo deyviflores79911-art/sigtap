@@ -101,7 +101,7 @@ const iniciales = computed(() => {
 .layout {
   min-height: 100vh;
   display: flex;
-  background: #f3f6fb;
+  background: var(--sigta-azul-tenue);
 }
 
 .page {
@@ -114,12 +114,9 @@ const iniciales = computed(() => {
 
   padding: 20px;
 
-  background: #f3f6fb;
+  background: var(--sigta-azul-tenue);
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--sigta-fuente);
 }
 
 @media (max-width: 760px) {
@@ -135,7 +132,7 @@ const iniciales = computed(() => {
   background: white;
 
   border-top:
-    4px solid #f2c400;
+    4px solid var(--sigta-mostaza);
 
   border-radius: 14px;
 
@@ -158,7 +155,7 @@ const iniciales = computed(() => {
 
   border-radius: 50%;
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
   color: white;
 
@@ -169,11 +166,11 @@ const iniciales = computed(() => {
 h1 {
   margin-bottom: 4px;
 
-  color: #17324a;
+  color: var(--sigta-texto);
 }
 
 .email {
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 }
 
 .divider {
@@ -181,7 +178,7 @@ h1 {
 
   margin: 22px 0;
 
-  background: #f2c400;
+  background: var(--sigta-mostaza);
 
   border-radius: 3px;
 }
@@ -194,25 +191,25 @@ h1 {
   padding: 13px 0;
 
   border-bottom:
-    1px solid #edf0f2;
+    1px solid var(--sigta-azul-tenue);
 }
 
 .information span {
   display: block;
 
-  color: #81909b;
+  color: var(--sigta-texto-suave);
 
   font-size: 10px;
 }
 
 .information strong {
-  color: #314b60;
+  color: var(--sigta-azul);
 
   font-size: 13px;
 }
 
 .active {
-  color: #237344 !important;
+  color: var(--sigta-exito) !important;
 }
 
 button {
@@ -225,7 +222,7 @@ button {
 
   border-radius: 7px;
 
-  background: #073b6f;
+  background: var(--sigta-azul);
 
   color: white;
 

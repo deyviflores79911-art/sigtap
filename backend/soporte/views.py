@@ -497,10 +497,19 @@ class TicketViewSet(
         )
 
 
-        if not serializer.validated_data.get("evidencia_archivo"):
+        # BPMN: el ticket debe describir el problema, la ubicación y el
+        # equipo involucrado; las evidencias se adjuntan "si corresponde".
+        if not str(serializer.validated_data.get("ubicacion", "")).strip():
 
             return Response(
-                {"detalle": "Debe adjuntar una foto como evidencia."},
+                {"ubicacion": "Indique la ubicación donde se presenta el problema."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not str(serializer.validated_data.get("equipo_afectado", "")).strip():
+
+            return Response(
+                {"equipo_afectado": "Indique el equipo involucrado."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -518,12 +527,6 @@ class TicketViewSet(
                 )
 
             extra["area"] = area_defecto
-
-        if not serializer.validated_data.get("ubicacion"):
-            extra["ubicacion"] = "No especificado"
-
-        if not serializer.validated_data.get("equipo_afectado"):
-            extra["equipo_afectado"] = ""
 
         if not serializer.validated_data.get("categoria"):
 
@@ -1603,6 +1606,12 @@ class TicketViewSet(
         ticket.costo_estimado = costo_estimado
         ticket.estado_compra_componente = "SOLICITADA"
 
+        # BPMN: el requerimiento viaja con su cotización adjunta.
+        cotizacion = request.FILES.get("cotizacion_archivo")
+
+        if cotizacion:
+            ticket.cotizacion_archivo = cotizacion
+
         ticket.save(
             update_fields=[
                 "requiere_compra",
@@ -1610,6 +1619,7 @@ class TicketViewSet(
                 "especificaciones_tecnicas",
                 "costo_estimado",
                 "estado_compra_componente",
+                "cotizacion_archivo",
                 "actualizado_en",
             ]
         )
@@ -1893,7 +1903,7 @@ class TicketViewSet(
             )
 
 
-        if ticket.estado_compra_componente in ("SOLICITADA",):
+        if ticket.estado_compra_componente == "SOLICITADA":
 
             return Response(
                 {
@@ -1902,6 +1912,23 @@ class TicketViewSet(
                         "de componente pendiente de "
                         "evaluación de viabilidad por "
                         "Jefe UTIC."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+
+        # El flujo técnico permanece en pausa mientras el componente
+        # recorre el subproceso de compra: solo se reanuda cuando
+        # Almacén registra el despacho (estado ENTREGADA).
+        if ticket.estado_compra_componente == "VIABLE":
+
+            return Response(
+                {
+                    "detalle": (
+                        "El componente todavía no fue entregado por "
+                        "Almacén. El expediente de compra "
+                        f"{ticket.codigo_compra_vinculada or 'vinculado'} "
+                        "sigue en proceso."
                     )
                 },
                 status=status.HTTP_409_CONFLICT
@@ -2072,6 +2099,22 @@ class TicketViewSet(
             resultado
         )
 
+        # BPMN: "Registrar informe al Jefe de UTIC". Es el descargo del
+        # especialista, distinto del informe final que la jefatura
+        # elabora y valida una vez cerrado el ticket.
+        informe_tecnico = (
+            str(
+                request.data.get(
+                    "informe_tecnico",
+                    ""
+                )
+            )
+            .strip()
+        )
+
+        if informe_tecnico:
+            ticket.informe_tecnico = informe_tecnico
+
         ticket.estado = (
             estado_verificacion
         )
@@ -2084,6 +2127,7 @@ class TicketViewSet(
         ticket.save(
             update_fields=[
                 "resultado_pruebas",
+                "informe_tecnico",
                 "estado",
                 "pruebas_en",
                 "actualizado_en",
@@ -2567,6 +2611,128 @@ class TicketViewSet(
 
 
     # ======================================================
+    # 10. RECIBIR INFORME DE ACTIVIDADES
+    # ======================================================
+    #
+    # BPMN: la jefatura eleva el informe y la Dirección lo recibe.
+    # Con ese acuse el proceso del ticket llega a su evento final.
+    #
+    # ======================================================
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="recibir-informe"
+    )
+    def recibir_informe(
+        self,
+        request,
+        pk=None
+    ):
+
+        if not tiene_permiso(
+            request.user,
+            "RECIBIR_INFORME_ACTIVIDADES"
+        ):
+
+            return respuesta_sin_permiso(
+                "RECIBIR_INFORME_ACTIVIDADES"
+            )
+
+
+        ticket = self.get_object()
+
+
+        if not ticket.informe_elevado_en:
+
+            return Response(
+                {
+                    "detalle": (
+                        "La jefatura todavía no elevó el informe "
+                        "final de este ticket."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+
+
+        roles = obtener_roles(request.user)
+
+        if not (
+            "DIRECTOR" in roles
+            or es_admin(request.user)
+        ):
+
+            return Response(
+                {
+                    "detalle": (
+                        "Solo la Dirección puede recibir el informe "
+                        "de actividades."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+
+        if ticket.informe_recibido_director_en:
+
+            return Response(
+                {"detalle": "Usted ya recibió este informe."},
+                status=status.HTTP_409_CONFLICT
+            )
+
+
+        ahora = timezone.now()
+
+        ticket.informe_recibido_director_en = ahora
+        ticket.proceso_finalizado_en = ahora
+
+        ticket.save(
+            update_fields=[
+                "informe_recibido_director_en",
+                "proceso_finalizado_en",
+                "actualizado_en",
+            ]
+        )
+
+
+        registrar_bitacora(
+            request=request,
+            accion="RECIBIR_INFORME_ACTIVIDADES",
+            modulo="Soporte Técnico",
+            detalle=(
+                f"La Dirección recibió el informe de actividades del "
+                f"ticket {ticket.codigo}."
+            ),
+            nivel="INFO",
+        )
+
+
+        if ticket.proceso_finalizado_en:
+
+            registrar_bitacora(
+                request=request,
+                accion="FINALIZAR_PROCESO_TICKET",
+                modulo="Soporte Técnico",
+                detalle=(
+                    f"El informe del ticket {ticket.codigo} fue recibido: "
+                    "el proceso quedó formalmente cerrado."
+                ),
+                nivel="INFO",
+            )
+
+
+        return respuesta_ticket(
+            ticket,
+            (
+                "Informe recibido. El proceso del ticket quedó cerrado."
+                if ticket.proceso_finalizado_en
+                else "Informe recibido correctamente."
+            )
+        )
+
+
+    # ======================================================
     # 9. ELABORAR Y VALIDAR INFORME FINAL
     # ======================================================
     #
@@ -2627,9 +2793,22 @@ class TicketViewSet(
             )
 
 
+        ahora = timezone.now()
+
         ticket.informe_final = informe
 
-        ticket.save(update_fields=["informe_final", "actualizado_en"])
+        # BPMN: tras validar el informe, la jefatura lo eleva y una
+        # compuerta paralela lo distribuye al Director y al Jefe de
+        # carrera. El proceso solo termina cuando ambos lo reciben.
+        ticket.informe_elevado_en = ahora
+
+        ticket.save(
+            update_fields=[
+                "informe_final",
+                "informe_elevado_en",
+                "actualizado_en",
+            ]
+        )
 
 
         registrar_bitacora(
@@ -2641,7 +2820,19 @@ class TicketViewSet(
         )
 
 
+        registrar_bitacora(
+            request=request,
+            accion="ELEVAR_INFORME_ACTIVIDADES",
+            modulo="Soporte Técnico",
+            detalle=(
+                f"El informe final del ticket {ticket.codigo} fue elevado "
+                "a la Dirección para su conocimiento."
+            ),
+            nivel="INFO",
+        )
+
+
         return respuesta_ticket(
             ticket,
-            "Informe final elaborado y validado correctamente."
+            "Informe final validado y elevado a la Dirección."
         )

@@ -36,13 +36,6 @@ class Command(BaseCommand):
             "must_change_password": False,
         },
         {
-            "email": "jefe.daf@emi.edu.bo",
-            "nombre_completo": "Jefe DAF",
-            "rol": "JEFE_DAF",
-            "password": "SIGTA_JefeDAF#2026!",
-            "must_change_password": False,
-        },
-        {
             "email": "servicios.generales@emi.edu.bo",
             "nombre_completo": "Jefe Mantenimiento",
             "rol": "SERVICIOS_GENERALES",

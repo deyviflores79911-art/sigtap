@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.utils import timezone
 
 from rest_framework import (
@@ -331,8 +333,13 @@ class RequerimientoMantenimientoViewSet(
         # puede_operar_mantenimiento.
         if tiene_rol(usuario, "DIRECTOR"):
 
+            # La Dirección ve los informes que la jefatura le elevó
+            # (para acusar recibo) y los ya finalizados.
+            from django.db.models import Q
+
             return queryset.filter(
-                estado__codigo="FINALIZADO"
+                Q(informe_elevado_en__isnull=False)
+                | Q(estado__codigo="FINALIZADO")
             )
 
 
@@ -630,1429 +637,914 @@ class RequerimientoMantenimientoViewSet(
 
 
     # ======================================================
-    # 1. DERIVAR A SU AUXILIAR
-    # ======================================================
-    #
-    # BPMN:
-    #
-    # SERVICIOS GENERALES
-    # "DERIVA A SU AUXILIAR"
-    #
-    # RECIBIDO -> DERIVADO
-    #
+    # AUXILIAR DE ESTADOS
     # ======================================================
 
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="derivar-auxiliar"
-    )
-    def derivar_auxiliar(
-        self,
-        request,
-        pk=None
-    ):
+    def _cambiar_estado(self, requerimiento, codigo):
 
-        if not tiene_rol(
-            request.user,
-            "SERVICIOS_GENERALES"
-        ):
+        estado = obtener_estado(codigo)
 
+        if estado:
+            requerimiento.estado = estado
+
+        return estado
+
+
+    # ======================================================
+    # 1. RECIBIR Y VALIDAR TICKET  (Jefe de Mantenimiento)
+    # ======================================================
+    #
+    # BPMN: "Recibir Ticket y validar Ticket" -> ¿Ticket válido?
+    # NO -> "Notificar rechazo al usuario" -> "Ticket no procede".
+    #
+    # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="validar-ticket")
+    def validar_ticket(self, request, pk=None):
+
+        if not tiene_rol(request.user, "SERVICIOS_GENERALES"):
             return Response(
-                {
-                    "detalle": (
-                        "Solo Servicios Generales "
-                        "puede derivar el requerimiento."
-                    )
-                },
-                status=
-                    status.HTTP_403_FORBIDDEN
+                {"detalle": "Solo el Jefe de Mantenimiento puede validar el ticket."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
+        requerimiento = self.get_object()
 
-        requerimiento = (
-            self.get_object()
+        if not estado_permitido(requerimiento, ["RECIBIDO"]):
+            return Response(
+                {"detalle": "Solo los requerimientos RECIBIDOS pueden validarse."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        ahora = timezone.now()
+
+        if request.data.get("es_valido", True) is False:
+
+            motivo = str(request.data.get("motivo_rechazo", "")).strip()
+
+            if not motivo:
+                return Response(
+                    {"motivo_rechazo": "Debe indicar el motivo del rechazo."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not self._cambiar_estado(requerimiento, "RECHAZADO"):
+                return Response({"detalle": "No existe el estado RECHAZADO."}, status=400)
+
+            requerimiento.motivo_rechazo = motivo
+            requerimiento.validado_en = ahora
+            requerimiento.activo = False
+            requerimiento.save()
+
+            registrar_bitacora(
+                request=request,
+                accion="RECHAZAR_REQUERIMIENTO_MANTENIMIENTO",
+                modulo="Mantenimiento",
+                detalle=f"Se rechazó {requerimiento.codigo}: {motivo}",
+                nivel="WARNING",
+            )
+
+            return respuesta_requerimiento(
+                requerimiento, "Ticket rechazado y notificado al solicitante.", request
+            )
+
+        if not self._cambiar_estado(requerimiento, "VALIDADO"):
+            return Response({"detalle": "No existe el estado VALIDADO."}, status=400)
+
+        requerimiento.responsable_servicios_generales = request.user
+        requerimiento.validado_en = ahora
+        requerimiento.recibido_en = requerimiento.recibido_en or ahora
+        requerimiento.save()
+
+        registrar_bitacora(
+            request=request,
+            accion="VALIDAR_REQUERIMIENTO_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=f"Se recibió y validó {requerimiento.codigo}.",
+            nivel="INFO",
+        )
+
+        return respuesta_requerimiento(
+            requerimiento, "Ticket recibido y validado correctamente.", request
         )
 
 
-        if not estado_permitido(
-            requerimiento,
-            ["RECIBIDO"]
-        ):
+    # ======================================================
+    # 2. CLASIFICAR PRIORIDAD  (Jefe de Mantenimiento)
+    # ======================================================
 
+    @action(detail=True, methods=["post"], url_path="clasificar-prioridad")
+    def clasificar_prioridad(self, request, pk=None):
+
+        if not tiene_rol(request.user, "SERVICIOS_GENERALES"):
             return Response(
-                {
-                    "detalle": (
-                        "Solo los requerimientos "
-                        "RECIBIDOS pueden derivarse."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+                {"detalle": "Solo el Jefe de Mantenimiento puede clasificar la prioridad."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
+        requerimiento = self.get_object()
 
-        auxiliar_id = (
-            request.data.get(
-                "auxiliar_id"
-            )
-        )
-
-
-        if not auxiliar_id:
-
+        if not estado_permitido(requerimiento, ["VALIDADO"]):
             return Response(
-                {
-                    "auxiliar_id":
-                        "Debe seleccionar un auxiliar."
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+                {"detalle": "El requerimiento debe estar VALIDADO."},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         prioridad = str(request.data.get("prioridad", "")).strip().upper()
-        criterio_prioridad = str(request.data.get("criterio_prioridad", "")).strip()
-        if prioridad not in {"BAJA", "MEDIA", "ALTA", "URGENTE"}:
-            return Response({"prioridad": "Seleccione BAJA, MEDIA, ALTA o URGENTE."}, status=status.HTTP_400_BAD_REQUEST)
-        if not criterio_prioridad:
-            return Response({"criterio_prioridad": "Debe justificar la prioridad."}, status=status.HTTP_400_BAD_REQUEST)
+        criterio = str(request.data.get("criterio_prioridad", "")).strip()
 
+        if prioridad not in {"BAJA", "MEDIA", "ALTA", "URGENTE"}:
+            return Response(
+                {"prioridad": "Seleccione BAJA, MEDIA, ALTA o URGENTE."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not criterio:
+            return Response(
+                {"criterio_prioridad": "Debe justificar la prioridad asignada."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        requerimiento.prioridad_jefatura = prioridad
+        requerimiento.criterio_prioridad = criterio
+        requerimiento.clasificado_en = timezone.now()
+
+        requerimiento.save(update_fields=[
+            "prioridad_jefatura", "criterio_prioridad",
+            "clasificado_en", "actualizado_en",
+        ])
+
+        registrar_bitacora(
+            request=request,
+            accion="CLASIFICAR_PRIORIDAD_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=f"{requerimiento.codigo} clasificado como {prioridad}.",
+            nivel="INFO",
+        )
+
+        return respuesta_requerimiento(
+            requerimiento, f"Prioridad {prioridad} registrada.", request
+        )
+
+
+    # ======================================================
+    # 3. DESIGNAR REVISIÓN AL EQUIPO  (Jefe de Mantenimiento)
+    # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="designar-revision")
+    def designar_revision(self, request, pk=None):
+
+        if not tiene_rol(request.user, "SERVICIOS_GENERALES"):
+            return Response(
+                {"detalle": "Solo el Jefe de Mantenimiento puede designar al técnico."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        requerimiento = self.get_object()
+
+        if not estado_permitido(requerimiento, ["VALIDADO"]):
+            return Response(
+                {"detalle": "El requerimiento debe estar VALIDADO."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not requerimiento.prioridad_jefatura:
+            return Response(
+                {"detalle": "Primero debe clasificar la prioridad."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        tecnico_id = request.data.get("tecnico_id") or request.data.get("auxiliar_id")
+
+        if not tecnico_id:
+            return Response(
+                {"tecnico_id": "Debe seleccionar al técnico responsable."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
-
-            auxiliar = (
-                Usuario.objects.get(
-                    id=auxiliar_id,
-                    is_active=True
-                )
-            )
-
-        except Usuario.DoesNotExist:
-
+            tecnico = Usuario.objects.get(id=tecnico_id, is_active=True)
+        except (Usuario.DoesNotExist, TypeError, ValueError):
             return Response(
-                {
-                    "auxiliar_id": (
-                        "El auxiliar seleccionado "
-                        "no existe o está inactivo."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+                {"tecnico_id": "El técnico seleccionado no existe o está inactivo."},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-
-        tiene_rol_auxiliar = (
+        tiene_rol_tecnico = (
             UsuarioRol.objects
             .filter(
-                usuario=auxiliar,
+                usuario=tecnico,
                 activo=True,
                 rol__activo=True,
-                rol__codigo=
-                    "AUXILIAR_SERVICIOS_GENERALES"
+                rol__codigo="AUXILIAR_SERVICIOS_GENERALES",
             )
             .exists()
         )
 
-
-        if not tiene_rol_auxiliar:
-
+        if not tiene_rol_tecnico:
             return Response(
-                {
-                    "auxiliar_id": (
-                        "El usuario seleccionado "
-                        "no posee el rol "
-                        "Auxiliar de Servicios Generales."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+                {"tecnico_id": "El usuario seleccionado no es Técnico de Mantenimiento."},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
+        if not self._cambiar_estado(requerimiento, "DERIVADO"):
+            return Response({"detalle": "No existe el estado DERIVADO."}, status=400)
 
-        estado_derivado = obtener_estado(
-            "DERIVADO"
-        )
-
-
-        if not estado_derivado:
-
-            return Response(
-                {
-                    "detalle":
-                        "No existe el estado DERIVADO."
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        ahora = timezone.now()
-
-
-        requerimiento.responsable_servicios_generales = (
-            request.user
-        )
-
-        requerimiento.auxiliar_asignado = (
-            auxiliar
-        )
-
-        requerimiento.prioridad_jefatura = prioridad
-        requerimiento.criterio_prioridad = criterio_prioridad
-
-        requerimiento.estado = (
-            estado_derivado
-        )
-
-        requerimiento.recibido_en = (
-            requerimiento.recibido_en
-            or ahora
-        )
-
-        requerimiento.derivado_en = (
-            ahora
-        )
-
-
-        requerimiento.save(
-            update_fields=[
-                "responsable_servicios_generales",
-                "auxiliar_asignado",
-                "prioridad_jefatura",
-                "criterio_prioridad",
-                "estado",
-                "recibido_en",
-                "derivado_en",
-                "actualizado_en",
-            ]
-        )
-
+        requerimiento.auxiliar_asignado = tecnico
+        requerimiento.derivado_en = timezone.now()
+        requerimiento.save()
 
         registrar_bitacora(
             request=request,
-            accion=
-                "DERIVAR_AUXILIAR_MANTENIMIENTO",
-            modulo=
-                "Mantenimiento",
-            detalle=(
-                f"El requerimiento "
-                f"{requerimiento.codigo} "
-                f"fue derivado a "
-                f"{auxiliar.nombre_completo}."
-            ),
-            nivel=
-                "INFO",
+            accion="DESIGNAR_REVISION_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=f"{requerimiento.codigo} designado a {tecnico.nombre_completo}.",
+            nivel="INFO",
         )
-
 
         return respuesta_requerimiento(
-            requerimiento,
-            "Requerimiento derivado al auxiliar correctamente.",
-            request
+            requerimiento, "Técnico designado correctamente.", request
         )
 
 
     # ======================================================
-    # 2. VERIFICAR SI REQUIERE REPOSICIÓN
-    # ======================================================
-    #
-    # BPMN:
-    #
-    # "¿REQUIERE REPOSICIÓN DE ALMACÉN?"
-    #
-    # NO -> EN_MANTENIMIENTO
-    # SI -> REVISION_ALMACEN
-    #
+    # 4. INSPECCIÓN TÉCNICA Y DIAGNÓSTICO  (Técnico)
     # ======================================================
 
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="verificar-reposicion"
-    )
-    def verificar_reposicion(
-        self,
-        request,
-        pk=None
-    ):
+    @action(detail=True, methods=["post"], url_path="registrar-diagnostico")
+    def registrar_diagnostico(self, request, pk=None):
 
-        requerimiento = (
-            self.get_object()
-        )
-
+        requerimiento = self.get_object()
 
         if not (
             es_admin(request.user)
-            or
-            (
-                requerimiento.auxiliar_asignado_id
-                ==
-                request.user.id
-            )
+            or requerimiento.auxiliar_asignado_id == request.user.id
         ):
-
             return Response(
-                {
-                    "detalle": (
-                        "Solo el auxiliar asignado "
-                        "puede realizar esta verificación."
-                    )
-                },
-                status=
-                    status.HTTP_403_FORBIDDEN
+                {"detalle": "Solo el técnico asignado puede registrar el diagnóstico."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
-
-        if not estado_permitido(
-            requerimiento,
-            ["DERIVADO"]
-        ):
-
+        if not estado_permitido(requerimiento, ["DERIVADO"]):
             return Response(
-                {
-                    "detalle": (
-                        "El requerimiento debe "
-                        "encontrarse DERIVADO."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+                {"detalle": "El requerimiento debe estar DERIVADO."},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
+        diagnostico = str(request.data.get("diagnostico", "")).strip()
+        plan = str(request.data.get("plan_solucion", "")).strip()
 
-        requiere = (
-            request.data.get(
-                "requiere_reposicion"
-            )
-        )
+        if not diagnostico:
+            return Response({"diagnostico": "Debe registrar el diagnóstico."}, status=400)
 
-
-        if requiere not in [
-            True,
-            False
-        ]:
-
-            return Response(
-                {
-                    "requiere_reposicion": (
-                        "Debe indicar True o False."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
+        if not plan:
+            return Response({"plan_solucion": "Debe registrar el plan de solución."}, status=400)
 
         ahora = timezone.now()
 
+        requerimiento.diagnostico = diagnostico
+        requerimiento.plan_solucion = plan
+        requerimiento.diagnosticado_en = ahora
 
-        requerimiento.requiere_reposicion = (
-            requiere
-        )
-
-
-        # --------------------------------------------------
-        # NO NECESITA PRODUCTO
-        # --------------------------------------------------
-
-        if requiere is False:
-
-            estado_mantenimiento = obtener_estado(
-                "EN_MANTENIMIENTO"
-            )
-
-
-            if not estado_mantenimiento:
-
-                return Response(
-                    {
-                        "detalle": (
-                            "No existe el estado "
-                            "EN_MANTENIMIENTO."
-                        )
-                    },
-                    status=
-                        status.HTTP_400_BAD_REQUEST
-                )
-
-
-            requerimiento.estado = (
-                estado_mantenimiento
-            )
-
-            requerimiento.inicio_mantenimiento_en = (
-                ahora
-            )
-
-
-            requerimiento.save(
-                update_fields=[
-                    "requiere_reposicion",
-                    "estado",
-                    "inicio_mantenimiento_en",
-                    "actualizado_en",
-                ]
-            )
-
-
-            registrar_bitacora(
-                request=request,
-                accion=
-                    "NO_REQUIERE_REPOSICION",
-                modulo=
-                    "Mantenimiento",
-                detalle=(
-                    f"El requerimiento "
-                    f"{requerimiento.codigo} "
-                    f"no requiere reposición."
-                ),
-                nivel=
-                    "INFO",
-            )
-
-
-            return respuesta_requerimiento(
-                requerimiento,
-                (
-                    "No requiere reposición. "
-                    "Puede realizarse el mantenimiento."
-                ),
-                request
-            )
-
-
-        # --------------------------------------------------
-        # SÍ NECESITA PRODUCTO
-        # --------------------------------------------------
-
-        producto = (
-            str(
-                request.data.get(
-                    "producto_requerido",
-                    ""
-                )
-            )
-            .strip()
-        )
-
-
-        cantidad = (
-            request.data.get(
-                "cantidad_requerida"
-            )
-        )
-
-
-        especificacion = (
-            str(
-                request.data.get(
-                    "especificacion_producto",
-                    ""
-                )
-            )
-            .strip()
-        )
-
-
-        if not producto:
-
-            return Response(
-                {
-                    "producto_requerido":
-                        "Debe indicar el producto requerido."
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        try:
-
-            cantidad = int(
-                cantidad
-            )
-
-        except (
-            TypeError,
-            ValueError
-        ):
-
-            return Response(
-                {
-                    "cantidad_requerida":
-                        "Debe indicar una cantidad válida."
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        if cantidad <= 0:
-
-            return Response(
-                {
-                    "cantidad_requerida": (
-                        "La cantidad debe ser "
-                        "mayor a cero."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        estado_revision = obtener_estado(
-            "REVISION_ALMACEN"
-        )
-
-
-        if not estado_revision:
-
-            return Response(
-                {
-                    "detalle": (
-                        "No existe el estado "
-                        "REVISION_ALMACEN."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        requerimiento.producto_requerido = (
-            producto
-        )
-
-        requerimiento.cantidad_requerida = (
-            cantidad
-        )
-
-        requerimiento.especificacion_producto = (
-            especificacion
-        )
-
-        requerimiento.estado = (
-            estado_revision
-        )
-
-        requerimiento.revision_almacen_en = (
-            ahora
-        )
-
-
-        requerimiento.save(
-            update_fields=[
-                "requiere_reposicion",
-                "producto_requerido",
-                "cantidad_requerida",
-                "especificacion_producto",
-                "estado",
-                "revision_almacen_en",
-                "actualizado_en",
-            ]
-        )
-
+        # Compuerta "¿Requiere compra?" -> NO: sigue a la intervención.
+        self._cambiar_estado(requerimiento, "EN_MANTENIMIENTO")
+        requerimiento.inicio_mantenimiento_en = ahora
+        requerimiento.save()
 
         registrar_bitacora(
             request=request,
-            accion=
-                "SOLICITAR_REVISION_ALMACEN",
-            modulo=
-                "Mantenimiento",
-            detalle=(
-                f"El requerimiento "
-                f"{requerimiento.codigo} "
-                f"requiere {cantidad} unidad(es) "
-                f"de {producto}."
-            ),
-            nivel=
-                "INFO",
+            accion="REGISTRAR_DIAGNOSTICO_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=f"Se registró la inspección y diagnóstico de {requerimiento.codigo}.",
+            nivel="INFO",
         )
-
 
         return respuesta_requerimiento(
             requerimiento,
-            "Se solicitó la revisión de existencia en almacén.",
+            "Diagnóstico registrado. Puede realizar el mantenimiento.",
             request
         )
 
 
     # ======================================================
-    # 3. REPORTAR EXISTENCIA / NO EXISTENCIA
-    # ======================================================
-    #
-    # BPMN:
-    #
-    # HAY PRODUCTO:
-    # entrega producto -> mantenimiento
-    #
-    # NO HAY:
-    # reporta no existencia -> Compra Caja Chica
-    #
+    # 5. REALIZAR REQUERIMIENTO  (Técnico)
     # ======================================================
 
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="reportar-existencia"
-    )
-    def reportar_existencia(
-        self,
-        request,
-        pk=None
-    ):
-
-        if not tiene_rol(
-            request.user,
-            "ENCARGADO_COMPRAS_ALMACEN"
-        ):
-
-            return Response(
-                {
-                    "detalle": (
-                        "Solo el responsable de almacén "
-                        "puede registrar la existencia "
-                        "del producto."
-                    )
-                },
-                status=
-                    status.HTTP_403_FORBIDDEN
-            )
-
-
-        requerimiento = (
-            self.get_object()
-        )
-
-
-        if not estado_permitido(
-            requerimiento,
-            ["REVISION_ALMACEN"]
-        ):
-
-            return Response(
-                {
-                    "detalle": (
-                        "El requerimiento debe estar "
-                        "en REVISIÓN DE ALMACÉN."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        disponible = (
-            request.data.get(
-                "producto_disponible"
-            )
-        )
-
-
-        if disponible not in [
-            True,
-            False
-        ]:
-
-            return Response(
-                {
-                    "producto_disponible": (
-                        "Debe indicar True o False."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        observacion = (
-            str(
-                request.data.get(
-                    "observacion_almacen",
-                    ""
-                )
-            )
-            .strip()
-        )
-
-
-        requerimiento.producto_disponible_almacen = (
-            disponible
-        )
-
-        requerimiento.observacion_almacen = (
-            observacion
-        )
-
-
-        # --------------------------------------------------
-        # EXISTE PRODUCTO
-        # --------------------------------------------------
-
-        if disponible is True:
-
-            estado_mantenimiento = obtener_estado(
-                "EN_MANTENIMIENTO"
-            )
-
-
-            if not estado_mantenimiento:
-
-                return Response(
-                    {
-                        "detalle": (
-                            "No existe el estado "
-                            "EN_MANTENIMIENTO."
-                        )
-                    },
-                    status=
-                        status.HTTP_400_BAD_REQUEST
-                )
-
-
-            requerimiento.producto_entregado = (
-                True
-            )
-
-            requerimiento.estado = (
-                estado_mantenimiento
-            )
-
-            requerimiento.inicio_mantenimiento_en = (
-                timezone.now()
-            )
-
-
-            requerimiento.save(
-                update_fields=[
-                    "producto_disponible_almacen",
-                    "producto_entregado",
-                    "observacion_almacen",
-                    "estado",
-                    "inicio_mantenimiento_en",
-                    "actualizado_en",
-                ]
-            )
-
-
-            registrar_bitacora(
-                request=request,
-                accion=
-                    "ENTREGAR_PRODUCTO_ALMACEN",
-                modulo=
-                    "Mantenimiento",
-                detalle=(
-                    f"Almacén entregó el producto "
-                    f"para {requerimiento.codigo}."
-                ),
-                nivel=
-                    "INFO",
-            )
-
-
-            return respuesta_requerimiento(
-                requerimiento,
-                (
-                    "Producto disponible y entregado. "
-                    "Puede realizarse el mantenimiento."
-                ),
-                request
-            )
-
-
-        # --------------------------------------------------
-        # NO EXISTE PRODUCTO
-        # --------------------------------------------------
-
-        estado_espera = obtener_estado(
-            "EN_ESPERA_COMPRA"
-        )
-
-
-        if not estado_espera:
-
-            return Response(
-                {
-                    "detalle": (
-                        "No existe el estado "
-                        "EN_ESPERA_COMPRA."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        requerimiento.derivado_compra = False
-
-        requerimiento.estado = (
-            estado_espera
-        )
-
-
-        requerimiento.save(
-            update_fields=[
-                "producto_disponible_almacen",
-                "observacion_almacen",
-                "derivado_compra",
-                "estado",
-                "actualizado_en",
-            ]
-        )
-
-
-        registrar_bitacora(
-            request=request,
-            accion=
-                "REPORTAR_NO_EXISTENCIA_PRODUCTO",
-            modulo=
-                "Mantenimiento",
-            detalle=(
-                f"No existe el producto requerido "
-                f"para {requerimiento.codigo}. Queda pendiente de "
-                "validación por el Jefe de Mantenimiento."
-            ),
-            nivel=
-                "WARNING",
-        )
-
-
-        return respuesta_requerimiento(
-            requerimiento,
-            (
-                "No existe el producto en almacén. La solicitud de "
-                "compra fue enviada al Jefe de Mantenimiento para validación."
-            ),
-            request
-        )
-
-    @action(detail=True, methods=["post"], url_path="validar-elevar-compra")
-    def validar_elevar_compra(self, request, pk=None):
-        if not (es_admin(request.user) or tiene_rol(request.user, "SERVICIOS_GENERALES")):
-            return Response({"detalle": "Solo el Jefe de Mantenimiento puede validar y elevar la compra."}, status=status.HTTP_403_FORBIDDEN)
+    @action(detail=True, methods=["post"], url_path="solicitar-requerimiento")
+    def solicitar_requerimiento(self, request, pk=None):
 
         requerimiento = self.get_object()
-        if requerimiento.estado.codigo != "EN_ESPERA_COMPRA" or requerimiento.derivado_compra:
-            return Response({"detalle": "La solicitud no está pendiente de validación o ya fue elevada."}, status=status.HTTP_409_CONFLICT)
+
+        if not (
+            es_admin(request.user)
+            or requerimiento.auxiliar_asignado_id == request.user.id
+        ):
+            return Response(
+                {"detalle": "Solo el técnico asignado puede realizar el requerimiento."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not estado_permitido(requerimiento, ["DERIVADO", "EN_MANTENIMIENTO"]):
+            return Response(
+                {"detalle": "El requerimiento debe estar en atención técnica."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if requerimiento.estado_compra_componente:
+            return Response(
+                {"detalle": "Este requerimiento ya tiene una compra en curso."},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        producto = str(request.data.get("producto_requerido", "")).strip()
+
+        if not producto:
+            return Response(
+                {"producto_requerido": "Indique el componente requerido."},
+                status=400
+            )
+
+        try:
+            cantidad = int(request.data.get("cantidad_requerida") or 1)
+        except (TypeError, ValueError):
+            return Response({"cantidad_requerida": "Cantidad inválida."}, status=400)
+
+        if cantidad <= 0:
+            return Response(
+                {"cantidad_requerida": "La cantidad debe ser mayor a cero."},
+                status=400
+            )
+
+        costo = request.data.get("costo_estimado")
+
+        try:
+            costo = Decimal(str(costo)) if costo not in (None, "") else None
+        except InvalidOperation:
+            return Response({"costo_estimado": "Monto estimado inválido."}, status=400)
+
+        requerimiento.requiere_reposicion = True
+        requerimiento.producto_requerido = producto
+        requerimiento.especificacion_producto = str(
+            request.data.get("especificacion_producto", "")
+        ).strip()
+        requerimiento.cantidad_requerida = cantidad
+        requerimiento.costo_estimado = costo
+        requerimiento.estado_compra_componente = "SOLICITADA"
+
+        cotizacion = request.FILES.get("cotizacion_archivo")
+
+        if cotizacion:
+            requerimiento.cotizacion_archivo = cotizacion
+
+        self._cambiar_estado(requerimiento, "EN_ESPERA_COMPRA")
+        requerimiento.save()
+
+        registrar_bitacora(
+            request=request,
+            accion="SOLICITAR_REQUERIMIENTO_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=(
+                f"El técnico solicitó '{producto}' con cotización para "
+                f"{requerimiento.codigo}. Pendiente de evaluar viabilidad."
+            ),
+            nivel="INFO",
+        )
+
+        return respuesta_requerimiento(
+            requerimiento,
+            "Requerimiento enviado al Jefe de Mantenimiento para evaluar su viabilidad.",
+            request
+        )
+
+
+    # ======================================================
+    # 6. RECIBIR REQUERIMIENTO Y EVALUAR VIABILIDAD  (Jefe)
+    # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="evaluar-viabilidad-compra")
+    def evaluar_viabilidad_compra(self, request, pk=None):
+
+        if not (es_admin(request.user) or tiene_rol(request.user, "SERVICIOS_GENERALES")):
+            return Response(
+                {"detalle": "Solo el Jefe de Mantenimiento puede evaluar la viabilidad."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        requerimiento = self.get_object()
+
+        if requerimiento.estado_compra_componente != "SOLICITADA":
+            return Response(
+                {"detalle": "Este requerimiento no tiene una compra pendiente de evaluación."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        viable = request.data.get("viable")
+
+        if viable not in [True, False]:
+            return Response({"viable": "Debe indicar True o False."}, status=400)
+
+        if viable is False:
+
+            motivo = str(request.data.get("motivo_no_viable", "")).strip()
+
+            if not motivo:
+                return Response(
+                    {"motivo_no_viable": "Debe indicar el motivo de no viabilidad."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not self._cambiar_estado(requerimiento, "CERRADO_SIN_COMPRA"):
+                return Response(
+                    {"detalle": "No existe el estado CERRADO_SIN_COMPRA."},
+                    status=400
+                )
+
+            requerimiento.estado_compra_componente = "NO_VIABLE"
+            requerimiento.motivo_no_viable = motivo
+            requerimiento.activo = False
+            requerimiento.save()
+
+            registrar_bitacora(
+                request=request,
+                accion="COMUNICAR_NO_VIABILIDAD_MANTENIMIENTO",
+                modulo="Mantenimiento",
+                detalle=f"Compra no viable para {requerimiento.codigo}: {motivo}",
+                nivel="WARNING",
+            )
+
+            return respuesta_requerimiento(
+                requerimiento, "Compra no viable. El caso se cerró sin compra.", request
+            )
 
         from compras.models import SolicitudCompra
+
         solicitud = SolicitudCompra.objects.create(
             codigo=SolicitudCompra.generar_codigo(),
-            titulo=requerimiento.producto_requerido or f"Reposición para mantenimiento {requerimiento.codigo}",
-            descripcion=requerimiento.especificacion_producto or requerimiento.producto_requerido or "",
+            titulo=requerimiento.producto_requerido or f"Reposición {requerimiento.codigo}",
+            descripcion=(
+                requerimiento.especificacion_producto
+                or requerimiento.producto_requerido
+                or ""
+            ),
             solicitante=request.user,
             area=requerimiento.area,
             tipo="COMPONENTE",
             cantidad=requerimiento.cantidad_requerida or 1,
             especificaciones=requerimiento.especificacion_producto,
-            justificacion=f"Reposición validada por Jefatura para atender {requerimiento.codigo}.",
+            justificacion=f"Requerido para atender el mantenimiento {requerimiento.codigo}.",
+            monto_estimado=requerimiento.costo_estimado,
             estado="CREADO_PENDIENTE_DAF",
             origen_modulo="MANTENIMIENTO",
             requerimiento_mantenimiento=requerimiento,
         )
+
+        requerimiento.estado_compra_componente = "VIABLE"
         requerimiento.derivado_compra = True
         requerimiento.codigo_compra_vinculada = solicitud.codigo
-        requerimiento.save(update_fields=["derivado_compra", "codigo_compra_vinculada", "actualizado_en"])
-        registrar_bitacora(request=request, accion="VALIDAR_ELEVAR_COMPRA_MANTENIMIENTO", modulo="Mantenimiento", detalle=f"El Jefe de Mantenimiento validó {requerimiento.codigo} y elevó {solicitud.codigo} a DAF.", nivel="INFO")
-        return respuesta_requerimiento(requerimiento, f"Solicitud validada y elevada a DAF como {solicitud.codigo}.", request)
-
-
-    # ======================================================
-    # 4. REGISTRAR COMPRA COMPLETADA
-    # ======================================================
-    #
-    # Cuando el subproceso de compra termina,
-    # mantenimiento puede continuar.
-    #
-    # ======================================================
-
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="registrar-compra"
-    )
-    def registrar_compra(
-        self,
-        request,
-        pk=None
-    ):
-
-        if not (
-            es_admin(request.user)
-            or
-            tiene_rol(
-                request.user,
-                "ENCARGADO_COMPRAS_ALMACEN",
-                "SERVICIOS_GENERALES",
-            )
-        ):
-
-            return Response(
-                {
-                    "detalle": (
-                        "No tiene permiso para "
-                        "registrar la recepción "
-                        "de la compra."
-                    )
-                },
-                status=
-                    status.HTTP_403_FORBIDDEN
-            )
-
-
-        requerimiento = (
-            self.get_object()
-        )
-
-
-        if not estado_permitido(
-            requerimiento,
-            ["EN_ESPERA_COMPRA"]
-        ):
-
-            return Response(
-                {
-                    "detalle": (
-                        "El requerimiento no está "
-                        "esperando una compra."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        # La compra ya no se confirma con un código escrito a
-        # mano: se busca el expediente real vinculado (creado
-        # automáticamente en reportar-existencia) y se exige
-        # que Compras ya lo haya cerrado y archivado.
-        solicitud_compra = (
-            requerimiento.compras_generadas
-            .filter(activo__in=[True, False])
-            .order_by("-creado_en")
-            .first()
-        )
-
-        if not solicitud_compra:
-
-            return Response(
-                {
-                    "detalle": (
-                        "Este requerimiento no tiene una "
-                        "solicitud de compra vinculada."
-                    )
-                },
-                status=
-                    status.HTTP_409_CONFLICT
-            )
-
-        if solicitud_compra.estado != "CERRADO_ARCHIVADO":
-
-            return Response(
-                {
-                    "detalle": (
-                        "La compra vinculada "
-                        f"({solicitud_compra.codigo}) todavía "
-                        "no fue cerrada y archivada por Tesorería."
-                    )
-                },
-                status=
-                    status.HTTP_409_CONFLICT
-            )
-
-
-        estado_mantenimiento = obtener_estado(
-            "EN_MANTENIMIENTO"
-        )
-
-
-        if not estado_mantenimiento:
-
-            return Response(
-                {
-                    "detalle": (
-                        "No existe el estado "
-                        "EN_MANTENIMIENTO."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        requerimiento.codigo_compra_vinculada = (
-            solicitud_compra.codigo
-        )
-
-        requerimiento.compra_completada = (
-            True
-        )
-
-        requerimiento.producto_entregado = (
-            True
-        )
-
-        requerimiento.estado = (
-            estado_mantenimiento
-        )
-
-        requerimiento.inicio_mantenimiento_en = (
-            timezone.now()
-        )
-
-
-        requerimiento.save(
-            update_fields=[
-                "codigo_compra_vinculada",
-                "compra_completada",
-                "producto_entregado",
-                "estado",
-                "inicio_mantenimiento_en",
-                "actualizado_en",
-            ]
-        )
-
+        requerimiento.save()
 
         registrar_bitacora(
             request=request,
-            accion=
-                "REGISTRAR_COMPRA_MANTENIMIENTO",
-            modulo=
-                "Mantenimiento",
+            accion="ELEVAR_INFORME_COMPRA_MANTENIMIENTO",
+            modulo="Mantenimiento",
             detalle=(
-                f"La compra {solicitud_compra.codigo} "
-                f"fue confirmada para el requerimiento "
-                f"{requerimiento.codigo}."
+                f"El Jefe de Mantenimiento elevó el informe de {requerimiento.codigo} "
+                f"a la DAF. Expediente {solicitud.codigo}."
             ),
-            nivel=
-                "INFO",
+            nivel="INFO",
         )
-
 
         return respuesta_requerimiento(
             requerimiento,
-            (
-                "Compra recibida. "
-                "El mantenimiento puede continuar."
-            ),
+            f"Informe elevado a la DAF. Expediente de compra {solicitud.codigo}.",
             request
         )
 
 
     # ======================================================
-    # 5. REALIZAR EL MANTENIMIENTO
+    # 7. REPARACIÓN O INSTALACIÓN  (Técnico)
     # ======================================================
 
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="realizar-mantenimiento"
-    )
-    def realizar_mantenimiento(
-        self,
-        request,
-        pk=None
-    ):
+    @action(detail=True, methods=["post"], url_path="realizar-mantenimiento")
+    def realizar_mantenimiento(self, request, pk=None):
 
-        requerimiento = (
-            self.get_object()
-        )
-
+        requerimiento = self.get_object()
 
         if not (
             es_admin(request.user)
-            or
-            (
-                requerimiento.auxiliar_asignado_id
-                ==
-                request.user.id
-            )
+            or requerimiento.auxiliar_asignado_id == request.user.id
         ):
+            return Response(
+                {"detalle": "Solo el técnico asignado puede registrar el mantenimiento."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
+        if not estado_permitido(requerimiento, ["EN_MANTENIMIENTO"]):
+            return Response(
+                {"detalle": "El requerimiento no se encuentra EN MANTENIMIENTO."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # El trabajo queda en pausa mientras el componente esté en compra.
+        if requerimiento.estado_compra_componente in ("SOLICITADA", "VIABLE"):
             return Response(
                 {
                     "detalle": (
-                        "Solo el auxiliar asignado "
-                        "puede registrar el mantenimiento."
+                        "El componente todavía no fue entregado: el expediente "
+                        f"{requerimiento.codigo_compra_vinculada or 'de compra'} "
+                        "sigue en proceso."
                     )
                 },
-                status=
-                    status.HTTP_403_FORBIDDEN
+                status=status.HTTP_409_CONFLICT
             )
 
-
-        if not estado_permitido(
-            requerimiento,
-            ["EN_MANTENIMIENTO"]
-        ):
-
-            return Response(
-                {
-                    "detalle": (
-                        "El requerimiento no se "
-                        "encuentra EN MANTENIMIENTO."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        trabajo = (
-            str(
-                request.data.get(
-                    "trabajo_realizado",
-                    ""
-                )
-            )
-            .strip()
-        )
-
-
-        observaciones = (
-            str(
-                request.data.get(
-                    "observaciones_trabajo",
-                    ""
-                )
-            )
-            .strip()
-        )
-
+        trabajo = str(request.data.get("trabajo_realizado", "")).strip()
 
         if not trabajo:
-
             return Response(
-                {
-                    "trabajo_realizado":
-                        "Debe registrar el trabajo realizado."
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+                {"trabajo_realizado": "Debe registrar el trabajo realizado."},
+                status=400
             )
 
+        requerimiento.trabajo_realizado = trabajo
+        requerimiento.observaciones_trabajo = str(
+            request.data.get("observaciones_trabajo", "")
+        ).strip()
 
-        requerimiento.trabajo_realizado = (
-            trabajo
-        )
-
-        requerimiento.observaciones_trabajo = (
-            observaciones
-        )
-
-
-        requerimiento.save(
-            update_fields=[
-                "trabajo_realizado",
-                "observaciones_trabajo",
-                "actualizado_en",
-            ]
-        )
-
+        requerimiento.save(update_fields=[
+            "trabajo_realizado", "observaciones_trabajo", "actualizado_en",
+        ])
 
         registrar_bitacora(
             request=request,
-            accion=
-                "REALIZAR_MANTENIMIENTO",
-            modulo=
-                "Mantenimiento",
-            detalle=(
-                f"Se registró el trabajo realizado "
-                f"en {requerimiento.codigo}."
-            ),
-            nivel=
-                "INFO",
+            accion="REALIZAR_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=f"Se registró el trabajo realizado en {requerimiento.codigo}.",
+            nivel="INFO",
+        )
+
+        return respuesta_requerimiento(
+            requerimiento, "Trabajo de mantenimiento registrado correctamente.", request
         )
 
 
+    # ======================================================
+    # 8. PRUEBAS TÉCNICAS  (Técnico)
+    # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="pruebas-tecnicas")
+    def pruebas_tecnicas(self, request, pk=None):
+
+        requerimiento = self.get_object()
+
+        if not (
+            es_admin(request.user)
+            or requerimiento.auxiliar_asignado_id == request.user.id
+        ):
+            return Response(
+                {"detalle": "Solo el técnico asignado puede registrar las pruebas."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not estado_permitido(requerimiento, ["EN_MANTENIMIENTO"]):
+            return Response(
+                {"detalle": "El requerimiento no se encuentra EN MANTENIMIENTO."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not requerimiento.trabajo_realizado:
+            return Response(
+                {"detalle": "Primero debe registrar la reparación o instalación."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        resultado = str(request.data.get("resultado_pruebas", "")).strip()
+
+        if not resultado:
+            return Response(
+                {"resultado_pruebas": "Debe registrar el resultado de las pruebas técnicas."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        requerimiento.resultado_pruebas = resultado
+        requerimiento.pruebas_en = timezone.now()
+
+        requerimiento.save(update_fields=[
+            "resultado_pruebas", "pruebas_en", "actualizado_en",
+        ])
+
+        registrar_bitacora(
+            request=request,
+            accion="REALIZAR_PRUEBAS_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=f"Se registraron las pruebas técnicas de {requerimiento.codigo}.",
+            nivel="INFO",
+        )
+
+        return respuesta_requerimiento(
+            requerimiento, "Pruebas técnicas registradas correctamente.", request
+        )
+
+
+    # ======================================================
+    # 9. REGISTRAR INFORME AL JEFE DE MANTENIMIENTO  (Técnico)
+    # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="registrar-informe")
+    def registrar_informe(self, request, pk=None):
+
+        requerimiento = self.get_object()
+
+        if not (
+            es_admin(request.user)
+            or requerimiento.auxiliar_asignado_id == request.user.id
+        ):
+            return Response(
+                {"detalle": "Solo el técnico asignado puede registrar el informe."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not estado_permitido(requerimiento, ["EN_MANTENIMIENTO"]):
+            return Response(
+                {"detalle": "El requerimiento debe estar EN MANTENIMIENTO."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not requerimiento.resultado_pruebas:
+            return Response(
+                {"detalle": "Primero debe registrar las pruebas técnicas."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        informe = str(request.data.get("informe_trabajo", "")).strip()
+
+        if not informe:
+            return Response(
+                {"informe_trabajo": "Debe registrar el informe del trabajo."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        requerimiento.informe_trabajo = informe
+
+        fotografia = request.FILES.get("fotografia_trabajo")
+
+        if fotografia:
+            requerimiento.fotografia_trabajo = fotografia
+
+        if not self._cambiar_estado(requerimiento, "INFORME_REGISTRADO"):
+            return Response({"detalle": "No existe el estado INFORME_REGISTRADO."}, status=400)
+
+        requerimiento.informe_registrado_en = timezone.now()
+        requerimiento.save()
+
+        registrar_bitacora(
+            request=request,
+            accion="REGISTRAR_INFORME_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=(
+                f"El técnico registró el informe de {requerimiento.codigo} "
+                "para el Jefe de Mantenimiento."
+            ),
+            nivel="INFO",
+        )
+
         return respuesta_requerimiento(
             requerimiento,
-            "Trabajo de mantenimiento registrado correctamente.",
+            "Informe registrado. La jefatura verificará el funcionamiento.",
             request
         )
 
 
     # ======================================================
-    # 6. REALIZAR INFORME Y FOTOGRAFÍA
+    # 10. VERIFICAR FUNCIONAMIENTO  (Jefe de Mantenimiento)
+    # ======================================================
+    #
+    # BPMN: ¿Problema resuelto? NO -> el caso vuelve a la atención
+    # técnica; SÍ -> se informa la conformidad.
+    #
     # ======================================================
 
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="registrar-informe"
-    )
-    def registrar_informe(
-        self,
-        request,
-        pk=None
-    ):
+    @action(detail=True, methods=["post"], url_path="verificar-funcionamiento")
+    def verificar_funcionamiento(self, request, pk=None):
 
-        requerimiento = (
-            self.get_object()
-        )
-
-
-        if not (
-            es_admin(request.user)
-            or
-            (
-                requerimiento.auxiliar_asignado_id
-                ==
-                request.user.id
-            )
-        ):
-
+        if not (es_admin(request.user) or tiene_rol(request.user, "SERVICIOS_GENERALES")):
             return Response(
-                {
-                    "detalle": (
-                        "Solo el auxiliar asignado "
-                        "puede registrar el informe."
-                    )
-                },
-                status=
-                    status.HTTP_403_FORBIDDEN
+                {"detalle": "Solo el Jefe de Mantenimiento puede verificar el funcionamiento."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
+        requerimiento = self.get_object()
 
-        if not estado_permitido(
-            requerimiento,
-            ["EN_MANTENIMIENTO"]
-        ):
-
+        if not estado_permitido(requerimiento, ["INFORME_REGISTRADO"]):
             return Response(
-                {
-                    "detalle": (
-                        "El requerimiento debe estar "
-                        "EN MANTENIMIENTO."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+                {"detalle": "El requerimiento debe tener el informe del técnico registrado."},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
+        resuelto = request.data.get("problema_resuelto")
 
-        if not requerimiento.trabajo_realizado:
+        if resuelto not in [True, False]:
+            return Response({"problema_resuelto": "Debe indicar True o False."}, status=400)
 
-            return Response(
-                {
-                    "detalle": (
-                        "Primero debe registrar "
-                        "el trabajo realizado."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+        ahora = timezone.now()
+        requerimiento.verificado_en = ahora
+
+        if resuelto is False:
+
+            # Ciclo de retroalimentación: vuelve a la atención técnica.
+            self._cambiar_estado(requerimiento, "EN_MANTENIMIENTO")
+            requerimiento.rework_count += 1
+            requerimiento.resultado_pruebas = ""
+            requerimiento.save()
+
+            registrar_bitacora(
+                request=request,
+                accion="VERIFICACION_NO_CONFORME_MANTENIMIENTO",
+                modulo="Mantenimiento",
+                detalle=(
+                    f"{requerimiento.codigo}: el problema no fue resuelto; "
+                    "vuelve a la atención técnica."
+                ),
+                nivel="WARNING",
             )
 
-
-        informe = (
-            str(
-                request.data.get(
-                    "informe_trabajo",
-                    ""
-                )
+            return respuesta_requerimiento(
+                requerimiento,
+                "El problema no fue resuelto. El caso volvió al técnico.",
+                request
             )
-            .strip()
-        )
-
-
-        if not informe:
-
-            return Response(
-                {
-                    "informe_trabajo":
-                        "Debe registrar el informe del trabajo."
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        fotografia = (
-            request.FILES.get(
-                "fotografia_trabajo"
-            )
-        )
-
-
-        estado_informe = obtener_estado(
-            "INFORME_REGISTRADO"
-        )
-
-
-        if not estado_informe:
-
-            return Response(
-                {
-                    "detalle": (
-                        "No existe el estado "
-                        "INFORME_REGISTRADO."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
-        requerimiento.informe_trabajo = (
-            informe
-        )
-
-
-        if fotografia:
-
-            requerimiento.fotografia_trabajo = (
-                fotografia
-            )
-
-
-        requerimiento.estado = (
-            estado_informe
-        )
-
-        requerimiento.informe_registrado_en = (
-            timezone.now()
-        )
-
 
         requerimiento.save()
 
-
         registrar_bitacora(
             request=request,
-            accion=
-                "REGISTRAR_INFORME_MANTENIMIENTO",
-            modulo=
-                "Mantenimiento",
-            detalle=(
-                f"Se registró el informe "
-                f"del requerimiento "
-                f"{requerimiento.codigo}."
-            ),
-            nivel=
-                "INFO",
+            accion="VERIFICAR_FUNCIONAMIENTO_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=f"Se verificó el funcionamiento de {requerimiento.codigo}.",
+            nivel="INFO",
         )
-
 
         return respuesta_requerimiento(
             requerimiento,
-            "Informe del mantenimiento registrado correctamente.",
+            "Funcionamiento verificado. Puede informar la conformidad.",
             request
         )
 
 
     # ======================================================
-    # 7. FINALIZAR
+    # 11. INFORMAR CONFORMIDAD  (Jefe de Mantenimiento)
     # ======================================================
 
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="finalizar"
-    )
-    def finalizar(
-        self,
-        request,
-        pk=None
-    ):
+    @action(detail=True, methods=["post"], url_path="informar-conformidad")
+    def informar_conformidad(self, request, pk=None):
 
-        if not (
-            es_admin(request.user)
-            or
-            tiene_rol(
-                request.user,
-                "SERVICIOS_GENERALES"
-            )
-        ):
-
+        if not (es_admin(request.user) or tiene_rol(request.user, "SERVICIOS_GENERALES")):
             return Response(
-                {
-                    "detalle": (
-                        "Solo Servicios Generales "
-                        "puede finalizar el requerimiento."
-                    )
-                },
-                status=
-                    status.HTTP_403_FORBIDDEN
+                {"detalle": "Solo el Jefe de Mantenimiento puede informar la conformidad."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
+        requerimiento = self.get_object()
 
-        requerimiento = (
-            self.get_object()
-        )
-
-
-        if not estado_permitido(
-            requerimiento,
-            ["INFORME_REGISTRADO"]
-        ):
-
+        if not requerimiento.verificado_en:
             return Response(
-                {
-                    "detalle": (
-                        "Primero debe registrarse "
-                        "el informe del trabajo."
-                    )
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+                {"detalle": "Primero debe verificar el funcionamiento."},
+                status=status.HTTP_409_CONFLICT
             )
 
-
-        estado_finalizado = obtener_estado(
-            "FINALIZADO"
-        )
-
-
-        if not estado_finalizado:
-
+        if not estado_permitido(requerimiento, ["INFORME_REGISTRADO"]):
             return Response(
-                {
-                    "detalle":
-                        "No existe el estado FINALIZADO."
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
+                {"detalle": "El requerimiento no está en condiciones de informar conformidad."},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
+        if not self._cambiar_estado(requerimiento, "CONFORMIDAD_INFORMADA"):
+            return Response({"detalle": "No existe el estado CONFORMIDAD_INFORMADA."}, status=400)
 
-        requerimiento.estado = (
-            estado_finalizado
-        )
-
-        requerimiento.finalizado_en = (
-            timezone.now()
-        )
-
-
-        requerimiento.save(
-            update_fields=[
-                "estado",
-                "finalizado_en",
-                "actualizado_en",
-            ]
-        )
-
+        requerimiento.conformidad_en = timezone.now()
+        requerimiento.save()
 
         registrar_bitacora(
             request=request,
-            accion=
-                "FINALIZAR_MANTENIMIENTO",
-            modulo=
-                "Mantenimiento",
+            accion="INFORMAR_CONFORMIDAD_MANTENIMIENTO",
+            modulo="Mantenimiento",
             detalle=(
-                f"Se finalizó el requerimiento "
-                f"{requerimiento.codigo}."
+                f"Se informó la conformidad del mantenimiento {requerimiento.codigo}."
             ),
-            nivel=
-                "INFO",
+            nivel="INFO",
         )
-
 
         return respuesta_requerimiento(
             requerimiento,
-            "Requerimiento de mantenimiento finalizado.",
+            "Conformidad informada. Elabore el informe final.",
+            request
+        )
+
+
+    # ======================================================
+    # 12. ELABORAR Y VALIDAR INFORME FINAL  (Jefe)
+    # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="elaborar-informe-final")
+    def elaborar_informe_final(self, request, pk=None):
+
+        if not (es_admin(request.user) or tiene_rol(request.user, "SERVICIOS_GENERALES")):
+            return Response(
+                {"detalle": "Solo el Jefe de Mantenimiento puede elaborar el informe final."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        requerimiento = self.get_object()
+
+        if not estado_permitido(requerimiento, ["CONFORMIDAD_INFORMADA"]):
+            return Response(
+                {"detalle": "Primero debe informarse la conformidad del mantenimiento."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        informe = str(request.data.get("informe_final", "")).strip()
+
+        if not informe:
+            return Response(
+                {"informe_final": "Debe elaborar el informe final."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        ahora = timezone.now()
+
+        requerimiento.informe_final = informe
+        requerimiento.informe_elevado_en = ahora
+        requerimiento.save()
+
+        registrar_bitacora(
+            request=request,
+            accion="ELABORAR_INFORME_FINAL_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=(
+                f"Se elaboró y validó el informe final de {requerimiento.codigo} "
+                "y fue elevado a la Dirección."
+            ),
+            nivel="INFO",
+        )
+
+        return respuesta_requerimiento(
+            requerimiento,
+            "Informe final validado y elevado a la Dirección.",
+            request
+        )
+
+
+    # ======================================================
+    # 13. RECIBIR INFORME DE ACTIVIDADES  (Dirección) -> FIN
+    # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="recibir-informe")
+    def recibir_informe(self, request, pk=None):
+
+        if not (es_admin(request.user) or tiene_rol(request.user, "DIRECTOR")):
+            return Response(
+                {"detalle": "Solo la Dirección puede recibir el informe de actividades."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        requerimiento = self.get_object()
+
+        if not requerimiento.informe_elevado_en:
+            return Response(
+                {"detalle": "La jefatura todavía no elevó el informe final."},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        if requerimiento.informe_recibido_director_en:
+            return Response(
+                {"detalle": "Usted ya recibió este informe."},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        ahora = timezone.now()
+
+        if not self._cambiar_estado(requerimiento, "FINALIZADO"):
+            return Response({"detalle": "No existe el estado FINALIZADO."}, status=400)
+
+        requerimiento.informe_recibido_director_en = ahora
+        requerimiento.proceso_finalizado_en = ahora
+        requerimiento.finalizado_en = ahora
+        requerimiento.save()
+
+        registrar_bitacora(
+            request=request,
+            accion="RECIBIR_INFORME_ACTIVIDADES_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=(
+                f"La Dirección recibió el informe de {requerimiento.codigo}: "
+                "el proceso de mantenimiento quedó cerrado."
+            ),
+            nivel="INFO",
+        )
+
+        return respuesta_requerimiento(
+            requerimiento,
+            "Informe recibido. El proceso de mantenimiento quedó cerrado.",
             request
         )
 

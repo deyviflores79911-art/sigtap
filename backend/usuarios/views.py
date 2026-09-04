@@ -1112,7 +1112,6 @@ class InformeJefaturaViewSet(viewsets.ModelViewSet):
     MAPA_JEFATURA = {
         "JEFE_UTIC": "UTIC",
         "SERVICIOS_GENERALES": "MANTENIMIENTO",
-        "JEFE_DAF": "DAF",
     }
 
     def get_queryset(self):
@@ -1126,9 +1125,6 @@ class InformeJefaturaViewSet(viewsets.ModelViewSet):
         jefatura = next((area for rol, area in self.MAPA_JEFATURA.items() if rol in roles), None)
         if not jefatura:
             raise PermissionDenied("Solo una jefatura puede elaborar informes para el Director.")
-        tipo = serializer.validated_data.get("tipo", "ACTIVIDADES")
-        if tipo == "APROBACION_DAF" and jefatura != "DAF":
-            raise PermissionDenied("El informe de aprobación corresponde únicamente al Jefe DAF.")
         serializer.save(jefe=self.request.user, jefatura=jefatura)
 
 
@@ -1716,7 +1712,6 @@ MAPA_ROLES_CONSULTABLES = {
     "AUXILIAR_SERVICIOS_GENERALES": ["SERVICIOS_GENERALES"],
     "ESPECIALISTA": ["JEFE_UTIC"],
     "AGENTE": ["JEFE_UTIC"],
-    "DAF": ["JEFE_DAF"],
 }
 
 

@@ -212,9 +212,17 @@
               <button
                 v-if="solicitud.estado === 'COMPRADO_Y_ENTREGADO'"
                 class="edit"
-                @click="presentarDescargo(solicitud)"
+                @click="firmarActa(solicitud)"
               >
-                Presentar descargo
+                Firmar acta de conformidad
+              </button>
+
+              <button
+                v-if="solicitud.estado === 'DESCARGO_PENDIENTE_LIQUIDACION'"
+                class="edit"
+                @click="recibirSolicitud(solicitud)"
+              >
+                Recibir la solicitud
               </button>
 
             </div>
@@ -479,13 +487,13 @@
             <div v-if="!editando" class="field full documents-field">
               <label>Expediente inicial obligatorio</label>
               <p class="file-help">
-                Adjunte Informe, POA, Pedido y Proforma en PDF para enviar la solicitud a la DAF.
+                Adjunte el Informe, la Proforma y el POA en PDF para enviar la solicitud a la DAF. El Pedido es opcional.
               </p>
               <div class="document-grid">
                 <label class="document-input"><span>Informe</span><input type="file" accept="application/pdf" required @change="seleccionarArchivo('informe', $event)" /></label>
-                <label class="document-input"><span>POA</span><input type="file" accept="application/pdf" required @change="seleccionarArchivo('poa', $event)" /></label>
-                <label class="document-input"><span>Pedido</span><input type="file" accept="application/pdf" required @change="seleccionarArchivo('pedido', $event)" /></label>
                 <label class="document-input"><span>Proforma</span><input type="file" accept="application/pdf" required @change="seleccionarArchivo('proforma', $event)" /></label>
+                <label class="document-input"><span>POA</span><input type="file" accept="application/pdf" required @change="seleccionarArchivo('poa', $event)" /></label>
+                <label class="document-input"><span>Pedido (opcional)</span><input type="file" accept="application/pdf" @change="seleccionarArchivo('pedido', $event)" /></label>
               </div>
             </div>
 
@@ -899,7 +907,7 @@ async function guardar() {
     for (const campo of ['informe', 'poa', 'pedido', 'proforma']) {
       const archivo = archivos[campo]
       if (archivo && !archivo.name.toLowerCase().endsWith('.pdf')) {
-        mensajeModal.value = 'Informe, POA, Pedido y Proforma deben ser archivos PDF.'
+        mensajeModal.value = 'Los documentos del expediente deben ser archivos PDF.'
         return
       }
     }
@@ -1091,27 +1099,40 @@ function seleccionarDocumento(accept = '*/*') {
   })
 }
 
-async function presentarDescargo(solicitud) {
+async function accionCompra(solicitud, endpoint, mensajeOk) {
   try {
-    alert('Seleccione la Factura, luego el Acta de Conformidad y finalmente el Fotograma.')
-    const factura = await seleccionarDocumento('.pdf,.jpg,.jpeg,.png')
-    if (!factura) return
-    const acta = await seleccionarDocumento('.pdf,.jpg,.jpeg,.png')
-    if (!acta) return
-    const fotograma = await seleccionarDocumento('image/*,.pdf')
-    if (!fotograma) return
-    const datos = new FormData()
-    datos.append('factura', factura)
-    datos.append('acta_conformidad', acta)
-    datos.append('fotograma', fotograma)
-    const respuesta = await fetch(`/api/compras/solicitudes/${solicitud.id}/presentar-descargo/`, {
-      method: 'POST', headers: { Authorization: `Token ${token()}` }, body: datos,
+    const respuesta = await fetch(`/api/compras/solicitudes/${solicitud.id}/${endpoint}/`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Token ${token()}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
     })
-    const resultado = await respuesta.json()
-    if (!respuesta.ok) throw new Error(resultado.detalle || 'No fue posible presentar el descargo.')
+    const resultado = await respuesta.json().catch(() => ({}))
+    if (!respuesta.ok) throw new Error(resultado.detalle || 'No fue posible completar la acción.')
     await cargarSolicitudes()
-    alert('Descargo enviado correctamente a Tesorería.')
+    alert(mensajeOk)
   } catch (error) { alert(error.message) }
+}
+
+
+/* BPMN: "Firmar acta de conformidad" — la sección solicitante deja
+   constancia de que recibió el bien conforme. */
+async function firmarActa(solicitud) {
+  if (!window.confirm(
+    `¿Confirma que recibió el bien de ${solicitud.codigo} conforme y firma el acta?`
+  )) return
+  await accionCompra(solicitud, 'firmar-acta', 'Acta de conformidad firmada.')
+}
+
+
+/* BPMN: "Recibir la solicitud" — último paso del proceso de compra. */
+async function recibirSolicitud(solicitud) {
+  if (!window.confirm(
+    `¿Confirma la recepción formal de ${solicitud.codigo}? El expediente quedará cerrado.`
+  )) return
+  await accionCompra(solicitud, 'recibir-solicitud', 'Solicitud recibida. El proceso de compra quedó cerrado.')
 }
 
 
@@ -1138,8 +1159,8 @@ function cerrarSesion() {
 .layout {
   min-height: 100vh;
   display: flex;
-  background: #f4f6f8;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--sigta-azul-tenue);
+  font-family: var(--sigta-fuente);
 }
 
 .content {
@@ -1157,11 +1178,11 @@ header {
 
 header h1 {
   margin: 0;
-  color: #17324a;
+  color: var(--sigta-texto);
 }
 
 header p {
-  color: #71818f;
+  color: var(--sigta-texto-suave);
   font-size: 19px;
 }
 
@@ -1170,8 +1191,8 @@ header p {
   padding: 0 18px;
   border: none;
   border-radius: 8px;
-  background: #f2c400;
-  color: #17324a;
+  background: var(--sigta-mostaza);
+  color: var(--sigta-texto);
   font-weight: 800;
   cursor: pointer;
 }
@@ -1186,12 +1207,12 @@ header p {
 .stats article {
   padding: 17px;
   background: white;
-  border-top: 3px solid #f2c400;
+  border-top: 3px solid var(--sigta-mostaza);
   border-radius: 9px;
 }
 
 .stats span {
-  color: #71818f;
+  color: var(--sigta-texto-suave);
   font-size: 16px;
   font-weight: 700;
 }
@@ -1199,7 +1220,7 @@ header p {
 .stats strong {
   display: block;
   margin-top: 5px;
-  color: #073b6f;
+  color: var(--sigta-azul);
   font-size: 31px;
 }
 
@@ -1214,7 +1235,7 @@ header p {
 .filters select {
   height: 42px;
   padding: 0 12px;
-  border: 1px solid #d0dae2;
+  border: 1px solid var(--sigta-borde);
   border-radius: 7px;
 }
 
@@ -1229,21 +1250,21 @@ header p {
   justify-content: space-between;
   gap: 20px;
   padding: 18px 20px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--sigta-azul-tenue);
 }
 
 .code {
-  color: #07518d;
+  color: var(--sigta-azul);
   font-size: 17px;
 }
 
 .purchase h3 {
   margin: 6px 0;
-  color: #29475e;
+  color: var(--sigta-azul);
 }
 
 .purchase p {
-  color: #73818c;
+  color: var(--sigta-texto-suave);
   font-size: 17px;
 }
 
@@ -1255,7 +1276,7 @@ header p {
 
 .meta span {
   padding: 4px 7px;
-  background: #f3f6f8;
+  background: var(--sigta-azul-tenue);
   border-radius: 4px;
   font-size: 15px;
 }
@@ -1270,8 +1291,8 @@ header p {
 .status {
   padding: 5px 9px;
   border-radius: 20px;
-  background: #eaf3fb;
-  color: #07518d;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-azul);
   font-size: 15px;
   font-weight: 800;
 }
@@ -1289,19 +1310,19 @@ header p {
 }
 
 .actions .edit {
-  background: #eaf3fb;
-  color: #07518d;
+  background: var(--sigta-azul-tenue);
+  color: var(--sigta-azul);
 }
 
 .actions .cancel {
-  background: #fdecec;
-  color: #a53232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
 }
 
 .empty {
   padding: 40px;
   text-align: center;
-  color: #71818f;
+  color: var(--sigta-texto-suave);
 }
 
 .overlay {
@@ -1332,11 +1353,11 @@ header p {
 
 .modal-header h2 {
   margin: 0;
-  color: #17324a;
+  color: var(--sigta-texto);
 }
 
 .modal-header p {
-  color: #71818f;
+  color: var(--sigta-texto-suave);
   font-size: 17px;
 }
 
@@ -1372,7 +1393,7 @@ header p {
 .field select,
 .field textarea {
   padding: 14px 15px;
-  border: 1px solid #ccd6de;
+  border: 1px solid var(--sigta-borde);
   border-radius: 7px;
 }
 
@@ -1394,13 +1415,13 @@ header p {
 }
 
 .secondary {
-  border: 1px solid #ccd6de;
+  border: 1px solid var(--sigta-borde);
   background: white;
 }
 
 .primary {
   border: none;
-  background: #073b6f;
+  background: var(--sigta-azul);
   color: white;
 }
 
@@ -1408,8 +1429,8 @@ header p {
   margin-top: 12px;
   padding: 9px;
   border-radius: 6px;
-  background: #fdecec;
-  color: #a53232;
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
 }
 
 @media (max-width: 760px) {
@@ -1446,7 +1467,7 @@ header p {
 
 .file-help {
   margin: 0 0 10px;
-  color: #728393;
+  color: var(--sigta-texto-suave);
   font-size: 16px;
 }
 
@@ -1458,15 +1479,15 @@ header p {
 
 .document-input {
   padding: 11px;
-  border: 1px dashed #aebfcd;
+  border: 1px dashed var(--sigta-texto-suave);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--sigta-azul-tenue);
 }
 
 .document-input span {
   display: block;
   margin-bottom: 7px;
-  color: #174a7d;
+  color: var(--sigta-azul);
   font-size: 16px;
   font-weight: 800;
 }
@@ -1493,7 +1514,7 @@ header p {
   min-width: 0;
   display: block;
   padding: 28px;
-  background: #f2f5f9;
+  background: var(--sigta-azul-tenue);
 }
 
 .purchase-page {
@@ -1509,13 +1530,13 @@ header p {
 
 .purchase-page-header h1 {
   margin: 0;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 34px;
 }
 
 .purchase-page-header p {
   margin: 6px 0 0;
-  color: #758391;
+  color: var(--sigta-texto-suave);
   font-size: 18px;
 }
 
@@ -1525,14 +1546,14 @@ header p {
   max-height: none;
   overflow: visible;
   padding: 0;
-  border-top: 4px solid #f2c400;
+  border-top: 4px solid var(--sigta-mostaza);
   border-radius: 10px;
   box-shadow: 0 4px 14px rgba(0,0,0,.05);
 }
 
 .modal-header {
   padding: 22px 28px 17px;
-  border-bottom: 1px solid #e5ebf0;
+  border-bottom: 1px solid var(--sigta-azul-texto-claro);
 }
 
 .modal-header h2 {
@@ -1547,8 +1568,8 @@ header p {
   height: 31px;
   margin-right: 12px;
   border-radius: 50%;
-  background: #174a7d;
-  color: #fff;
+  background: var(--sigta-azul);
+  color: var(--sigta-blanco);
   font-size: 18px;
 }
 
@@ -1572,7 +1593,7 @@ header p {
   gap: 12px;
   margin: 8px -28px 0;
   padding: 22px 28px 2px;
-  border-top: 1px solid #e2e8ed;
+  border-top: 1px solid var(--sigta-borde);
 }
 
 .form-section-title > span {
@@ -1582,21 +1603,21 @@ header p {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: #174a7d;
-  color: #fff;
+  background: var(--sigta-azul);
+  color: var(--sigta-blanco);
   font-size: 15px;
   font-weight: 800;
 }
 
 .form-section-title h3 {
   margin: 0;
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 20px;
 }
 
 .form-section-title p {
   margin: 4px 0 0;
-  color: #758391;
+  color: var(--sigta-texto-suave);
   font-size: 15px;
 }
 
@@ -1606,7 +1627,7 @@ header p {
 }
 
 .field label {
-  color: #17324a;
+  color: var(--sigta-texto);
   font-size: 17px;
 }
 
@@ -1614,8 +1635,8 @@ header p {
 .field select,
 .field textarea {
   padding: 14px 15px;
-  background: #fff;
-  border: 1px solid #cbd7e1;
+  background: var(--sigta-blanco);
+  border: 1px solid var(--sigta-azul-texto-claro);
   border-radius: 7px;
   font-family: inherit;
 }
@@ -1629,20 +1650,20 @@ header p {
 .field select:focus,
 .field textarea:focus {
   outline: none;
-  border-color: #0a5794;
+  border-color: var(--sigta-texto-suave);
   box-shadow: 0 0 0 3px rgba(10,87,148,.08);
 }
 
 .modal-actions {
   padding-top: 20px;
-  border-top: 1px solid #e5ebf0;
+  border-top: 1px solid var(--sigta-azul-texto-claro);
 }
 
 .modal-actions .primary {
   min-width: 210px;
   min-height: 42px;
-  background: #075b9b;
-  color: #fff;
+  background: var(--sigta-texto-suave);
+  color: var(--sigta-blanco);
 }
 
 @media (max-width: 760px) {

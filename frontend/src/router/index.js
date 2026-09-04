@@ -97,9 +97,6 @@ import PerfilView
 import JefeUticDashboardView
   from '../views/JefeUticDashboardView.vue'
 
-import JefeDafDashboardView
-  from '../views/JefeDafDashboardView.vue'
-
 import EspecialistaDashboardView
   from '../views/EspecialistaDashboardView.vue'
 
@@ -471,13 +468,6 @@ const router = createRouter({
     },
 
     {
-      path: '/jefe-daf/dashboard',
-      name: 'jefe-daf-dashboard',
-      component: JefeDafDashboardView,
-      meta: { requiereAuth: true, roles: ['JEFE_DAF'] },
-    },
-
-    {
       path: '/daf/dashboard',
       name: 'daf-dashboard',
       component: DafDashboardView,
@@ -578,7 +568,6 @@ router.beforeEach(
         if (roles.includes('AUXILIAR_SERVICIOS_GENERALES')) return '/auxiliar-servicios-generales/dashboard'
         if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
         if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'
-        if (roles.includes('JEFE_DAF')) return '/jefe-daf/dashboard'
         if (roles.includes('DAF')) return '/daf/dashboard'
       }
     }
@@ -654,7 +643,6 @@ router.beforeEach(
       if (roles.includes('AUXILIAR_SERVICIOS_GENERALES')) return '/auxiliar-servicios-generales/dashboard'
       if (roles.includes('TESORERIA')) return '/tesoreria/dashboard'
       if (roles.includes('ENCARGADO_COMPRAS_ALMACEN')) return '/almacen/dashboard'
-      if (roles.includes('JEFE_DAF')) return '/jefe-daf/dashboard'
       if (roles.includes('DAF')) return '/daf/dashboard'
     }
 
