@@ -17,10 +17,10 @@
       </header>
 
       <section v-if="mostrarCrear" class="create-panel">
-        <button @click="router.push('/usuario/soporte')">
+        <button @click="router.push({ path: '/usuario/soporte', query: { origen: '/usuario/dashboard' } })">
           <span>🖥️</span><div><strong>Soporte Técnico</strong><small>Equipos, redes, sistemas y dispositivos.</small></div>
         </button>
-        <button @click="router.push('/usuario/mantenimiento')">
+        <button @click="router.push({ path: '/usuario/mantenimiento', query: { origen: '/usuario/dashboard' } })">
           <span>🛠️</span><div><strong>Mantenimiento</strong><small>Infraestructura, instalaciones y servicios.</small></div>
         </button>
       </section>
@@ -106,7 +106,12 @@ async function cargar() {
   } catch (e) { error.value = e.message } finally { cargando.value = false }
 }
 function abrirColumna(estado) { router.push({path:'/usuario/mis-solicitudes',query:{estado}}) }
-function abrirDetalle(item) { router.push({path:'/usuario/mis-solicitudes',query:{proceso:item.proceso,id:item.id}}) }
+function abrirDetalle(item) {
+  router.push({
+    path: '/usuario/mis-solicitudes',
+    query: { proceso: item.proceso, id: item.id, origen: 'kanban' },
+  })
+}
 function irAValidaciones() { router.push({path:'/usuario/mis-solicitudes',query:{estado:'POR_VALIDAR'}}) }
 function fecha(value) { return value ? new Date(value).toLocaleDateString('es-BO',{day:'2-digit',month:'short'}) : '' }
 function progreso(estado) { return {PENDIENTES:18,EN_PROCESO:58,POR_VALIDAR:85,FINALIZADAS:100,CANCELADAS:100}[bucket(estado)] }

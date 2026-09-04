@@ -2,9 +2,9 @@
   <div :class="['portal-layout', { 'con-menu': mostrarMenuUsuario }]">
     <SolicitanteMenu v-if="mostrarMenuUsuario" />
     <main class="password-page">
-    <section class="password-card">
+    <section :class="['password-card', { 'settings-sheet': mostrarMenuUsuario }]">
 
-      <div class="brand">
+      <div v-if="!mostrarMenuUsuario" class="brand">
         <div class="logo-placeholder"><img src="/img/emi.jpg" alt="EMI" class="logo-img"></div>
 
         <div class="brand-text">
@@ -14,7 +14,7 @@
         </div>
       </div>
 
-      <div class="divider"></div>
+      <div v-if="!mostrarMenuUsuario" class="divider"></div>
 
       <div class="header">
         <h2>{{ mostrarMenuUsuario ? 'Cambiar contraseña' : 'Cambio obligatorio de contraseña' }}</h2>
@@ -122,7 +122,7 @@
         </button>
       </form>
 
-      <footer>
+      <footer v-if="!mostrarMenuUsuario">
         <p>
           Sistema Integral de Gestión de Tickets y Aprobaciones
         </p>
@@ -358,6 +358,22 @@ function redirigirSegunRol() {
 
 .portal-layout.con-menu .password-page {
   background: var(--sigta-azul-tenue);
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 28px 34px;
+}
+
+.password-card.settings-sheet {
+  max-width: 880px;
+  padding: 26px 30px;
+  border: 1px solid var(--sigta-borde);
+  border-top: 4px solid var(--sigta-mostaza);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.05);
+}
+
+.settings-sheet form {
+  max-width: 620px;
 }
 
 @media (max-width: 760px) {

@@ -370,14 +370,6 @@ class RequerimientoMantenimientoViewSet(
         )
 
 
-        if not serializer.validated_data.get("evidencia_archivo"):
-
-            return Response(
-                {"detalle": "Debe adjuntar una foto como evidencia."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-
         extra = {}
 
         if not serializer.validated_data.get("area"):
