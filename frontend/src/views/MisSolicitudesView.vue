@@ -37,7 +37,7 @@
       </header>
 
       <section v-if="mostrarCrear" class="create-panel">
-        <button type="button" @click="router.push('/usuario/soporte')">
+        <button type="button" @click="router.push({ path: '/usuario/soporte', query: { origen: '/usuario/mis-solicitudes' } })">
           <span>🖥️</span>
           <div>
             <strong>Soporte Técnico</strong>
@@ -45,7 +45,7 @@
           </div>
         </button>
 
-        <button type="button" @click="router.push('/usuario/mantenimiento')">
+        <button type="button" @click="router.push({ path: '/usuario/mantenimiento', query: { origen: '/usuario/mis-solicitudes' } })">
           <span>🛠️</span>
           <div>
             <strong>Mantenimiento</strong>
@@ -381,7 +381,7 @@
                 <button
                   v-if="puedeCancelar(item)"
                   class="cancel"
-                  @click="anularSolicitud(item)"
+                  @click="solicitudPorCancelar = item"
                 >
                   Cancelar
                 </button>
@@ -405,6 +405,20 @@
 
               </div>
 
+            </div>
+
+            <div
+              v-if="solicitudPorCancelar?.proceso === item.proceso && solicitudPorCancelar?.id === item.id"
+              class="cancel-confirmation"
+            >
+              <div>
+                <strong>¿Está seguro de cancelar la solicitud?</strong>
+                <span>{{ item.codigo }} quedará cancelada y la acción se registrará en el historial.</span>
+              </div>
+              <div class="cancel-confirmation__actions">
+                <button type="button" class="confirm-no" @click="solicitudPorCancelar = null">No</button>
+                <button type="button" class="confirm-yes" @click="anularSolicitud(item)">Sí</button>
+              </div>
             </div>
 
           </article>
@@ -1060,6 +1074,9 @@ const mostrarEditar =
 const solicitudSeleccionada =
   ref(null)
 
+const solicitudPorCancelar =
+  ref(null)
+
 
 // ==========================================================
 // FORMULARIO SOPORTE
@@ -1599,6 +1616,10 @@ function cerrarDetalle() {
 
   solicitudSeleccionada.value =
     null
+
+  if (route.query.origen === 'kanban') {
+    router.push('/usuario/dashboard')
+  }
 }
 
 
@@ -2062,18 +2083,6 @@ async function anularSolicitud(
   item
 ) {
 
-  const confirmar =
-    window.confirm(
-      `¿Confirma la cancelación de ${item.codigo}? Esta acción quedará en el historial.`
-    )
-
-
-  if (!confirmar) {
-
-    return
-  }
-
-
   try {
 
     const endpoint = item.proceso === 'MANTENIMIENTO'
@@ -2125,6 +2134,8 @@ async function anularSolicitud(
     mostrarMensaje(
       'Solicitud cancelada correctamente.'
     )
+
+    solicitudPorCancelar.value = null
 
 
     await cargarTodo()
@@ -2624,7 +2635,30 @@ function cerrarSesion() {
   gap: 20px;
   padding: 17px 20px;
   border-bottom: 1px solid var(--sigta-azul-tenue);
+  flex-wrap: wrap;
 }
+
+.cancel-confirmation {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: -4px;
+  padding: 13px 15px;
+  border-left: 4px solid var(--sigta-mostaza);
+  border-radius: 7px;
+  background: var(--sigta-mostaza-suave);
+  color: var(--sigta-azul);
+}
+
+.cancel-confirmation strong,
+.cancel-confirmation span { display: block; }
+.cancel-confirmation span { margin-top: 3px; color: var(--sigta-texto-suave); font-size: 13px; }
+.cancel-confirmation__actions { display: flex; gap: 8px; }
+.cancel-confirmation__actions button { min-width: 64px; padding: 9px 14px; border-radius: 7px; font-weight: 800; cursor: pointer; }
+.confirm-no { border: 1px solid var(--sigta-borde); background: white; color: var(--sigta-texto); }
+.confirm-yes { border: 0; background: var(--sigta-error); color: white; }
 
 
 .request:last-child {
