@@ -33,7 +33,7 @@
 
         <div class="panels">
           <section class="panel">
-            <div class="panel-head"><div><small>FLUJO BPMN</small><h3>Sus cuatro tareas del proceso</h3></div></div>
+            <div class="panel-head"><div><h3>Sus cuatro tareas del proceso</h3></div></div>
             <button class="flow" @click="irA('comprar')"><i class="gold">1</i><div><b>Realizar compra</b><small>Adquirir el bien y respaldarlo con la factura o recibo</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('entrada')"><i class="blue">2</i><div><b>Registrar entrada de almacén</b><small>Cuántas unidades llegaron y quién las recibió</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('salida')"><i class="blue">3</i><div><b>Registrar salida de almacén</b><small>Qué sale, cuándo y para quién</small></div><strong>›</strong></button>

@@ -2063,7 +2063,7 @@ async function anularSolicitud(
 ) {
 
   const confirmar =
-    window.confirm(
+    await window.sigtaConfirm(
       `¿Confirma la cancelación de ${item.codigo}? Esta acción quedará en el historial.`
     )
 
@@ -2159,7 +2159,7 @@ async function informarConformidad(
 
   if (!conforme) {
 
-    observaciones = window.prompt(
+    observaciones = await window.sigtaPrompt(
       'Indique por qué no está conforme con la solución:'
     ) || ''
 
@@ -2168,7 +2168,7 @@ async function informarConformidad(
     }
 
   } else if (
-    !window.confirm(
+    !await window.sigtaConfirm(
       `¿Confirma que está conforme con la solución de ${item.codigo}? El ticket se cerrará.`
     )
   ) {

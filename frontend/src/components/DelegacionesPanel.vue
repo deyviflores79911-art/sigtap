@@ -138,7 +138,7 @@ async function crearDelegacion() {
 }
 
 async function revocar(d) {
-  if (!confirm(`¿Revocar la delegación otorgada a ${d.delegado_nombre}?`)) return
+  if (!await window.sigtaConfirm(`¿Revocar la delegación otorgada a ${d.delegado_nombre}?`)) return
   try {
     const r = await fetch(`/api/usuarios/delegaciones/${d.id}/revocar/`, { method: 'POST', headers: headersJson(), body: '{}' })
     const respuesta = await r.json().catch(() => ({}))

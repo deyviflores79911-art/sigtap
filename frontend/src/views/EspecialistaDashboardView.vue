@@ -40,7 +40,7 @@
 
         <div class="panels">
           <section class="panel">
-            <div class="panel-head"><div><small>FLUJO BPMN</small><h3>Atención técnica</h3></div></div>
+            <div class="panel-head"><div><h3>Atención técnica</h3></div></div>
             <button class="flow" @click="irA('ordenes')"><i class="blue">1</i><div><b>Recibir orden de trabajo</b><small>Tomar conocimiento del ticket asignado por la jefatura</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('ordenes')"><i class="blue">2</i><div><b>Realizar inspección técnica y diagnóstico</b><small>Registrar el diagnóstico y definir si requiere compra</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('compras')"><i class="navy">3</i><div><b>Realizar requerimiento de componente</b><small>Características y cotización, si el diagnóstico lo exige</small></div><strong>›</strong></button>

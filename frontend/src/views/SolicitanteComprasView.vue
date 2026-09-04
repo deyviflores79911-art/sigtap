@@ -1012,7 +1012,7 @@ async function anularSolicitud(
 ) {
 
   const confirmar =
-    window.confirm(
+    await window.sigtaConfirm(
       `¿Desea anular ${solicitud.codigo}?`
     )
 
@@ -1120,7 +1120,7 @@ async function accionCompra(solicitud, endpoint, mensajeOk) {
 /* BPMN: "Firmar acta de conformidad" — la sección solicitante deja
    constancia de que recibió el bien conforme. */
 async function firmarActa(solicitud) {
-  if (!window.confirm(
+  if (!await window.sigtaConfirm(
     `¿Confirma que recibió el bien de ${solicitud.codigo} conforme y firma el acta?`
   )) return
   await accionCompra(solicitud, 'firmar-acta', 'Acta de conformidad firmada.')
@@ -1129,7 +1129,7 @@ async function firmarActa(solicitud) {
 
 /* BPMN: "Recibir la solicitud" — último paso del proceso de compra. */
 async function recibirSolicitud(solicitud) {
-  if (!window.confirm(
+  if (!await window.sigtaConfirm(
     `¿Confirma la recepción formal de ${solicitud.codigo}? El expediente quedará cerrado.`
   )) return
   await accionCompra(solicitud, 'recibir-solicitud', 'Solicitud recibida. El proceso de compra quedó cerrado.')

@@ -1047,7 +1047,7 @@ async function aprobarCompra() {
   }
 
   const confirmar =
-    window.confirm(
+    await window.sigtaConfirm(
       `¿Confirma aprobar la solicitud ${compraSeleccionada.value.codigo}?`
     )
 

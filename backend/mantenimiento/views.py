@@ -1038,9 +1038,10 @@ class RequerimientoMantenimientoViewSet(
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        viable = request.data.get("viable")
+        viable_raw = request.data.get("viable")
+        viable = viable_raw in [True, "true", "True", 1, "1"] if viable_raw is not None else None
 
-        if viable not in [True, False]:
+        if viable is None:
             return Response({"viable": "Debe indicar True o False."}, status=400)
 
         if viable is False:
@@ -1096,6 +1097,9 @@ class RequerimientoMantenimientoViewSet(
             estado="CREADO_PENDIENTE_DAF",
             origen_modulo="MANTENIMIENTO",
             requerimiento_mantenimiento=requerimiento,
+            informe=request.FILES.get("informe"),
+            poa=request.FILES.get("poa"),
+            proforma=request.FILES.get("proforma"),
         )
 
         requerimiento.estado_compra_componente = "VIABLE"

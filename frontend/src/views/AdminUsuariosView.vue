@@ -1708,7 +1708,7 @@ async function inactivarUsuario(
 ) {
 
   const confirmar =
-    window.confirm(
+    await window.sigtaConfirm(
       `¿Desea inactivar a ${usuario.nombre_completo}?`
     )
 

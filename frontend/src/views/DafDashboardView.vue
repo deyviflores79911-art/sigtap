@@ -158,26 +158,10 @@
               <div class="row-actions">
 
                 <button
-                  class="view"
+                  :class="puedeAprobar(compra) ? 'view btn-evaluar' : 'view'"
                   @click="verDetalle(compra)"
                 >
-                  Ver detalle
-                </button>
-
-                <button
-                  v-if="puedeAprobar(compra)"
-                  class="row-aprobar"
-                  @click="aprobarDesdeLista(compra)"
-                >
-                  Aprobar
-                </button>
-
-                <button
-                  v-if="puedeRechazar(compra)"
-                  class="row-rechazar"
-                  @click="rechazarDesdeLista(compra)"
-                >
-                  Rechazar
+                  {{ puedeAprobar(compra) ? 'Evaluar' : 'Ver detalle' }}
                 </button>
 
               </div>
@@ -202,7 +186,7 @@
       class="detalle-modal-backdrop"
       @click.self="cerrarDetalle"
     >
-      <div class="detalle-modal documento-modal">
+      <div class="detalle-modal documento-modal" @scroll="onModalScroll">
 
         <div class="detalle-modal-header">
           <div class="documento-header-titulo">
@@ -222,7 +206,7 @@
           >✕</button>
         </div>
 
-        <div class="documento-body">
+        <div class="documento-body" @scroll="onModalScroll">
 
           <div
             :class="['estado-banner', claseBucket(bucketEstado(compraSeleccionada?.estado))]"
@@ -422,31 +406,27 @@
 
             <div
               v-if="!mostrarFormRechazo && !mostrarFormCertificacion"
-              class="acciones-botones"
             >
-              <button
-                class="btn-aprobar"
-                :disabled="procesando"
-                @click="iniciarAprobacion"
-              >
-                {{
-                  compraSeleccionada?.estado === 'EVALUADO_PENDIENTE_CERTIFICACION'
-                    ? 'Certificar presupuesto'
-                    : 'Sí califica'
-                }}
-              </button>
+              <div v-if="haLeidoTodo" class="acciones-botones eval-mode">
+                <button
+                  class="btn-aprobar btn-eval-main"
+                  :disabled="procesando"
+                  @click="iniciarAprobacion"
+                >
+                  APROBAR
+                </button>
 
-              <button
-                class="btn-rechazar"
-                :disabled="procesando"
-                @click="abrirFormRechazo"
-              >
-                {{
-                  compraSeleccionada?.estado === 'EVALUADO_PENDIENTE_CERTIFICACION'
-                    ? 'Rechazar'
-                    : 'No califica'
-                }}
-              </button>
+                <button
+                  class="btn-rechazar btn-eval-main"
+                  :disabled="procesando"
+                  @click="abrirFormRechazo"
+                >
+                  RECHAZAR
+                </button>
+              </div>
+              <div v-else class="scroll-lock-msg">
+                <span>↓</span> Desliza hasta el final para habilitar la evaluación <span>↓</span>
+              </div>
             </div>
 
             <div
@@ -693,6 +673,9 @@ const comprasFiltradas =
 const mostrarDetalle =
   ref(false)
 
+const haLeidoTodo =
+  ref(false)
+
 const compraSeleccionada =
   ref(null)
 
@@ -709,13 +692,7 @@ const documentosExpediente =
     return [
       { label: 'Informe', url: c.informe },
       { label: 'POA', url: c.poa },
-      { label: 'Pedido', url: c.pedido },
       { label: 'Proforma', url: c.proforma },
-      {
-        label: 'Certificación presupuestaria',
-        url: c.certificacion_presupuestaria,
-        pendienteTexto: 'Pendiente de generar',
-      },
     ]
   })
 
@@ -767,7 +744,27 @@ function verDetalle(
   mostrarDetalle.value =
     true
 
+  haLeidoTodo.value = false
+
   resetearFormularios()
+
+  setTimeout(() => {
+    // Check if scrollable content is small enough to not need scrolling
+    const modals = document.querySelectorAll('.detalle-modal, .documento-body')
+    for (const m of modals) {
+      if (m.scrollHeight <= m.clientHeight + 10) {
+        haLeidoTodo.value = true
+      }
+    }
+  }, 100)
+}
+
+function onModalScroll(e) {
+  const { scrollTop, scrollHeight, clientHeight } = e.target
+  // Si llegó cerca del final (margen de 20px)
+  if (scrollTop + clientHeight >= scrollHeight - 20) {
+    haLeidoTodo.value = true
+  }
 }
 
 
@@ -986,17 +983,6 @@ function onSeleccionarCertificacion(
 
 
 function iniciarAprobacion() {
-
-  if (
-    compraSeleccionada.value?.estado
-    === 'EVALUADO_PENDIENTE_CERTIFICACION'
-  ) {
-
-    abrirFormCertificacion()
-
-    return
-  }
-
   aprobarCompra()
 }
 
@@ -1048,7 +1034,7 @@ async function aprobarCompra() {
   }
 
   const confirmar =
-    window.confirm(
+    await window.sigtaConfirm(
       `¿Confirma que la solicitud ${compraSeleccionada.value.codigo} califica presupuestariamente?`
     )
 
@@ -1381,8 +1367,6 @@ function bucketEstado(
 
   if (
     codigo === 'CREADO_PENDIENTE_DAF'
-    ||
-    codigo === 'EVALUADO_PENDIENTE_CERTIFICACION'
   ) {
 
     return 'EN_ESPERA'
@@ -1710,65 +1694,82 @@ function cerrarSesion() {
 
 .status {
   display: inline-block;
-  padding: 5px 8px;
-  border-radius: 20px;
-  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 
 .status.working {
-  background: var(--sigta-mostaza-suave);
-  color: var(--sigta-mostaza-oscuro);
+  background: var(--sigta-mostaza);
+  color: var(--sigta-azul);
 }
-
 
 .status.closed {
-  background: var(--sigta-exito-fondo);
-  color: var(--sigta-exito);
+  background: #dcfce7;
+  color: #15803d;
 }
-
 
 .status.cancelled {
-  background: var(--sigta-error-fondo);
-  color: var(--sigta-error);
+  background: #fee2e2;
+  color: #b91c1c;
 }
-
 
 .row-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
 }
-
 
 .view,
 .row-aprobar,
 .row-rechazar {
-  padding: 6px 8px;
-  border: none;
-  border-radius: 5px;
-  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
+.view:hover,
+.row-aprobar:hover,
+.row-rechazar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
 
 .view {
-  background: var(--sigta-azul-tenue);
-  color: var(--sigta-texto-suave);
+  background: var(--sigta-blanco);
+  border-color: var(--sigta-borde-suave);
+  color: var(--sigta-azul);
 }
 
+.view.btn-evaluar {
+  background: var(--sigta-exito);
+  color: white;
+  border-color: var(--sigta-exito);
+  font-weight: 800;
+}
+.view.btn-evaluar:hover {
+  background: #166534;
+}
 
 .row-aprobar {
   background: var(--sigta-exito-fondo);
+  border-color: #bbf7d0;
   color: var(--sigta-exito);
 }
 
-
 .row-rechazar {
   background: var(--sigta-error-fondo);
+  border-color: #fecaca;
   color: var(--sigta-error);
 }
 
@@ -2177,6 +2178,31 @@ function cerrarSesion() {
   gap: 8px;
 }
 
+.eval-mode {
+  flex-direction: column;
+  align-items: center;
+  margin-top: 15px;
+  gap: 12px;
+}
+
+.scroll-lock-msg {
+  text-align: center;
+  padding: 15px;
+  margin-top: 15px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  color: var(--sigta-azul);
+  font-weight: bold;
+  font-size: 13px;
+  border: 1px dashed #cbd5e1;
+  animation: pulse 2s infinite;
+}
+.scroll-lock-msg span {
+  display: inline-block;
+  animation: bounce 2s infinite;
+}
+@keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
 
 .btn-aprobar,
 .btn-rechazar,
@@ -2190,6 +2216,17 @@ function cerrarSesion() {
   cursor: pointer;
 }
 
+.btn-eval-main {
+  width: 100%;
+  min-height: 50px;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-eval-main:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 
 .btn-aprobar {
   background: var(--sigta-exito);
