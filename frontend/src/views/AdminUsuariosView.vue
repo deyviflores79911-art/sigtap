@@ -247,6 +247,10 @@
 
               <tr>
 
+                <th class="id-column">
+                  ID
+                </th>
+
                 <th>
                   Usuario
                 </th>
@@ -287,6 +291,11 @@
                 :key="usuario.id"
               >
 
+                <!-- ID -->
+                <td class="id-column">
+                  {{ usuario.id }}
+                </td>
+
                 <!-- USUARIO -->
                 <td>
 
@@ -308,10 +317,6 @@
                       <strong>
                         {{ usuario.nombre_completo }}
                       </strong>
-
-                      <small>
-                        ID {{ usuario.id }}
-                      </small>
 
                     </div>
 
@@ -416,14 +421,19 @@
                       Editar
                     </button>
 
+                    <button
+                      class="btn-reset-password"
+                      @click="abrirRestablecerPassword(usuario)"
+                    >
+                      Restablecer contraseña
+                    </button>
+
 
                     <button
                       v-if="usuario.is_active"
                       class="btn-disable"
                       @click="
-                        inactivarUsuario(
-                          usuario
-                        )
+                        solicitarCambioEstado(usuario, 'inactivar')
                       "
                     >
                       Inactivar
@@ -434,9 +444,7 @@
                       v-else
                       class="btn-enable"
                       @click="
-                        activarUsuario(
-                          usuario
-                        )
+                        solicitarCambioEstado(usuario, 'activar')
                       "
                     >
                       Activar
@@ -524,7 +532,7 @@
 
               <!-- NOMBRE -->
 
-              <div class="field full">
+              <div v-if="editando" class="field full">
 
                 <label>
                   Nombre completo
@@ -540,6 +548,25 @@
 
               </div>
 
+              <template v-else>
+                <div class="field">
+                  <label>Primer nombre <span>*</span></label>
+                  <input v-model="form.primer_nombre" type="text" placeholder="Ej.: Wendy" required :disabled="usuarioCreado" />
+                </div>
+                <div class="field">
+                  <label>Segundo nombre</label>
+                  <input v-model="form.segundo_nombre" type="text" placeholder="Ej.: Roxana" :disabled="usuarioCreado" />
+                </div>
+                <div class="field">
+                  <label>Apellido paterno <span>*</span></label>
+                  <input v-model="form.apellido_paterno" type="text" placeholder="Ej.: Caillavi" required :disabled="usuarioCreado" />
+                </div>
+                <div class="field">
+                  <label>Apellido materno <span>*</span></label>
+                  <input v-model="form.apellido_materno" type="text" placeholder="Ej.: Reyes" required :disabled="usuarioCreado" />
+                </div>
+              </template>
+
 
               <!-- EMAIL -->
 
@@ -551,9 +578,10 @@
                 </label>
 
                 <input
-                  v-model="form.email"
+                  :value="correoGenerado"
                   type="email"
                   placeholder="usuario@emi.edu.bo"
+                  readonly
                   required
                 />
 
@@ -669,12 +697,23 @@
                 </label>
 
 
-                <input
-                  v-model="form.password"
-                  type="password"
-                  :required="!editando"
-                  placeholder="Ej.: Temporal2026*"
-                />
+                <div class="password-field">
+                  <input
+                    v-model="form.password"
+                    :type="mostrarPassword ? 'text' : 'password'"
+                    readonly
+                    :placeholder="editando ? 'No se modifica desde esta pantalla' : '••••••••••'"
+                  />
+                  <button
+                    v-if="!editando"
+                    type="button"
+                    class="password-eye"
+                    :disabled="!form.password"
+                    :aria-label="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                    :title="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                    @click="mostrarPassword = !mostrarPassword"
+                  >👁</button>
+                </div>
 
 
                 <small>
@@ -682,7 +721,9 @@
                   {{
                     editando
                       ? 'Déjelo vacío si no desea cambiar la contraseña.'
-                      : 'El usuario deberá cambiarla obligatoriamente en su primer ingreso.'
+                      : (form.password
+                          ? 'Copie esta contraseña ahora: no podrá consultarse posteriormente.'
+                          : 'Se generará automáticamente al crear el usuario.')
                   }}
 
                 </small>
@@ -696,7 +737,7 @@
 
             <div
               v-if="mensajeModal"
-              class="modal-error"
+              :class="usuarioCreado ? 'modal-success' : 'modal-error'"
             >
               {{ mensajeModal }}
             </div>
@@ -711,11 +752,12 @@
                 class="btn-cancel"
                 @click="cerrarModal"
               >
-                Cancelar
+                {{ usuarioCreado ? 'Cerrar' : 'Cancelar' }}
               </button>
 
 
               <button
+                v-if="!usuarioCreado"
                 type="submit"
                 class="btn-save"
                 :disabled="guardando"
@@ -739,6 +781,113 @@
 
         </div>
 
+      </div>
+
+      <div
+        v-if="usuarioConfirmacion"
+        class="modal-overlay"
+        @click.self="cerrarConfirmacion"
+      >
+        <div class="modal confirm-modal">
+          <div class="confirm-icon" :class="accionConfirmacion">!</div>
+          <h2>{{ accionConfirmacion === 'inactivar' ? 'Inactivar usuario' : 'Activar usuario' }}</h2>
+          <p>
+            {{ accionConfirmacion === 'inactivar'
+              ? '¿Está seguro de que desea inactivar a este usuario?'
+              : '¿Está seguro de que desea activar nuevamente a este usuario?' }}
+          </p>
+          <dl class="confirm-user-data">
+            <div><dt>Nombre:</dt><dd>{{ usuarioConfirmacion.nombre_completo }}</dd></div>
+            <div><dt>Correo:</dt><dd>{{ usuarioConfirmacion.email }}</dd></div>
+            <div><dt>Rol:</dt><dd>{{ usuarioConfirmacion.roles?.[0]?.rol_nombre || 'Sin rol' }}</dd></div>
+          </dl>
+          <div class="confirm-warning" :class="accionConfirmacion">
+            {{ accionConfirmacion === 'inactivar'
+              ? 'El usuario no podrá acceder a SIGTA mientras se encuentre inactivo.'
+              : 'El usuario recuperará el acceso a SIGTA.' }}
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" :disabled="procesandoEstado" @click="cerrarConfirmacion">Cancelar</button>
+            <button
+              type="button"
+              :class="accionConfirmacion === 'inactivar' ? 'btn-confirm-disable' : 'btn-confirm-enable'"
+              :disabled="procesandoEstado"
+              @click="confirmarCambioEstado"
+            >
+              {{ procesandoEstado
+                ? 'Procesando...'
+                : (accionConfirmacion === 'inactivar' ? 'Inactivar usuario' : 'Activar usuario') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="usuarioRestablecimiento && !passwordRestablecida"
+        class="modal-overlay"
+        @click.self="cerrarRestablecimiento"
+      >
+        <div class="modal confirm-modal">
+          <div class="confirm-icon reset-password">!</div>
+          <h2>Restablecer contraseña</h2>
+          <p>¿Está seguro de que desea restablecer la contraseña de este usuario?</p>
+          <dl class="confirm-user-data">
+            <div><dt>Usuario:</dt><dd>{{ usuarioRestablecimiento.nombre_completo }}</dd></div>
+            <div><dt>Correo:</dt><dd>{{ usuarioRestablecimiento.email }}</dd></div>
+          </dl>
+          <div class="confirm-warning">
+            La contraseña actual dejará de funcionar. Se generará una nueva contraseña temporal y el usuario deberá cambiarla en su próximo inicio de sesión.
+          </div>
+          <div v-if="errorRestablecimiento" class="modal-error">
+            {{ errorRestablecimiento }}
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" :disabled="restableciendoPassword" @click="cerrarRestablecimiento">
+              Cancelar
+            </button>
+            <button type="button" class="btn-confirm-reset" :disabled="restableciendoPassword" @click="confirmarRestablecimiento">
+              {{ restableciendoPassword ? 'Restableciendo...' : 'Restablecer contraseña' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="usuarioRestablecimiento && passwordRestablecida"
+        class="modal-overlay"
+      >
+        <div class="modal generated-password-modal">
+          <div class="confirm-icon activar">✓</div>
+          <h2>Contraseña temporal generada</h2>
+          <dl class="confirm-user-data">
+            <div><dt>Usuario:</dt><dd>{{ usuarioRestablecimiento.nombre_completo }}</dd></div>
+            <div><dt>Correo:</dt><dd>{{ usuarioRestablecimiento.email }}</dd></div>
+          </dl>
+          <div class="field full">
+            <label>Contraseña temporal</label>
+            <div class="password-field">
+              <input
+                :value="passwordRestablecida"
+                :type="mostrarPasswordRestablecida ? 'text' : 'password'"
+                readonly
+              />
+              <button
+                type="button"
+                class="password-eye"
+                :aria-label="mostrarPasswordRestablecida ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                :title="mostrarPasswordRestablecida ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                @click="mostrarPasswordRestablecida = !mostrarPasswordRestablecida"
+              >👁</button>
+            </div>
+          </div>
+          <div class="one-time-notice">
+            <strong>Esta contraseña temporal se mostrará únicamente en este momento.</strong>
+            <span>El usuario deberá cambiarla al iniciar sesión nuevamente.</span>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-save" @click="cerrarRestablecimiento">Entendido</button>
+          </div>
+        </div>
       </div>
 
     </main>
@@ -822,6 +971,17 @@ const mensajeModal =
 const error =
   ref(false)
 
+const mostrarPassword = ref(false)
+const usuarioCreado = ref(false)
+const usuarioConfirmacion = ref(null)
+const accionConfirmacion = ref('')
+const procesandoEstado = ref(false)
+const usuarioRestablecimiento = ref(null)
+const passwordRestablecida = ref('')
+const mostrarPasswordRestablecida = ref(false)
+const restableciendoPassword = ref(false)
+const errorRestablecimiento = ref('')
+
 
 /* =========================================================
    FORMULARIO
@@ -831,6 +991,14 @@ const form =
   reactive({
 
     nombre_completo: '',
+
+    primer_nombre: '',
+
+    segundo_nombre: '',
+
+    apellido_paterno: '',
+
+    apellido_materno: '',
 
     email: '',
 
@@ -844,6 +1012,23 @@ const form =
 
     especialidad: '',
   })
+
+function normalizarParteCorreo(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+}
+
+const correoGenerado = computed(() => {
+  if (editando.value) return form.email
+  const primero = normalizarParteCorreo(form.primer_nombre)
+  const paterno = normalizarParteCorreo(form.apellido_paterno)
+  const materno = normalizarParteCorreo(form.apellido_materno)
+  if (!primero || !paterno || !materno) return ''
+  return `${primero[0]}${paterno}${materno[0]}@emi.edu.bo`
+})
 
 
 /* =========================================================
@@ -1301,6 +1486,8 @@ function abrirNuevo() {
 
   limpiarFormulario()
 
+  form.password = 'Temporal2026*'
+
   mostrarModal.value =
     true
 }
@@ -1403,6 +1590,14 @@ function limpiarFormulario() {
 
   form.nombre_completo = ''
 
+  form.primer_nombre = ''
+
+  form.segundo_nombre = ''
+
+  form.apellido_paterno = ''
+
+  form.apellido_materno = ''
+
   form.email = ''
 
   form.password = ''
@@ -1416,6 +1611,10 @@ function limpiarFormulario() {
   form.especialidad = ''
 
   mensajeModal.value = ''
+
+  mostrarPassword.value = false
+
+  usuarioCreado.value = false
 }
 
 
@@ -1459,9 +1658,11 @@ async function guardarUsuario() {
   ================================================ */
 
   if (
-    !form.nombre_completo.trim()
-    ||
-    !form.email.trim()
+    (editando.value
+      ? !form.nombre_completo.trim()
+      : (!form.primer_nombre.trim()
+          || !form.apellido_paterno.trim()
+          || !form.apellido_materno.trim()))
     ||
     !form.tipo_usuario
   ) {
@@ -1490,12 +1691,7 @@ async function guardarUsuario() {
   ================================================ */
 
   if (
-    !form.email
-      .trim()
-      .toLowerCase()
-      .endsWith(
-        '@emi.edu.bo'
-      )
+    !correoGenerado.value.endsWith('@emi.edu.bo')
   ) {
 
     mensajeModal.value =
@@ -1527,23 +1723,6 @@ async function guardarUsuario() {
   }
 
 
-  /* ===============================================
-     CONTRASEÑA PARA NUEVO USUARIO
-  ================================================ */
-
-  if (
-    !editando.value
-    &&
-    !form.password
-  ) {
-
-    mensajeModal.value =
-      'Ingrese una contraseña temporal.'
-
-    return
-  }
-
-
   guardando.value =
     true
 
@@ -1560,12 +1739,20 @@ async function guardarUsuario() {
     const payload = {
 
       nombre_completo:
-        form.nombre_completo.trim(),
+        editando.value
+          ? form.nombre_completo.trim()
+          : [
+              form.primer_nombre,
+              form.segundo_nombre,
+              form.apellido_paterno,
+              form.apellido_materno,
+            ]
+              .map(valor => valor.trim())
+              .filter(Boolean)
+              .join(' '),
 
       email:
-        form.email
-          .trim()
-          .toLowerCase(),
+        correoGenerado.value,
 
       rol_id: Number(rolInterno.id),
 
@@ -1577,15 +1764,21 @@ async function guardarUsuario() {
       especialidad: form.especialidad || '',
     }
 
+    if (!editando.value) {
+      payload.primer_nombre = form.primer_nombre.trim()
+      payload.segundo_nombre = form.segundo_nombre.trim()
+      payload.apellido_paterno = form.apellido_paterno.trim()
+      payload.apellido_materno = form.apellido_materno.trim()
+      payload.password = form.password
+    }
+
 
     /*
      * La contraseña solamente se manda
      * si se escribió una.
      */
 
-    if (
-      form.password
-    ) {
+    if (editando.value && form.password) {
 
       payload.password =
         form.password
@@ -1666,16 +1859,15 @@ async function guardarUsuario() {
       editando.value
 
 
-    cerrarModal()
-
-
-    mostrarMensaje(
-
-      eraEdicion
-        ? 'Usuario actualizado correctamente.'
-        : 'Usuario creado correctamente.'
-    )
-
+    if (eraEdicion) {
+      cerrarModal()
+      mostrarMensaje('Usuario actualizado correctamente.')
+    } else {
+      form.password = datos.password_temporal || ''
+      usuarioCreado.value = true
+      mensajeModal.value = 'Usuario creado correctamente.'
+      mostrarMensaje('Usuario creado correctamente.')
+    }
 
     await cargarDatos()
 
@@ -1706,19 +1898,6 @@ async function guardarUsuario() {
 async function inactivarUsuario(
   usuario
 ) {
-
-  const confirmar =
-    window.confirm(
-      `¿Desea inactivar a ${usuario.nombre_completo}?`
-    )
-
-
-  if (!confirmar) {
-
-    return
-  }
-
-
   try {
 
     const respuesta =
@@ -1761,7 +1940,7 @@ async function inactivarUsuario(
       )
 
 
-      return
+      return false
     }
 
 
@@ -1771,6 +1950,8 @@ async function inactivarUsuario(
 
 
     await cargarDatos()
+
+    return true
 
 
   } catch (e) {
@@ -1784,6 +1965,36 @@ async function inactivarUsuario(
       'Error al inactivar el usuario.',
       true
     )
+    return false
+  }
+}
+
+function solicitarCambioEstado(usuario, accion) {
+  usuarioConfirmacion.value = usuario
+  accionConfirmacion.value = accion
+}
+
+function cerrarConfirmacion() {
+  if (procesandoEstado.value) return
+  usuarioConfirmacion.value = null
+  accionConfirmacion.value = ''
+}
+
+async function confirmarCambioEstado() {
+  if (!usuarioConfirmacion.value) return
+  procesandoEstado.value = true
+  const usuario = usuarioConfirmacion.value
+  const accion = accionConfirmacion.value
+  try {
+    const completado = accion === 'inactivar'
+      ? await inactivarUsuario(usuario)
+      : await activarUsuario(usuario)
+    if (completado) {
+      usuarioConfirmacion.value = null
+      accionConfirmacion.value = ''
+    }
+  } finally {
+    procesandoEstado.value = false
   }
 }
 
@@ -1841,7 +2052,7 @@ async function activarUsuario(
       )
 
 
-      return
+      return false
     }
 
 
@@ -1851,6 +2062,8 @@ async function activarUsuario(
 
 
     await cargarDatos()
+
+    return true
 
 
   } catch (e) {
@@ -1864,6 +2077,69 @@ async function activarUsuario(
       'Error al activar el usuario.',
       true
     )
+    return false
+  }
+}
+
+
+/* =========================================================
+   RESTABLECER CONTRASEÑA
+========================================================= */
+
+function abrirRestablecerPassword(usuario) {
+  usuarioRestablecimiento.value = usuario
+  passwordRestablecida.value = ''
+  mostrarPasswordRestablecida.value = false
+  errorRestablecimiento.value = ''
+}
+
+function cerrarRestablecimiento() {
+  if (restableciendoPassword.value) return
+  usuarioRestablecimiento.value = null
+  passwordRestablecida.value = ''
+  mostrarPasswordRestablecida.value = false
+  errorRestablecimiento.value = ''
+}
+
+async function confirmarRestablecimiento() {
+  if (!usuarioRestablecimiento.value) return
+
+  restableciendoPassword.value = true
+  errorRestablecimiento.value = ''
+
+  try {
+    const respuesta = await fetch(
+      `/api/usuarios/usuarios/${usuarioRestablecimiento.value.id}/restablecer-password/`,
+      {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({}),
+      }
+    )
+
+    let datos = {}
+    try {
+      datos = await respuesta.json()
+    } catch {
+      datos = {}
+    }
+
+    if (!respuesta.ok || !datos.password_temporal) {
+      errorRestablecimiento.value =
+        respuesta.status === 401 || respuesta.status === 403
+          ? 'No tiene autorización para restablecer esta contraseña.'
+          : 'No fue posible restablecer la contraseña. Intente nuevamente.'
+      return
+    }
+
+    passwordRestablecida.value = datos.password_temporal
+    await cargarDatos()
+  } catch (error) {
+    console.error('Error restableciendo contraseña:', error)
+    errorRestablecimiento.value =
+      'No fue posible restablecer la contraseña. Intente nuevamente.'
+  } finally {
+    restableciendoPassword.value = false
   }
 }
 
@@ -2478,7 +2754,7 @@ table {
 
   width: 100%;
 
-  min-width: 1050px;
+  min-width: 1100px;
 
   border-collapse:
     collapse;
@@ -2710,6 +2986,11 @@ td strong {
   background: var(--sigta-exito-fondo);
 
   color: var(--sigta-exito);
+}
+
+.btn-reset-password {
+  background: #fff7d6;
+  color: var(--sigta-azul);
 }
 
 
@@ -2957,6 +3238,40 @@ td strong {
   line-height: 1.4;
 }
 
+.id-column {
+  width: 54px;
+  padding-right: 8px;
+  padding-left: 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 48px;
+}
+
+.password-eye {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--sigta-azul-tenue);
+  cursor: pointer;
+}
+
+.password-eye:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
 
 /* =========================================================
    ERROR MODAL
@@ -2975,6 +3290,142 @@ td strong {
   color: var(--sigta-error);
 
   font-size: 16px;
+}
+
+.modal-success {
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
+  font-size: 16px;
+}
+
+.confirm-modal {
+  max-width: 500px;
+  text-align: center;
+}
+
+.confirm-modal h2 {
+  margin: 12px 0 8px;
+  color: var(--sigta-azul);
+}
+
+.confirm-modal > p {
+  color: var(--sigta-texto-suave);
+}
+
+.confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  border-radius: 50%;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.confirm-icon.inactivar {
+  background: var(--sigta-error-fondo);
+  color: var(--sigta-error);
+}
+
+.confirm-icon.activar {
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
+}
+
+.confirm-icon.reset-password {
+  background: #fff7d6;
+  color: var(--sigta-azul);
+}
+
+.confirm-user-data {
+  margin: 20px 0;
+  padding: 14px;
+  border: 1px solid var(--sigta-borde);
+  border-radius: 8px;
+  background: var(--sigta-azul-tenue);
+  text-align: left;
+}
+
+.confirm-user-data div {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.confirm-user-data dt { font-weight: 700; color: var(--sigta-azul); }
+.confirm-user-data dd { margin: 0; overflow-wrap: anywhere; }
+
+.confirm-warning {
+  padding: 12px;
+  border-left: 4px solid var(--sigta-mostaza);
+  border-radius: 6px;
+  background: #fff9e6;
+  text-align: left;
+}
+
+.btn-confirm-disable,
+.btn-confirm-enable {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 7px;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-confirm-disable { background: var(--sigta-error); }
+.btn-confirm-enable { background: var(--sigta-azul); }
+
+.btn-confirm-reset {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--sigta-azul);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-confirm-reset:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
+.generated-password-modal {
+  max-width: 520px;
+}
+
+.generated-password-modal h2 {
+  margin: 12px 0 18px;
+  color: var(--sigta-azul);
+  text-align: center;
+}
+
+.one-time-notice {
+  margin-top: 16px;
+  padding: 12px;
+  border-left: 4px solid var(--sigta-mostaza);
+  border-radius: 6px;
+  background: #fff9e6;
+  color: var(--sigta-texto-suave);
+}
+
+.one-time-notice strong,
+.one-time-notice span {
+  display: block;
+}
+
+.one-time-notice span {
+  margin-top: 4px;
 }
 
 

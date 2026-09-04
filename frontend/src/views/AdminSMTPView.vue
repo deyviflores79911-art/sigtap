@@ -15,6 +15,14 @@
 
     <main class="content">
 
+      <button
+        type="button"
+        class="back-link"
+        @click="router.push('/superuser/dashboard')"
+      >
+        ← Volver al panel
+      </button>
+
       <!-- ==============================================
            ENCABEZADO
       =============================================== -->
@@ -23,13 +31,17 @@
 
         <div>
 
+          <span class="page-kicker">
+            Configuración de correo
+          </span>
+
           <h1>
-            Correo y notificaciones
+            Correo SMTP
           </h1>
 
           <p>
-            Configuración del canal SMTP secundario
-            utilizado por SIGTA.
+            Administre el canal institucional utilizado por SIGTA
+            para recuperación y notificaciones.
           </p>
 
         </div>
@@ -45,8 +57,8 @@
         >
           {{
             form.activo
-              ? 'SMTP ACTIVO'
-              : 'SMTP INACTIVO'
+              ? '● SMTP activo'
+              : '● SMTP inactivo'
           }}
         </span>
 
@@ -169,204 +181,95 @@
           @submit.prevent="guardar"
         >
 
-          <div class="form-grid">
+          <div class="smtp-layout">
 
-            <!-- ========================================
-                 NOMBRE
-            ========================================= -->
+            <section class="smtp-column general-column">
+              <div class="column-heading">
+                <span class="section-label">CONFIGURACIÓN GENERAL</span>
+              </div>
 
-            <div class="field full">
+              <div class="field">
+                <label>Nombre de configuración</label>
+                <input
+                  v-model="form.nombre"
+                  type="text"
+                  placeholder="Correo institucional EMI"
+                />
+              </div>
 
-              <label>
-                Nombre de configuración
-              </label>
+              <div class="field">
+                <label>Cuenta de envío</label>
+                <input
+                  v-model="form.usuario"
+                  type="email"
+                  placeholder="sigta@emi.edu.bo"
+                />
+                <small>Cuenta autorizada para enviar mensajes desde SIGTA.</small>
+              </div>
 
-              <input
-                v-model="form.nombre"
-                type="text"
-                placeholder="Correo institucional EMI"
-              />
+              <div class="field">
+                <label>Remitente visible</label>
+                <input
+                  v-model="form.remitente"
+                  type="email"
+                  placeholder="sigta@emi.edu.bo"
+                />
+                <small>Dirección que visualizará el destinatario.</small>
+              </div>
+            </section>
 
-            </div>
+            <section class="smtp-column server-column">
+              <div class="column-heading">
+                <span class="section-label">SERVIDOR Y SEGURIDAD</span>
+              </div>
 
+              <div class="server-fields">
+                <div class="field">
+                  <label>Servidor SMTP</label>
+                  <input
+                    v-model="form.host"
+                    type="text"
+                    placeholder="smtp-mail.outlook.com"
+                  />
+                  <small>Servidor proporcionado por el proveedor de correo.</small>
+                </div>
 
-            <!-- ========================================
-                 HOST
-            ========================================= -->
+                <div class="field">
+                  <label>Puerto</label>
+                  <input
+                    v-model.number="form.puerto"
+                    type="number"
+                    min="1"
+                    placeholder="587"
+                  />
+                  <small>Normalmente 587.</small>
+                </div>
+              </div>
 
-            <div class="field">
+              <section class="security-section">
+                <div class="security-header">
+                  <span class="section-label">SEGURIDAD DE CONEXIÓN</span>
+                </div>
 
-              <label>
-                Servidor SMTP
-              </label>
+                <label class="switch-row">
+                  <input v-model="form.usar_tls" type="checkbox" />
+                  <div>
+                    <strong>STARTTLS / TLS</strong>
+                    <span>Proteger la conexión con el servidor SMTP.</span>
+                  </div>
+                </label>
 
-              <input
-                v-model="form.host"
-                type="text"
-                placeholder="smtp-mail.outlook.com"
-              />
-
-              <small>
-                Servidor proporcionado por el
-                proveedor de correo.
-              </small>
-
-            </div>
-
-
-            <!-- ========================================
-                 PUERTO
-            ========================================= -->
-
-            <div class="field">
-
-              <label>
-                Puerto
-              </label>
-
-              <input
-                v-model.number="form.puerto"
-                type="number"
-                min="1"
-                placeholder="587"
-              />
-
-              <small>
-                Normalmente 587 con STARTTLS.
-              </small>
-
-            </div>
-
-
-            <!-- ========================================
-                 USUARIO
-            ========================================= -->
-
-            <div class="field">
-
-              <label>
-                Cuenta de envío
-              </label>
-
-              <input
-                v-model="form.usuario"
-                type="email"
-                placeholder="sigta@emi.edu.bo"
-              />
-
-              <small>
-                Cuenta autorizada para enviar
-                mensajes desde SIGTA.
-              </small>
-
-            </div>
-
-
-            <!-- ========================================
-                 REMITENTE
-            ========================================= -->
-
-            <div class="field">
-
-              <label>
-                Remitente visible
-              </label>
-
-              <input
-                v-model="form.remitente"
-                type="email"
-                placeholder="sigta@emi.edu.bo"
-              />
-
-              <small>
-                Dirección que visualizará
-                el destinatario.
-              </small>
-
-            </div>
+                <label class="switch-row">
+                  <input v-model="form.activo" type="checkbox" />
+                  <div>
+                    <strong>Habilitar notificaciones</strong>
+                    <span>Permitir que SIGTA utilice este canal de correo.</span>
+                  </div>
+                </label>
+              </section>
+            </section>
 
           </div>
-
-
-          <!-- ==========================================
-               SEGURIDAD
-          =========================================== -->
-
-          <section class="security-section">
-
-            <div class="security-header">
-
-              <span class="section-label">
-                SEGURIDAD
-              </span>
-
-              <h3>
-                Seguridad de conexión
-              </h3>
-
-              <p>
-                La credencial secreta no se guarda
-                en esta pantalla ni se expone
-                desde la interfaz.
-              </p>
-
-            </div>
-
-
-            <!-- ========================================
-                 TLS
-            ========================================= -->
-
-            <label class="switch-row">
-
-              <input
-                v-model="form.usar_tls"
-                type="checkbox"
-              />
-
-              <div>
-
-                <strong>
-                  STARTTLS / TLS
-                </strong>
-
-                <span>
-                  Proteger la conexión con
-                  el servidor SMTP.
-                </span>
-
-              </div>
-
-            </label>
-
-
-            <!-- ========================================
-                 ACTIVO
-            ========================================= -->
-
-            <label class="switch-row">
-
-              <input
-                v-model="form.activo"
-                type="checkbox"
-              />
-
-              <div>
-
-                <strong>
-                  Habilitar notificaciones
-                </strong>
-
-                <span>
-                  Permitir que SIGTA utilice
-                  este canal de correo.
-                </span>
-
-              </div>
-
-            </label>
-
-          </section>
 
 
           <!-- ==========================================
@@ -399,7 +302,7 @@
               type="button"
               class="secondary"
               @click="
-                router.push('/admin/dashboard')
+                router.push('/superuser/dashboard')
               "
             >
               Cancelar
@@ -780,6 +683,22 @@ function cerrarSesion() {
   overflow-x: hidden;
 }
 
+.back-link {
+  margin: 0 0 9px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sigta-azul);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
 
 /* =========================================================
    ENCABEZADO
@@ -790,7 +709,17 @@ function cerrarSesion() {
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+}
+
+.page-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--sigta-texto-suave);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .7px;
+  text-transform: uppercase;
 }
 
 
@@ -855,11 +784,11 @@ function cerrarSesion() {
 
 
 .info-card {
-  min-height: 100px;
+  min-height: 82px;
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 16px;
+  padding: 12px 14px;
   border-top: 4px solid var(--sigta-mostaza);
   border-radius: 9px;
   background: white;
@@ -889,10 +818,10 @@ function cerrarSesion() {
 
 
 .info-card p {
-  margin: 5px 0 0;
+  margin: 3px 0 0;
   color: var(--sigta-texto-suave);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.35;
 }
 
 
@@ -901,7 +830,7 @@ function cerrarSesion() {
 ========================================================= */
 
 .configuration {
-  padding: 20px;
+  padding: 18px 20px;
   border-top: 4px solid var(--sigta-mostaza);
   border-radius: 9px;
   background: white;
@@ -958,12 +887,44 @@ function cerrarSesion() {
    FORMULARIO
 ========================================================= */
 
-.form-grid {
+.smtp-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  max-width: 1100px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  width: 100%;
   margin-top: 18px;
+}
+
+.smtp-column {
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid var(--sigta-borde);
+  border-radius: 8px;
+  background: white;
+}
+
+.server-column {
+  background: var(--sigta-azul-tenue);
+}
+
+.column-heading {
+  margin-bottom: 13px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--sigta-borde);
+}
+
+.column-heading .section-label {
+  margin: 0;
+}
+
+.general-column .field + .field {
+  margin-top: 13px;
+}
+
+.server-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(100px, 3fr);
+  gap: 13px;
 }
 
 
@@ -971,11 +932,6 @@ function cerrarSesion() {
   display: flex;
   flex-direction: column;
   gap: 5px;
-}
-
-
-.field.full {
-  grid-column: 1 / -1;
 }
 
 
@@ -1017,25 +973,16 @@ function cerrarSesion() {
 ========================================================= */
 
 .security-section {
-  max-width: 1100px;
-  margin-top: 20px;
-  padding: 15px;
+  width: 100%;
+  margin-top: 17px;
+  padding: 13px;
+  border: 1px solid var(--sigta-borde);
   border-radius: 8px;
-  background: var(--sigta-azul-tenue);
+  background: white;
 }
 
-
-.security-header h3 {
-  margin: 0;
-  color: var(--sigta-azul);
-  font-size: 18px;
-}
-
-
-.security-header p {
-  margin: 4px 0 13px;
-  color: var(--sigta-texto-suave);
-  font-size: 14px;
+.security-header {
+  margin-bottom: 4px;
 }
 
 
@@ -1081,7 +1028,7 @@ function cerrarSesion() {
 
 .success,
 .error {
-  max-width: 1100px;
+  width: 100%;
   margin-top: 14px;
   padding: 10px 12px;
   border-radius: 6px;
@@ -1106,7 +1053,7 @@ function cerrarSesion() {
 ========================================================= */
 
 .footer-actions {
-  max-width: 1100px;
+  width: 100%;
   display: flex;
   justify-content: flex-end;
   gap: 9px;
@@ -1156,13 +1103,13 @@ function cerrarSesion() {
   }
 
 
-  .form-grid {
+  .smtp-layout {
     grid-template-columns: 1fr;
   }
 
 
-  .field.full {
-    grid-column: auto;
+  .server-fields {
+    grid-template-columns: minmax(0, 7fr) minmax(90px, 3fr);
   }
 }
 
@@ -1187,6 +1134,11 @@ function cerrarSesion() {
 
   .configuration-header {
     flex-direction: column;
+  }
+
+
+  .server-fields {
+    grid-template-columns: 1fr;
   }
 }
 

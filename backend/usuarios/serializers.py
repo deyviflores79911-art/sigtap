@@ -1,4 +1,7 @@
 from datetime import timedelta
+import secrets
+import string
+import unicodedata
 
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -16,6 +19,24 @@ from .models import (
     InformeJefatura,
     DelegacionAprobacion,
 )
+
+
+def generar_password_temporal(aleatoria=False):
+    """Genera la clave temporal sin alterar la clave fija usada en las altas."""
+    if not aleatoria:
+        return "Temporal2026*"
+
+    grupos = (
+        string.ascii_uppercase,
+        string.ascii_lowercase,
+        string.digits,
+        "!@#$%&*",
+    )
+    caracteres = [secrets.choice(grupo) for grupo in grupos]
+    alfabeto = "".join(grupos)
+    caracteres.extend(secrets.choice(alfabeto) for _ in range(12))
+    secrets.SystemRandom().shuffle(caracteres)
+    return "".join(caracteres)
 
 
 # ==========================================================
@@ -512,6 +533,19 @@ class UsuarioRolSerializer(serializers.ModelSerializer):
 
 class UsuarioSerializer(serializers.ModelSerializer):
 
+    primer_nombre = serializers.CharField(
+        write_only=True, required=False, max_length=80
+    )
+    segundo_nombre = serializers.CharField(
+        write_only=True, required=False, allow_blank=True, max_length=80
+    )
+    apellido_paterno = serializers.CharField(
+        write_only=True, required=False, max_length=80
+    )
+    apellido_materno = serializers.CharField(
+        write_only=True, required=False, max_length=80
+    )
+
     # ======================================================
     # CONTRASEÑA
     # ======================================================
@@ -573,6 +607,10 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "email",
             "nombre_completo",
             "password",
+            "primer_nombre",
+            "segundo_nombre",
+            "apellido_paterno",
+            "apellido_materno",
 
             "is_active",
             "must_change_password",
@@ -759,6 +797,26 @@ class UsuarioSerializer(serializers.ModelSerializer):
     # ======================================================
     # VALIDAR CORREO
     # ======================================================
+
+    @staticmethod
+    def normalizar_correo(texto):
+        texto = unicodedata.normalize("NFKD", texto.strip().lower())
+        return "".join(
+            caracter for caracter in texto
+            if caracter.isascii() and caracter.isalnum()
+        )
+
+    def construir_correo(self, primer_nombre, apellido_paterno, apellido_materno):
+        primero = self.normalizar_correo(primer_nombre)
+        paterno = self.normalizar_correo(apellido_paterno)
+        materno = self.normalizar_correo(apellido_materno)
+
+        if not primero or not paterno or not materno:
+            raise serializers.ValidationError({
+                "nombre_completo": "Ingrese el primer nombre y ambos apellidos."
+            })
+
+        return f"{primero[0]}{paterno}{materno[0]}@emi.edu.bo"
 
     def validate_email(self, value):
 
@@ -963,10 +1021,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
         validated_data
     ):
 
-        password = validated_data.pop(
-            "password",
-            None
-        )
+        password = validated_data.pop("password", None)
+        primer_nombre = validated_data.pop("primer_nombre", "").strip()
+        segundo_nombre = validated_data.pop("segundo_nombre", "").strip()
+        apellido_paterno = validated_data.pop("apellido_paterno", "").strip()
+        apellido_materno = validated_data.pop("apellido_materno", "").strip()
 
 
         rol_id = validated_data.pop(
@@ -1004,6 +1063,16 @@ class UsuarioSerializer(serializers.ModelSerializer):
         # ROL OBLIGATORIO
         # --------------------------------------------------
 
+        if not primer_nombre or not apellido_paterno or not apellido_materno:
+            raise serializers.ValidationError({
+                "nombre_completo": "El primer nombre y ambos apellidos son obligatorios."
+            })
+
+        if password != generar_password_temporal():
+            raise serializers.ValidationError({
+                "password": "La contraseña temporal generada no es válida."
+            })
+
         if not rol_id:
 
             raise serializers.ValidationError(
@@ -1039,15 +1108,14 @@ class UsuarioSerializer(serializers.ModelSerializer):
         # PREPARAR CORREO
         # --------------------------------------------------
 
-        email = (
-            validated_data
-            .get(
-                "email",
-                ""
-            )
-            .strip()
-            .lower()
+        email = self.construir_correo(
+            primer_nombre, apellido_paterno, apellido_materno
         )
+
+        if Usuario.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError({
+                "email": "El correo institucional generado ya está registrado."
+            })
 
 
         validated_data[
@@ -1108,6 +1176,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
 
         usuario.save()
+        usuario._password_temporal = password
 
 
         # --------------------------------------------------
@@ -1125,6 +1194,13 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
         return usuario
 
+    def to_representation(self, instance):
+        datos = super().to_representation(instance)
+        password_temporal = getattr(instance, "_password_temporal", None)
+        if password_temporal:
+            datos["password_temporal"] = password_temporal
+        return datos
+
 
     # ======================================================
     # MODIFICAR USUARIO
@@ -1141,6 +1217,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "password",
             None
         )
+
+        validated_data.pop("primer_nombre", None)
+        validated_data.pop("segundo_nombre", None)
+        validated_data.pop("apellido_paterno", None)
+        validated_data.pop("apellido_materno", None)
 
 
         rol_id = validated_data.pop(

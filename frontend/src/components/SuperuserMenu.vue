@@ -113,6 +113,20 @@
       </router-link>
 
 
+      <!-- CORREO SMTP -->
+
+      <router-link
+        to="/superuser/smtp"
+        class="menu-item"
+      >
+        <IconoSigta class="icon" nombre="correo" />
+
+        <span>
+          Correo SMTP
+        </span>
+      </router-link>
+
+
       <!-- PREFERENCIAS -->
 
       <router-link
