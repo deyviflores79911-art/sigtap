@@ -479,10 +479,6 @@
                   {{ permiso.nombre }}
                 </strong>
 
-                <span class="permission-code">
-                  {{ permiso.codigo }}
-                </span>
-
                 <p>
                   {{
                     permiso.descripcion
