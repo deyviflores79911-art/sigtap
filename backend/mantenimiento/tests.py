@@ -66,6 +66,25 @@ class FlujoMantenimientoTests(APITestCase):
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(r.data["requerimiento"]["estado_codigo"], "RECHAZADO")
 
+    def test_solicitante_registra_campos_comunes_sin_adjunto(self):
+        self.autenticar("SOLICITANTE")
+        r = self.client.post("/api/mantenimiento/requerimientos/", {
+            "titulo": "Luminaria averiada",
+            "descripcion": "La luminaria parpadea durante la jornada.",
+            "area": self.area.id,
+            "ubicacion": "Aula C0-07",
+            "referencia_ubicacion": "Bloque C, planta baja",
+            "equipo_afectado": "Luminaria del aula",
+            "tipo": "CORRECTIVO",
+        }, format="multipart")
+
+        self.assertEqual(r.status_code, 201, r.data)
+        creado = r.data["requerimiento"]
+        self.assertEqual(creado["solicitante"], self.usuarios["SOLICITANTE"].id)
+        self.assertEqual(creado["estado_codigo"], "RECIBIDO")
+        self.assertEqual(creado["referencia_ubicacion"], "Bloque C, planta baja")
+        self.assertEqual(creado["equipo_afectado"], "Luminaria del aula")
+
     def test_flujo_completo_sin_compra(self):
         pk = self.registrar()
 

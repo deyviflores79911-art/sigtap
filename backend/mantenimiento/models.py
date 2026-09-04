@@ -97,6 +97,18 @@ class RequerimientoMantenimiento(models.Model):
         max_length=200
     )
 
+    referencia_ubicacion = models.CharField(
+        max_length=200,
+        blank=True,
+        default=""
+    )
+
+    equipo_afectado = models.CharField(
+        max_length=200,
+        blank=True,
+        default=""
+    )
+
 
     # ======================================================
     # CLASIFICACIÓN
