@@ -2,41 +2,43 @@
 
 > **Uso exclusivo para desarrollo local.** Este archivo contiene contraseñas en texto visible. No debe incluirse en un repositorio público ni utilizarse en producción.
 
+> **Todas las cuentas usan la misma contraseña: `Hola123*`** — así no hay que volver aquí cada vez que se cambia de rol durante las pruebas. Cumple la política del sistema (mayúscula, minúscula, número, carácter especial y 8 caracteres), por lo que también sirve al fijarla de nuevo en el cambio obligatorio.
+
 ### Administración
 
 | Rol | Correo | Contraseña | Ruta principal |
 |---|---|---|---|
-| Admin (superuser) | `superuser@emi.edu.bo` | `SIGTA_Superuser#2026!` | `/superuser/dashboard` |
-| Director | `admin@emi.edu.bo` | `SIGTA_Admin#2026!` | `/admin/dashboard` |
+| Admin (superuser) | `superuser@emi.edu.bo` | `Hola123*` | `/superuser/dashboard` |
+| Director | `admin@emi.edu.bo` | `Hola123*` | `/admin/dashboard` |
 
 ### Jefes
 
 | Rol | Correo | Contraseña | Ruta principal |
 |---|---|---|---|
-| Jefe UTIC  | `jefe.utic@emi.edu.bo` | `SIGTA_JefeUTIC#2026!` | `/jefe-utic/dashboard` |
-| Jefe Mantenimiento | `servicios.generales@emi.edu.bo` | `SIGTA_ServiciosGrales#2026!` | `/servicios-generales/dashboard` |
+| Jefe UTIC  | `jefe.utic@emi.edu.bo` | `Hola123*` | `/jefe-utic/dashboard` |
+| Jefe Mantenimiento | `servicios.generales@emi.edu.bo` | `Hola123*` | `/servicios-generales/dashboard` |
 
 ### Técnicos
 
 | Dependencia | Rol | Correo | Contraseña | Ruta principal |
 |---|---|---|---|---|
-| — | DAF (Dirección de Asuntos Financieros) | `daf@emi.edu.bo` | `SIGTA_DAF#2026!` | `/daf/dashboard` |
-| — | Técnico de Almacén y Compras | `almacen@emi.edu.bo` | `SIGTA_Almacen#2026!` | `/almacen/dashboard` |
-| — | Técnico de Tesorería | `tesoreria@emi.edu.bo` | `SIGTA_Tesoreria#2026!` | `/tesoreria/dashboard` |
-| Jefe UTIC | Técnico de Soporte Técnico | `especialista@emi.edu.bo` | `SIGTA_Especialista#2026!` | `/especialista/dashboard` |
-| Jefe Mantenimiento | Técnico de Mantenimiento | `auxiliar.sg@emi.edu.bo` | `SIGTA_AuxiliarSG#2026!` | `/auxiliar-servicios-generales/dashboard` |
+| — | DAF (Dirección de Asuntos Financieros) | `daf@emi.edu.bo` | `Hola123*` | `/daf/dashboard` |
+| — | Técnico de Almacén y Compras | `almacen@emi.edu.bo` | `Hola123*` | `/almacen/dashboard` |
+| — | Técnico de Tesorería | `tesoreria@emi.edu.bo` | `Hola123*` | `/tesoreria/dashboard` |
+| Jefe UTIC | Técnico de Soporte Técnico | `especialista@emi.edu.bo` | `Hola123*` | `/especialista/dashboard` |
+| Jefe Mantenimiento | Técnico de Mantenimiento | `auxiliar.sg@emi.edu.bo` | `Hola123*` | `/auxiliar-servicios-generales/dashboard` |
 
 ### Usuario
 
 | Rol | Correo | Contraseña | Ruta principal |
 |---|---|---|---|
-| Usuario | `solicitante@emi.edu.bo` | `SIGTA_Usuario#2026!` | `/usuario/dashboard` |
+| Usuario | `solicitante@emi.edu.bo` | `Hola123*` | `/usuario/dashboard` |
 
 ### Cuenta para probar HU-01 / HU-02 (cambio obligatorio de contraseña)
 
 | Rol | Correo | Contraseña temporal | Comportamiento esperado |
 |---|---|---|---|
-| Solicitante (recién creado) | `nuevo.ingreso@emi.edu.bo` | `SIGTA_Temporal#2026!` | `must_change_password=true`: al iniciar sesión, el sistema exige cambiar la contraseña antes de permitir cualquier otra acción (bloqueado también en el backend, no solo en el redireccionamiento del frontend). |
+| Solicitante (recién creado) | `nuevo.ingreso@emi.edu.bo` | `Hola123*` | `must_change_password=true`: al iniciar sesión, el sistema exige cambiar la contraseña antes de permitir cualquier otra acción (bloqueado también en el backend, no solo en el redireccionamiento del frontend). |
 
 ## Observaciones
 
