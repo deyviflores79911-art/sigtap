@@ -197,6 +197,8 @@ class SolicitudCompra(models.Model):
 
     motivo_rechazo = models.TextField(blank=True)
     monto_desembolsado = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    tipo_desembolso = models.CharField(max_length=50, blank=True)
+    comprobante_desembolso = models.FileField(upload_to="compras/comprobantes/", null=True, blank=True)
 
     # El dinero sale de Tesorería, pero alguien tiene que recogerlo: hasta
     # que el Encargado confirme la recepción, el expediente muestra que los

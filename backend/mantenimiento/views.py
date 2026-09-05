@@ -1129,6 +1129,67 @@ class RequerimientoMantenimientoViewSet(
     # 7. REPARACIÓN O INSTALACIÓN  (Técnico)
     # ======================================================
 
+    @action(detail=True, methods=["post"], url_path="recibir-componente-acta")
+    def recibir_componente_acta(self, request, pk=None):
+        """El técnico asignado acepta formalmente el componente y el acta
+        enviados por Almacén antes de iniciar la reparación."""
+
+        requerimiento = self.get_object()
+
+        if not (
+            es_admin(request.user)
+            or requerimiento.auxiliar_asignado_id == request.user.id
+        ):
+            return Response(
+                {"detalle": "Solo el técnico asignado puede recibir el componente."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if requerimiento.estado_compra_componente != "PENDIENTE_RECEPCION_TECNICO":
+            return Response(
+                {"detalle": "No hay un componente pendiente de recepción."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        compra = requerimiento.compras_generadas.order_by("-creado_en").first()
+        if not compra or not compra.acta_conformidad:
+            return Response(
+                {"detalle": "La entrega aún no cuenta con un acta de conformidad."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        if not self._cambiar_estado(requerimiento, "EN_MANTENIMIENTO"):
+            return Response({"detalle": "No existe el estado EN_MANTENIMIENTO."}, status=400)
+
+        requerimiento.estado_compra_componente = "ENTREGADA"
+        requerimiento.componente_recibido_por = (
+            request.user.nombre_completo or request.user.email
+        )
+        requerimiento.componente_recibido_en = timezone.now()
+        requerimiento.observacion_recepcion_componente = str(
+            request.data.get("observacion_recepcion_componente", "")
+        ).strip()
+        requerimiento.inicio_mantenimiento_en = requerimiento.componente_recibido_en
+        requerimiento.save()
+
+        registrar_bitacora(
+            request=request,
+            accion="RECIBIR_COMPONENTE_Y_ACTA_MANTENIMIENTO",
+            modulo="Mantenimiento",
+            detalle=(
+                f"El técnico recibió el componente y acta de {compra.codigo} "
+                f"para {requerimiento.codigo}."
+            ),
+            nivel="INFO",
+        )
+
+        return respuesta_requerimiento(
+            requerimiento,
+            "Recepción registrada. Ya puede realizar la reparación y las pruebas.",
+            request,
+        )
+
+
     @action(detail=True, methods=["post"], url_path="realizar-mantenimiento")
     def realizar_mantenimiento(self, request, pk=None):
 

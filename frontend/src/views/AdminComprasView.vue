@@ -157,26 +157,10 @@
               <div class="row-actions">
 
                 <button
-                  class="view"
+                  :class="['view', { 'btn-evaluar': bucketEstado(compra.estado) === 'EN_ESPERA' }]"
                   @click="verDetalle(compra)"
                 >
-                  Ver detalle
-                </button>
-
-                <button
-                  v-if="puedeAprobar(compra)"
-                  class="row-aprobar"
-                  @click="aprobarDesdeLista(compra)"
-                >
-                  Aprobar
-                </button>
-
-                <button
-                  v-if="puedeRechazar(compra)"
-                  class="row-rechazar"
-                  @click="rechazarDesdeLista(compra)"
-                >
-                  Rechazar
+                  {{ bucketEstado(compra.estado) === 'EN_ESPERA' ? 'Evaluar' : 'Ver detalle' }}
                 </button>
 
               </div>
@@ -201,7 +185,7 @@
       class="detalle-modal-backdrop"
       @click.self="cerrarDetalle"
     >
-      <div class="detalle-modal documento-modal">
+      <div class="detalle-modal documento-modal" @scroll="onModalScroll">
 
         <div class="detalle-modal-header">
           <div class="documento-header-titulo">
@@ -221,7 +205,7 @@
           >✕</button>
         </div>
 
-        <div class="documento-body">
+        <div class="documento-body" @scroll="onModalScroll">
 
           <div
             :class="['estado-banner', claseBucket(bucketEstado(compraSeleccionada?.estado))]"
@@ -425,24 +409,28 @@
             </p>
 
             <div
-              v-if="!mostrarFormRechazo && !mostrarFormCertificacion"
-              class="acciones-botones"
+              v-if="!mostrarFormRechazo"
             >
-              <button
-                class="btn-aprobar"
-                :disabled="procesando"
-                @click="iniciarAprobacion"
-              >
-                Aprobar
-              </button>
+              <div v-if="haLeidoTodo" class="acciones-botones eval-mode">
+                <button
+                  class="btn-aprobar btn-eval-main"
+                  :disabled="procesando"
+                  @click="iniciarAprobacion"
+                >
+                  APROBAR
+                </button>
 
-              <button
-                class="btn-rechazar"
-                :disabled="procesando"
-                @click="abrirFormRechazo"
-              >
-                Rechazar
-              </button>
+                <button
+                  class="btn-rechazar btn-eval-main"
+                  :disabled="procesando"
+                  @click="abrirFormRechazo"
+                >
+                  RECHAZAR
+                </button>
+              </div>
+              <div v-else class="scroll-lock-msg">
+                <span>↓</span> Desliza hasta el final para habilitar la evaluación <span>↓</span>
+              </div>
             </div>
 
             <div
@@ -481,53 +469,7 @@
               </div>
             </div>
 
-            <div
-              v-else-if="mostrarFormCertificacion"
-              class="form-certificacion"
-            >
-              <p class="nota-tramite">
-                DAF debe hacer llegar la certificación presupuestaria en
-                PDF. Adjúntela aquí para completar la aprobación.
-              </p>
 
-              <label>
-                Certificación presupuestaria (PDF)
-                <span>*</span>
-              </label>
-
-              <input
-                type="file"
-                accept="application/pdf"
-                @change="onSeleccionarCertificacion"
-              />
-
-              <span
-                v-if="archivoCertificacion"
-                class="archivo-seleccionado"
-              >
-                {{ archivoCertificacion.name }}
-              </span>
-
-              <div class="acciones-botones">
-
-                <button
-                  class="btn-cancelar"
-                  :disabled="procesando"
-                  @click="cancelarCertificacion"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  class="btn-aprobar"
-                  :disabled="procesando"
-                  @click="confirmarCertificacion"
-                >
-                  Confirmar aprobación
-                </button>
-
-              </div>
-            </div>
 
           </div>
 
@@ -688,6 +630,7 @@ const comprasFiltradas =
 
 const mostrarDetalle =
   ref(false)
+const haLeidoTodo = ref(false)
 
 const compraSeleccionada =
   ref(null)
@@ -705,13 +648,8 @@ const documentosExpediente =
     return [
       { label: 'Informe', url: c.informe },
       { label: 'POA', url: c.poa },
-      { label: 'Pedido', url: c.pedido },
       { label: 'Proforma', url: c.proforma },
-      {
-        label: 'Certificación presupuestaria',
-        url: c.certificacion_presupuestaria,
-        pendienteTexto: 'Pendiente (la genera OAF/DAF)',
-      },
+      { label: 'Certificación presupuestaria', url: c.certificacion_presupuestaria },
     ]
   })
 
@@ -762,8 +700,26 @@ function verDetalle(
 
   mostrarDetalle.value =
     true
+    
+  haLeidoTodo.value = false
 
   resetearFormularios()
+
+  setTimeout(() => {
+    const modals = document.querySelectorAll('.detalle-modal, .documento-body')
+    for (const m of modals) {
+      if (m.scrollHeight <= m.clientHeight + 10) {
+        haLeidoTodo.value = true
+      }
+    }
+  }, 100)
+}
+
+function onModalScroll(e) {
+  const { scrollTop, scrollHeight, clientHeight } = e.target
+  if (scrollTop + clientHeight >= scrollHeight - 20) {
+    haLeidoTodo.value = true
+  }
 }
 
 
@@ -956,87 +912,8 @@ function cancelarRechazo() {
 }
 
 
-function abrirFormCertificacion() {
-
-  resetearFormularios()
-
-  mostrarFormCertificacion.value =
-    true
-}
-
-
-function cancelarCertificacion() {
-
-  resetearFormularios()
-}
-
-
-function onSeleccionarCertificacion(
-  evento
-) {
-
-  errorAccion.value =
-    ''
-
-  archivoCertificacion.value =
-    evento.target.files?.[0]
-    || null
-}
-
-
 function iniciarAprobacion() {
-
-  if (
-    compraSeleccionada.value?.estado
-    === 'EVALUADO_PENDIENTE_CERTIFICACION'
-  ) {
-
-    abrirFormCertificacion()
-
-    return
-  }
-
   aprobarCompra()
-}
-
-
-async function confirmarCertificacion() {
-
-  const archivo =
-    archivoCertificacion.value
-
-  if (!archivo) {
-
-    errorAccion.value =
-      'Debe adjuntar el PDF de la certificación presupuestaria.'
-
-    return
-  }
-
-  if (
-    !archivo.name.toLowerCase().endsWith('.pdf')
-  ) {
-
-    errorAccion.value =
-      'La certificación debe ser un archivo PDF.'
-
-    return
-  }
-
-  const datosFormulario =
-    new FormData()
-
-  datosFormulario.append(
-    'certificacion_presupuestaria',
-    archivo
-  )
-
-  await ejecutarAccion(
-    'certificar-daf',
-    datosFormulario,
-    'aprobar',
-    true
-  )
 }
 
 
@@ -1048,7 +925,7 @@ async function aprobarCompra() {
 
   const confirmar =
     await window.sigtaConfirm(
-      `¿Confirma aprobar la solicitud ${compraSeleccionada.value.codigo}?`
+      `¿Confirma aprobar la solicitud ${compraSeleccionada.value.codigo}? Será enviada a Tesorería para su desembolso.`
     )
 
   if (!confirmar) {
@@ -1058,26 +935,14 @@ async function aprobarCompra() {
   const estado =
     compraSeleccionada.value.estado
 
-  const endpointsPorEstado = {
-    CREADO_PENDIENTE_DAF: 'evaluar-daf',
-    VERIFICADO_PENDIENTE_AUTORIZACION: 'visto-bueno-director',
-  }
-
-  const endpoint =
-    endpointsPorEstado[estado]
-
-  if (!endpoint) {
+  if (estado !== 'VERIFICADO_PENDIENTE_AUTORIZACION') {
+    errorAccion.value = 'Esta solicitud no está lista para su autorización o ya fue procesada.'
     return
   }
 
-  const body =
-    estado === 'CREADO_PENDIENTE_DAF'
-      ? { califica: true }
-      : {}
-
   await ejecutarAccion(
-    endpoint,
-    body,
+    'visto-bueno-director',
+    {},
     'aprobar'
   )
 }
@@ -1177,6 +1042,14 @@ async function ejecutarAccion(
         || `No fue posible ${tipo === 'aprobar' ? 'aprobar' : 'rechazar'} la solicitud.`
 
       return
+    }
+
+    if (tipo === 'aprobar') {
+      if (window.sigtaAlert) await window.sigtaAlert('¡Autorizada con éxito! El expediente ha sido enviado a Tesorería para su desembolso.');
+      else alert('¡Autorizada con éxito! El expediente ha sido enviado a Tesorería para su desembolso.');
+    } else {
+      if (window.sigtaAlert) await window.sigtaAlert('La solicitud ha sido rechazada exitosamente.');
+      else alert('La solicitud ha sido rechazada exitosamente.');
     }
 
     cerrarDetalle()
@@ -1414,7 +1287,24 @@ function bucketEstado(
   }
 
 
-  return 'EN_ESPERA'
+  if (
+    codigo === 'CREADO_PENDIENTE_DAF'
+    ||
+    codigo === 'EVALUADO_PENDIENTE_CERTIFICACION'
+  ) {
+
+    return 'EN_REVISION_DAF'
+  }
+
+  if (
+    codigo === 'VERIFICADO_PENDIENTE_AUTORIZACION'
+  ) {
+
+    return 'EN_ESPERA'
+  }
+
+
+  return 'EN_ESPERA' // Default
 }
 
 
@@ -1424,6 +1314,7 @@ function etiquetaBucket(
 
   return (
     {
+      EN_REVISION_DAF: 'En revisión DAF',
       EN_ESPERA: 'Aprobación en espera',
       APROBADA: 'Aprobada',
       RECHAZADA: 'Rechazada',
@@ -1453,6 +1344,7 @@ function claseBucket(
 
   return (
     {
+      EN_REVISION_DAF: 'abierto',
       EN_ESPERA: 'working',
       APROBADA: 'closed',
       RECHAZADA: 'cancelled',
@@ -1747,6 +1639,11 @@ function cerrarSesion() {
   color: var(--sigta-mostaza-oscuro);
 }
 
+.status.abierto {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
 
 .status.closed {
   background: var(--sigta-exito-fondo);
@@ -1785,17 +1682,18 @@ function cerrarSesion() {
   color: var(--sigta-texto-suave);
 }
 
-
-.row-aprobar {
-  background: var(--sigta-exito-fondo);
-  color: var(--sigta-exito);
+.view.btn-evaluar {
+  background: var(--sigta-exito);
+  color: white;
+  font-weight: 800;
+  border: none;
+}
+.view.btn-evaluar:hover {
+  background: #166534;
 }
 
 
-.row-rechazar {
-  background: var(--sigta-error-fondo);
-  color: var(--sigta-error);
-}
+
 
 
 /* =========================================================
@@ -1883,6 +1781,11 @@ function cerrarSesion() {
 .estado-banner.working {
   background: var(--sigta-mostaza-suave);
   color: var(--sigta-mostaza-oscuro);
+}
+
+.estado-banner.abierto {
+  background: #e0f2fe;
+  color: #0284c7;
 }
 
 
@@ -2202,6 +2105,43 @@ function cerrarSesion() {
   gap: 8px;
 }
 
+.eval-mode {
+  flex-direction: column;
+  align-items: center;
+  margin-top: 15px;
+  gap: 12px;
+}
+
+.scroll-lock-msg {
+  text-align: center;
+  padding: 15px;
+  margin-top: 15px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  color: var(--sigta-azul);
+  font-weight: bold;
+  font-size: 13px;
+  border: 1px dashed #cbd5e1;
+  animation: pulse 2s infinite;
+}
+.scroll-lock-msg span {
+  display: inline-block;
+  animation: bounce 2s infinite;
+}
+@keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+
+.btn-eval-main {
+  width: 100%;
+  min-height: 50px;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-eval-main:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 
 .btn-aprobar,
 .btn-rechazar,

@@ -108,6 +108,7 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
             "certificacion_presupuestaria",
             "factura", "acta_conformidad", "fotograma",
             "motivo_rechazo", "monto_desembolsado",
+            "tipo_desembolso", "comprobante_desembolso",
             "fondos_recibidos_en", "fondos_recibidos_por",
             "gestion_estado", "gestion_nota", "gestion_actualizada_en",
             "responsable_adquisicion", "monto_real", "proveedor",
@@ -258,5 +259,9 @@ class SolicitudCompraResumenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SolicitudCompra
-        fields = ["id", "codigo", "titulo", "estado", "estado_nombre", "creado_en", "actualizado_en"]
+        fields = [
+            "id", "codigo", "titulo", "estado", "estado_nombre",
+            "acta_conformidad", "fecha_entrega_solicitante",
+            "cantidad_entregada", "entregado_a", "creado_en", "actualizado_en",
+        ]
         read_only_fields = fields

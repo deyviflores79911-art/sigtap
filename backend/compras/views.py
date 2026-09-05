@@ -569,14 +569,25 @@ class SolicitudCompraViewSet(
             return respuesta_sin_permiso("REGISTRAR_DESEMBOLSO")
         if s.estado != "APROBADO_PARA_DESEMBOLSO":
             return Response({"detalle": "El expediente no está aprobado para desembolso."}, status=409)
-        try: monto = Decimal(str(request.data.get("monto_desembolsado", "")))
-        except InvalidOperation: return Response({"detalle": "Monto de desembolso inválido."}, status=400)
+        try:
+            monto_raw = request.data.get("monto_desembolsado", "")
+            monto = Decimal(str(monto_raw)) if monto_raw else None
+        except InvalidOperation: 
+            return Response({"detalle": "Monto de desembolso inválido."}, status=400)
+            
+        tipo = str(request.data.get("tipo_desembolso", "")).strip()
+        comprobante = request.FILES.get("comprobante_desembolso")
         responsable = str(request.data.get("responsable_adquisicion", "")).strip()
-        if monto <= 0 or not responsable:
-            return Response({"detalle": "Debe registrar monto y responsable de la adquisición."}, status=400)
-        s.monto_desembolsado, s.responsable_adquisicion = monto, responsable
-        s.save(update_fields=["monto_desembolsado", "responsable_adquisicion", "actualizado_en"])
-        return self._transicion(request, s, "REGISTRAR_DESEMBOLSO", ["APROBADO_PARA_DESEMBOLSO"], "FONDOS_DESEMBOLSADOS", "DESEMBOLSAR_FONDOS", "Tesorería registró la entrega física del efectivo.")
+        
+        if not tipo or not comprobante or not responsable:
+            return Response({"detalle": "Debe registrar el tipo, comprobante y responsable."}, status=400)
+            
+        s.monto_desembolsado = monto
+        s.responsable_adquisicion = responsable
+        s.tipo_desembolso = tipo
+        s.comprobante_desembolso = comprobante
+        s.save(update_fields=["monto_desembolsado", "responsable_adquisicion", "tipo_desembolso", "comprobante_desembolso", "actualizado_en"])
+        return self._transicion(request, s, "REGISTRAR_DESEMBOLSO", ["APROBADO_PARA_DESEMBOLSO"], "FONDOS_DESEMBOLSADOS", "DESEMBOLSAR_FONDOS", "Tesorería registró la entrega de fondos.")
 
     @action(detail=True, methods=["post"], url_path="confirmar-recepcion-fondos")
     def confirmar_recepcion_fondos(self, request, pk=None):
@@ -903,21 +914,9 @@ class SolicitudCompraViewSet(
 
         if requerimiento and requerimiento.estado_compra_componente == "VIABLE":
 
-            requerimiento.estado_compra_componente = "ENTREGADA"
+            requerimiento.estado_compra_componente = "PENDIENTE_RECEPCION_TECNICO"
             requerimiento.compra_completada = True
             requerimiento.producto_entregado = True
-
-            from mantenimiento.models import EstadoMantenimiento
-
-            estado_mantenimiento = (
-                EstadoMantenimiento.objects
-                .filter(codigo="EN_MANTENIMIENTO", activo=True)
-                .first()
-            )
-
-            if estado_mantenimiento:
-                requerimiento.estado = estado_mantenimiento
-                requerimiento.inicio_mantenimiento_en = timezone.now()
 
             requerimiento.save()
 
