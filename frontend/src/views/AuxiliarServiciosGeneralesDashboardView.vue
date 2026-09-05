@@ -461,7 +461,7 @@ function recibirOrden(item) {
   modoComponente.value = vista.value === 'cotizaciones'
   formDiagnostico.diagnostico = item.diagnostico || ''
   formDiagnostico.plan_solucion = item.plan_solucion || ''
-  formDiagnostico.requiere_compra = false
+  formDiagnostico.requiere_compra = vista.value === 'cotizaciones'
   formComponente.producto_requerido = item.producto_requerido || ''
   formComponente.especificacion_producto = item.especificacion_producto || ''
   formComponente.cantidad_requerida = item.cantidad_requerida || 1
