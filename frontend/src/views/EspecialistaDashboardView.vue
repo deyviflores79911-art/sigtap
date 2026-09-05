@@ -144,17 +144,14 @@
           <label class="campo">Costo estimado (Bs.)
             <input v-monto inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" v-model="formComponente.costo_estimado" type="text" min="0" step="0.01">
           </label>
-          <label class="campo">Informe técnico con cuadros (obligatorio)
-            <input type="file" accept=".pdf,.doc,.docx,image/*" @change="e => formComponente.informe = e.target.files?.[0] || null">
-            <a v-if="ordenAbierta?.informe_compra" :href="ordenAbierta.informe_compra" target="_blank">Ver informe guardado</a>
-          </label>
+          <a v-if="ordenAbierta?.informe_compra" :href="ordenAbierta.informe_compra" target="_blank">Ver informe de requerimiento generado</a>
           <label class="campo">Cotización / proforma
             <input type="file" accept="application/pdf,image/*" @change="onCotizacion">
           </label>
           <div class="actions">
             <button @click="cerrarOrden">Cancelar</button>
             <button :disabled="procesando" @click="guardarBorrador">Guardar borrador</button>
-            <button class="primary" :disabled="procesando || !formComponente.componente_requerido.trim() || !formComponente.especificaciones_tecnicas.trim() || !formComponente.justificacion_compra.trim() || !(formComponente.informe || ordenAbierta?.informe_compra) || !(formComponente.archivo || ordenAbierta?.cotizacion_archivo)" @click="enviarRequerimiento">Enviar requerimiento</button>
+            <button class="primary" :disabled="procesando || !formComponente.componente_requerido.trim() || !formComponente.especificaciones_tecnicas.trim() || !formComponente.justificacion_compra.trim() || !(formComponente.archivo || ordenAbierta?.cotizacion_archivo)" @click="enviarRequerimiento">Enviar requerimiento</button>
           </div>
         </template>
       </section>
@@ -553,7 +550,7 @@ function mostrarMensaje(titulo, texto, tipo='ok') { mensaje.value = { titulo, te
 ========================================================== */
 
 const formDiagnostico = reactive({ diagnostico: '', plan_solucion: '', observaciones_diagnostico: '', requiere_compra: null, archivo: null })
-const formComponente = reactive({ componente_requerido: '', cantidad_componente: 1, especificaciones_tecnicas: '', justificacion_compra: '', proveedor_cotizacion: '', costo_estimado: '', archivo: null, informe: null })
+const formComponente = reactive({ componente_requerido: '', cantidad_componente: 1, especificaciones_tecnicas: '', justificacion_compra: '', proveedor_cotizacion: '', costo_estimado: '', archivo: null })
 const formIntervencion = reactive({ solucion: '', acciones_realizadas: '', componentes_utilizados: '', archivo: null })
 const formPruebas = reactive({ resultado_pruebas: '', funciona_tecnicamente: null, informe_tecnico: '', archivo: null })
 
@@ -564,7 +561,7 @@ function recibirOrden(t) {
   formDiagnostico.plan_solucion = ''
   formDiagnostico.observaciones_diagnostico = t.observaciones_diagnostico || ''
   formDiagnostico.requiere_compra = null
-  Object.assign(formComponente, { componente_requerido:t.componente_requerido||'', cantidad_componente:t.cantidad_componente||1, especificaciones_tecnicas:t.especificaciones_tecnicas||'', justificacion_compra:t.justificacion_compra||'', proveedor_cotizacion:t.proveedor_cotizacion||'', costo_estimado:t.costo_estimado||'', archivo:null, informe:null })
+  Object.assign(formComponente, { componente_requerido:t.componente_requerido||'', cantidad_componente:t.cantidad_componente||1, especificaciones_tecnicas:t.especificaciones_tecnicas||'', justificacion_compra:t.justificacion_compra||'', proveedor_cotizacion:t.proveedor_cotizacion||'', costo_estimado:t.costo_estimado||'', archivo:null })
 }
 
 function cerrarOrden() {
@@ -608,7 +605,6 @@ function datosRequerimiento() {
   const datos = new FormData()
   for (const campo of ['componente_requerido','cantidad_componente','especificaciones_tecnicas','justificacion_compra','proveedor_cotizacion','costo_estimado']) datos.append(campo, formComponente[campo] ?? '')
   if (formComponente.archivo) datos.append('cotizacion_archivo', formComponente.archivo)
-  if (formComponente.informe) datos.append('informe_compra', formComponente.informe)
   return datos
 }
 

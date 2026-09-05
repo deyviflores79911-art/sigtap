@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.utils import timezone
+from django.core.files.base import ContentFile
 
 from rest_framework import (
     status,
@@ -46,6 +47,7 @@ from .serializers import (
     EstadoTicketSerializer,
     TicketSerializer,
 )
+from .informes_pdf import informe_final_jefatura, informe_requerimiento, informe_tecnico as generar_informe_tecnico
 
 
 # ==========================================================
@@ -444,6 +446,9 @@ class TicketViewSet(
             )
         )
 
+
+        if self.action == "list" and self.request.query_params.get("propias") == "1":
+            return queryset.filter(solicitante=usuario)
 
         if es_admin(usuario):
             return queryset
@@ -1744,11 +1749,14 @@ class TicketViewSet(
         ticket.justificacion_compra = justificacion
         ticket.proveedor_cotizacion = proveedor
         ticket.costo_estimado = costo_estimado
-        informe_compra = request.FILES.get("informe_compra") or ticket.informe_compra
         cotizacion_compra = request.FILES.get("cotizacion_archivo") or ticket.cotizacion_archivo
-        if not informe_compra or not cotizacion_compra:
-            return Response({"detalle": "Adjunte el informe técnico con sus cuadros y la cotización antes de enviar a jefatura."}, status=400)
-        ticket.informe_compra = informe_compra
+        if not cotizacion_compra:
+            return Response({"detalle": "Adjunte la cotización antes de enviar a jefatura."}, status=400)
+        ticket.informe_compra.save(
+            f"informe-requerimiento-{ticket.codigo}.pdf",
+            ContentFile(informe_requerimiento(ticket)),
+            save=False,
+        )
         ticket.estado_compra_componente = "SOLICITADA"
 
         # BPMN: el requerimiento viaja con su cotización adjunta.
@@ -2325,6 +2333,12 @@ class TicketViewSet(
 
         ticket.informe_tecnico = informe_tecnico
 
+        ticket.informe_tecnico_pdf.save(
+            f"informe-tecnico-{ticket.codigo}.pdf",
+            ContentFile(generar_informe_tecnico(ticket, informe_tecnico)),
+            save=False,
+        )
+
         evidencia_pruebas = request.FILES.get("evidencia_pruebas")
         if evidencia_pruebas:
             ticket.evidencia_pruebas = evidencia_pruebas
@@ -2342,6 +2356,7 @@ class TicketViewSet(
             update_fields=[
                 "resultado_pruebas",
                 "informe_tecnico",
+                "informe_tecnico_pdf",
                 "evidencia_pruebas",
                 "estado",
                 "pruebas_en",
@@ -3014,6 +3029,22 @@ class TicketViewSet(
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        campos_tecnicos = {
+            "diagnóstico": ticket.diagnostico,
+            "plan de solución": ticket.plan_solucion,
+            "intervención realizada": ticket.solucion,
+            "resultado de pruebas": ticket.resultado_pruebas,
+            "informe del técnico": ticket.informe_tecnico,
+        }
+        faltantes = [
+            nombre for nombre, valor in campos_tecnicos.items()
+            if not str(valor or "").strip()
+        ]
+        if faltantes:
+            return Response(
+                {"detalle": "No se puede elevar un informe incompleto. Falta: " + ", ".join(faltantes) + "."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         ahora = timezone.now()
 
@@ -3026,6 +3057,11 @@ class TicketViewSet(
             )
 
         ticket.informe_final = informe
+        ticket.informe_final_pdf.save(
+            f"informe-final-{ticket.codigo}.pdf",
+            ContentFile(informe_final_jefatura(ticket, informe)),
+            save=False,
+        )
         ticket.estado = estado_cerrado
         ticket.cerrado_en = ahora
 
@@ -3037,6 +3073,7 @@ class TicketViewSet(
         ticket.save(
             update_fields=[
                 "informe_final",
+                "informe_final_pdf",
                 "estado",
                 "cerrado_en",
                 "informe_elevado_en",

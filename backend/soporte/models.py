@@ -425,6 +425,19 @@ class Ticket(models.Model):
         blank=True
     )
 
+    informe_tecnico_pdf = models.FileField(
+        upload_to="soporte/informes_tecnicos/%Y/%m/",
+        blank=True,
+        null=True,
+    )
+
+    informe_final_pdf = models.FileField(
+        upload_to="soporte/informes_finales/%Y/%m/",
+        blank=True,
+        null=True,
+        help_text="PDF elaborado y remitido por la Jefatura UTIC a Dirección.",
+    )
+
     informe_elevado_en = models.DateTimeField(
         null=True,
         blank=True,

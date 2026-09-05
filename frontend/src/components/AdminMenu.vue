@@ -72,6 +72,17 @@
       </router-link>
 
 
+      <router-link to="/admin/mis-solicitudes" class="menu-item"
+        active-class="" exact-active-class=""
+        :class="{ 'router-link-active': opcionSolicitudesActiva(route) }">
+        <IconoSigta class="icon" nombre="solicitudes" /><span>Mis solicitudes</span>
+      </router-link>
+      <router-link :to="{ path: '/admin/mis-solicitudes', query: { vista: 'verificaciones' } }"
+        class="menu-item" active-class="" exact-active-class=""
+        :class="{ 'router-link-active': opcionSolicitudesActiva(route, true) }">
+        <IconoSigta class="icon" nombre="verificacion" /><span>Verificaciones pendientes</span>
+      </router-link>
+
       <!--
         SOLICITUDES: reutiliza la pantalla de Compras
         (Caja Chica). Ahí llega el expediente evaluado
@@ -87,7 +98,7 @@
         <IconoSigta class="icon" nombre="compras" />
 
         <span>
-          Solicitudes
+          Autorizar compras
         </span>
       </router-link>
 
@@ -159,9 +170,12 @@ import {
 } from 'vue'
 
 import {
-  useRouter
+  useRouter, useRoute
 } from 'vue-router'
 
+
+import { opcionSolicitudesActiva } from '../utils/portal'
+const route = useRoute()
 
 const router =
   useRouter()

@@ -133,7 +133,7 @@ class FlujoSoporteCompraTests(APITestCase):
         self.assertTrue(solicitud.proforma)
         self.assertTrue(solicitud.poa)
         self.assertTrue(solicitud.pedido)
-        self.assertEqual(solicitud.informe.read(), b"informe con cuadros")
+        self.assertEqual(solicitud.informe.read(5), b"%PDF-")
         self.assertEqual(solicitud.proforma.read(), b"cotizacion")
 
         # No se puede duplicar la solicitud de compra para el
@@ -231,7 +231,7 @@ class FlujoSoporteCompraTests(APITestCase):
         self.assertEqual(r.data["ticket"]["estado_compra_componente"], "BORRADOR")
         self.assertEqual(r.data["ticket"]["estado_codigo"], "EN_EJECUCION")
 
-    def test_no_envia_requerimiento_sin_informe_y_cotizacion(self):
+    def test_genera_informe_de_requerimiento_y_exige_cotizacion(self):
         pk = self.crear_ticket_en_ejecucion("Falta documentación", "PC")
         self.autenticar("ESPECIALISTA")
         r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
@@ -241,6 +241,15 @@ class FlujoSoporteCompraTests(APITestCase):
         self.assertEqual(r.status_code, 400, r.data)
         self.assertFalse(Ticket.objects.get(pk=pk).estado_compra_componente)
         self.assertFalse(SolicitudCompra.objects.filter(ticket_soporte_id=pk).exists())
+        r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
+            "componente_requerido": "Fuente", "especificaciones_tecnicas": "ATX",
+            "justificacion_compra": "Fuente quemada", "costo_estimado": "100.00",
+            "cotizacion_archivo": SimpleUploadedFile("cotizacion.jpg", b"imagen", content_type="image/jpeg"),
+        }, format="multipart")
+        self.assertEqual(r.status_code, 200, r.data)
+        ticket = Ticket.objects.get(pk=pk)
+        self.assertTrue(ticket.informe_compra)
+        self.assertTrue(ticket.informe_compra.name.endswith(".pdf"))
 
     def test_jefatura_completa_expediente_antiguo_y_daf_debe_reevaluar(self):
         pk = self.crear_ticket_en_ejecucion("Expediente antiguo", "PC")
@@ -287,7 +296,10 @@ class FlujoSoporteCompraTests(APITestCase):
         ticket.diagnostico = "Falla de memoria"
         ticket.solucion = "Memoria reinstalada"
         ticket.resultado_pruebas = "Pruebas satisfactorias"
-        ticket.save(update_fields=["estado", "diagnostico", "solucion", "resultado_pruebas"])
+        ticket.informe_tecnico = "Informe y cuadros registrados por el técnico."
+        ticket.save(update_fields=[
+            "estado", "diagnostico", "solucion", "resultado_pruebas", "informe_tecnico",
+        ])
 
         self.autenticar("SOLICITANTE")
         r = self.client.post(
@@ -309,6 +321,7 @@ class FlujoSoporteCompraTests(APITestCase):
         ticket.refresh_from_db()
         self.assertEqual(ticket.estado.codigo, "CERRADO")
         self.assertIsNotNone(ticket.cerrado_en)
+        self.assertTrue(ticket.informe_final_pdf)
 
     def test_no_conformidad_exige_motivo_y_conserva_historial(self):
         pk = self.crear_ticket_en_ejecucion("Falla persistente", "Impresora")

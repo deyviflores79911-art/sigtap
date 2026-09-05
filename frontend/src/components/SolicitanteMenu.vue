@@ -81,6 +81,8 @@
 
       <router-link
         to="/usuario/mis-solicitudes"
+        active-class="" exact-active-class=""
+        :class="{ 'router-link-active': opcionSolicitudesActiva(route) }"
         class="menu-item"
       >
 
@@ -92,6 +94,8 @@
 
       <router-link
         :to="{ path: '/usuario/mis-solicitudes', query: { vista: 'verificaciones' } }"
+        active-class="" exact-active-class=""
+        :class="{ 'router-link-active': opcionSolicitudesActiva(route, true) }"
         class="menu-item"
       >
         <IconoSigta class="icon" nombre="verificacion" />
@@ -152,9 +156,12 @@ import {
 } from 'vue'
 
 import {
-  useRouter
+  useRouter, useRoute
 } from 'vue-router'
 
+
+import { opcionSolicitudesActiva } from '../utils/portal'
+const route = useRoute()
 
 const router =
   useRouter()
@@ -173,7 +180,7 @@ onMounted(async () => {
   const token = localStorage.getItem('sigta_token')
   if (!token) return
   try {
-    const respuesta = await fetch('/api/soporte/tickets/', {
+    const respuesta = await fetch('/api/soporte/tickets/?propias=1', {
       headers: { Authorization: `Token ${token}`, Accept: 'application/json' },
     })
     if (!respuesta.ok) return

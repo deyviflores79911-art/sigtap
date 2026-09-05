@@ -98,7 +98,7 @@ async function endpoint(url) {
 async function cargar() {
   cargando.value = true; error.value = ''
   try {
-    const [soporte,mantenimiento] = await Promise.all([endpoint('/api/soporte/tickets/'),endpoint('/api/mantenimiento/requerimientos/')])
+    const [soporte,mantenimiento] = await Promise.all([endpoint('/api/soporte/tickets/?propias=1'),endpoint('/api/mantenimiento/requerimientos/?propias=1')])
     solicitudes.value = [
       ...soporte.map(x => ({...x,proceso:'SOPORTE',modulo:'Soporte Técnico',estado_codigo:x.estado_codigo||x.estado,estado_nombre:x.estado_nombre||x.estado_codigo,fecha:x.creado_en||x.created_at})),
       ...mantenimiento.map(x => ({...x,proceso:'MANTENIMIENTO',modulo:'Mantenimiento',estado_codigo:x.estado_codigo||x.estado,estado_nombre:x.estado_nombre||x.estado_codigo,fecha:x.creado_en||x.created_at})),
@@ -112,7 +112,7 @@ function abrirDetalle(item) {
     query: { proceso: item.proceso, id: item.id, origen: 'kanban' },
   })
 }
-function irAValidaciones() { router.push({path:'/usuario/mis-solicitudes',query:{estado:'POR_VALIDAR'}}) }
+function irAValidaciones() { router.push({path:'/usuario/mis-solicitudes',query:{vista:'verificaciones'}}) }
 function fecha(value) { return value ? new Date(value).toLocaleDateString('es-BO',{day:'2-digit',month:'short'}) : '' }
 function progreso(estado) { return {PENDIENTES:18,EN_PROCESO:58,POR_VALIDAR:85,FINALIZADAS:100,CANCELADAS:100}[bucket(estado)] }
 onMounted(cargar)

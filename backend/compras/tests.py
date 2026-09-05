@@ -66,6 +66,26 @@ class FlujoCajaChicaTests(APITestCase):
                 campo.run_validation(valor)
         self.assertEqual(str(campo.run_validation("1250.50")), "1250.50")
 
+    def test_bandeja_direccion_excluye_compras_propias(self):
+        from compras.models import SolicitudCompra
+        director = self.usuarios["DIRECTOR"]
+        propia = SolicitudCompra.objects.create(
+            codigo="CMP-DIR-PROPIA", titulo="Compra propia del director",
+            solicitante=director, area=self.area, tipo="BIEN", cantidad=1,
+            estado="VERIFICADO_PENDIENTE_AUTORIZACION",
+        )
+        ajena = SolicitudCompra.objects.create(
+            codigo="CMP-DIR-AJENA", titulo="Compra elevada por otra persona",
+            solicitante=self.usuarios["SOLICITANTE"], area=self.area,
+            tipo="BIEN", cantidad=1,
+            estado="VERIFICADO_PENDIENTE_AUTORIZACION",
+        )
+        self.autenticar("DIRECTOR")
+        respuesta = self.client.get("/api/compras/solicitudes/?bandeja=direccion")
+        ids = [item["id"] for item in respuesta.data]
+        self.assertIn(ajena.id, ids)
+        self.assertNotIn(propia.id, ids)
+
     def test_ciclo_completo_caja_chica(self):
         self.autenticar("SOLICITANTE")
         respuesta = self.client.post("/api/compras/solicitudes/", {

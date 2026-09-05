@@ -2,7 +2,7 @@
 
   <div class="layout">
 
-    <SolicitanteMenu />
+    <AdminMenu v-if="route.meta.portalDirector" /><SolicitanteMenu v-else />
 
 
     <main class="content">
@@ -39,7 +39,7 @@
       </header>
 
       <section v-if="!vistaVerificaciones && mostrarCrear" class="create-panel">
-        <button type="button" @click="router.push({ path: '/usuario/soporte', query: { origen: '/usuario/mis-solicitudes' } })">
+        <button type="button" @click="router.push({ path: route.meta.portalDirector ? '/admin/nueva-solicitud/soporte' : '/usuario/soporte', query: { origen: route.meta.portalDirector ? '/admin/mis-solicitudes' : '/usuario/mis-solicitudes' } })">
           <span>🖥️</span>
           <div>
             <strong>Soporte Técnico</strong>
@@ -47,7 +47,7 @@
           </div>
         </button>
 
-        <button type="button" @click="router.push({ path: '/usuario/mantenimiento', query: { origen: '/usuario/mis-solicitudes' } })">
+        <button type="button" @click="router.push({ path: route.meta.portalDirector ? '/admin/nueva-solicitud/mantenimiento' : '/usuario/mantenimiento', query: { origen: route.meta.portalDirector ? '/admin/mis-solicitudes' : '/usuario/mis-solicitudes' } })">
           <span>🛠️</span>
           <div>
             <strong>Mantenimiento</strong>
@@ -1141,11 +1141,13 @@
 
 
 <script setup>
+import AdminMenu from '../components/AdminMenu.vue'
 
 import {
   computed,
   onMounted,
   reactive,
+  watch,
   ref
 } from 'vue'
 
@@ -1243,6 +1245,11 @@ const guardandoConformidad = ref(false)
 const visorEvidencia = ref('')
 
 const vistaVerificaciones = computed(() => route.query.vista === 'verificaciones')
+watch(() => route.query, query => {
+  filtroProceso.value = typeof query.proceso === 'string' ? query.proceso : ''
+  filtroEstado.value = typeof query.estado === 'string' ? query.estado : ''
+  mostrarDetalle.value = false
+})
 const verificacionesPendientes = computed(() => solicitudes.value.filter(
   item => item.proceso === 'SOPORTE' && item.estado_codigo === 'PENDIENTE_CONFORMIDAD'
 ))
@@ -1433,11 +1440,11 @@ async function cargarTodo() {
       await Promise.allSettled([
 
         cargarLista(
-          '/api/soporte/tickets/'
+          '/api/soporte/tickets/?propias=1'
         ),
 
         cargarLista(
-          '/api/mantenimiento/requerimientos/'
+          '/api/mantenimiento/requerimientos/?propias=1'
         ),
       ])
 
@@ -1800,7 +1807,7 @@ function cerrarDetalle() {
     null
 
   if (route.query.origen === 'kanban') {
-    router.push('/usuario/dashboard')
+    router.push(route.meta.portalDirector ? '/admin/dashboard' : '/usuario/dashboard')
   }
 }
 

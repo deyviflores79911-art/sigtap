@@ -14,7 +14,7 @@
           <h1>
             {{
               vista === 'PENDIENTES'
-                ? 'Solicitudes'
+                ? 'Autorizar compras'
                 : 'Historial'
             }}
           </h1>
@@ -36,6 +36,9 @@
         </div>
 
         <div class="header-actions">
+          <select v-model="filtroProceso" class="filtro-estado" aria-label="Proceso">
+            <option value="">Ambos procesos</option><option value="MANTENIMIENTO">Mantenimiento</option><option value="SOPORTE">Soporte técnico</option>
+          </select>
 
           <select
             v-if="vista === 'HISTORIAL'"
@@ -619,6 +622,7 @@
 
 
 <script setup>
+import { coincideProceso } from '../utils/portal'
 import IconoSigta from '../components/IconoSigta.vue'
 
 import {
@@ -693,6 +697,9 @@ const filtroHistorial =
   ref('')
 
 
+const filtroProceso = ref(typeof route.query.proceso === 'string' ? route.query.proceso : '')
+const comprasPorProceso = computed(() => compras.value.filter(c=>coincideProceso(c,filtroProceso.value)))
+
 const conteos =
   computed(() => {
 
@@ -702,7 +709,7 @@ const conteos =
       RECHAZADA: 0,
     }
 
-    for (const compra of compras.value) {
+    for (const compra of comprasPorProceso.value) {
 
       const bucket =
         bucketEstado(compra.estado)
@@ -735,14 +742,14 @@ const comprasFiltradas =
 
     if (vista.value === 'PENDIENTES') {
 
-      return compras.value.filter(
+      return comprasPorProceso.value.filter(
         compra =>
           bucketEstado(compra.estado)
           === 'EN_ESPERA'
       )
     }
 
-    return compras.value.filter(
+    return comprasPorProceso.value.filter(
       compra => {
 
         const bucket =
@@ -1322,7 +1329,7 @@ async function cargarCompras() {
 
     const respuesta =
       await fetch(
-        '/api/compras/solicitudes/',
+        '/api/compras/solicitudes/?bandeja=direccion',
         {
           headers: {
 
@@ -1474,7 +1481,7 @@ function bucketEstado(
   }
 
 
-  return 'EN_ESPERA' // Default
+  return 'EN_REVISION_DAF' // Una etapa desconocida no habilita autorización.
 }
 
 

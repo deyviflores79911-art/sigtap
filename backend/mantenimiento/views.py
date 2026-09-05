@@ -319,6 +319,9 @@ class RequerimientoMantenimientoViewSet(
         )
 
 
+        if self.action == "list" and self.request.query_params.get("propias") == "1":
+            return queryset.filter(solicitante=usuario)
+
         # ADMIN y personal de mantenimiento ven todos
         if puede_operar_mantenimiento(
             usuario

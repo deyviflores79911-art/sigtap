@@ -246,6 +246,29 @@
 
             <p>{{ informeSeleccionado.contenido }}</p>
 
+            <p v-if="informeSeleccionado.informeTecnico">
+              <strong>Informe del técnico:</strong>
+              {{ informeSeleccionado.informeTecnico }}
+            </p>
+
+            <a
+              v-if="informeSeleccionado.pdf"
+              :href="informeSeleccionado.pdf"
+              target="_blank"
+              class="btn-cerrar"
+            >
+              Abrir informe final PDF
+            </a>
+
+            <template
+              v-for="respaldo in informeSeleccionado.respaldos"
+              :key="respaldo.nombre"
+            >
+              <a :href="respaldo.url" target="_blank" class="btn-cerrar">
+                {{ respaldo.nombre }}
+              </a>
+            </template>
+
           </div>
 
         </div>
@@ -419,6 +442,9 @@ function normalizarMantenimiento(requerimiento) {
     estadoNombre: requerimiento.estado_nombre || 'Enviado a Dirección',
     resumen: resumenDe(requerimiento.informe_final),
     contenido: requerimiento.informe_final,
+    informeTecnico: '',
+    pdf: null,
+    respaldos: [],
     leido: Boolean(requerimiento.informe_recibido_director_en),
     fechaElevado: fecha,
   }
@@ -444,6 +470,15 @@ function normalizarSoporte(ticket) {
     estadoNombre: ticket.estado_nombre || 'Enviado a Dirección',
     resumen: resumenDe(ticket.informe_final),
     contenido: ticket.informe_final,
+    informeTecnico: ticket.informe_tecnico,
+    pdf: ticket.informe_final_pdf_url,
+    respaldos: [
+      { nombre: 'Informe PDF generado del técnico', url: ticket.informe_tecnico_pdf_url },
+      { nombre: 'Respaldo y cuadros del técnico', url: ticket.evidencia_pruebas_url },
+      { nombre: 'Evidencia del diagnóstico', url: ticket.evidencia_diagnostico_url },
+      { nombre: 'Evidencia de la intervención', url: ticket.evidencia_intervencion_url },
+      { nombre: 'Cotización técnica', url: ticket.cotizacion_archivo_url },
+    ].filter(respaldo => respaldo.url),
     leido: Boolean(ticket.informe_recibido_director_en),
     fechaElevado: fecha,
   }
@@ -491,7 +526,7 @@ async function cargarInformes() {
         .filter(item => item.informe_elevado_en && item.informe_final)
         .map(normalizarMantenimiento),
       ...soporte
-        .filter(item => item.informe_elevado_en && item.informe_final)
+        .filter(item => item.informe_elevado_en && item.informe_final && item.informe_final_pdf_url)
         .map(normalizarSoporte),
     ].sort(
       (a, b) => new Date(b.fechaElevado) - new Date(a.fechaElevado)

@@ -248,12 +248,18 @@ class SolicitudCompraSerializer(serializers.ModelSerializer):
         # Se exige PDF para que el expediente sea previsualizable
         # (el navegador no puede renderizar .docx/.pptx en línea).
         no_pdf = [
-            nombre for nombre in ("informe", "poa", "pedido", "proforma")
+            nombre for nombre in ("informe", "poa", "pedido")
             if attrs.get(nombre) and not attrs[nombre].name.lower().endswith(".pdf")
         ]
         if no_pdf:
             raise serializers.ValidationError({
                 "documentos": "Los documentos del expediente deben ser archivos PDF: " + ", ".join(no_pdf)
+            })
+
+        proforma = attrs.get("proforma")
+        if proforma and not proforma.name.lower().endswith((".pdf", ".jpg", ".jpeg", ".png")):
+            raise serializers.ValidationError({
+                "proforma": "La cotización debe ser PDF, JPG, JPEG o PNG."
             })
 
         return attrs

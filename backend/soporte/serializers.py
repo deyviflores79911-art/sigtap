@@ -177,6 +177,8 @@ class TicketSerializer(
     evidencia_diagnostico_url = serializers.SerializerMethodField()
     evidencia_intervencion_url = serializers.SerializerMethodField()
     evidencia_pruebas_url = serializers.SerializerMethodField()
+    informe_final_pdf_url = serializers.SerializerMethodField()
+    informe_tecnico_pdf_url = serializers.SerializerMethodField()
 
 
     # ======================================================
@@ -376,8 +378,14 @@ class TicketSerializer(
             "observaciones_usuario",
 
             "informe_tecnico",
+            "informe_tecnico_pdf",
+            "informe_tecnico_pdf_url",
 
             "informe_final",
+
+            "informe_final_pdf",
+
+            "informe_final_pdf_url",
 
             "informe_elevado_en",
 
@@ -640,6 +648,12 @@ class TicketSerializer(
 
     def get_evidencia_pruebas_url(self, obj):
         return self._archivo_url(obj.evidencia_pruebas)
+
+    def get_informe_final_pdf_url(self, obj):
+        return self._archivo_url(obj.informe_final_pdf)
+
+    def get_informe_tecnico_pdf_url(self, obj):
+        return self._archivo_url(obj.informe_tecnico_pdf)
 
     def get_cotizacion_archivo_url(
         self,

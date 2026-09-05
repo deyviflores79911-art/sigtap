@@ -200,6 +200,9 @@ class SolicitudCompraViewSet(
             from django.db.models import Q
             queryset = queryset.exclude(Q(origen_modulo__in=["SOPORTE", "MANTENIMIENTO"]) & (Q(pedido="") | Q(pedido__isnull=True)))
 
+        if self.action == "list" and self.request.query_params.get("bandeja") == "direccion":
+            queryset = queryset.exclude(solicitante=usuario)
+
         # Actores del BPMN consultan la bandeja institucional. La DAF
         # recibe directamente la solicitud de compra (no existe una
         # jefatura que se la asigne previamente), así que ve la misma

@@ -174,6 +174,19 @@ const router = createRouter({
     ===================================================== */
 
     {
+      path: '/admin/mis-solicitudes', component: MisSolicitudesView,
+      meta: { requiereAuth: true, admin: true, portalDirector: true },
+    },
+    {
+      path: '/admin/nueva-solicitud/soporte', component: SolicitanteSoporteView,
+      meta: { requiereAuth: true, admin: true, portalDirector: true },
+    },
+    {
+      path: '/admin/nueva-solicitud/mantenimiento', component: SolicitanteMantenimientoView,
+      meta: { requiereAuth: true, admin: true, portalDirector: true },
+    },
+
+    {
       path: '/admin/dashboard',
       name: 'admin-dashboard',
       component: AdminDashboardView,

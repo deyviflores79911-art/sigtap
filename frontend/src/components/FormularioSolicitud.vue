@@ -6,7 +6,7 @@
          MENÚ ÚNICO DEL SOLICITANTE
     ====================================================== -->
 
-    <SolicitanteMenu />
+    <AdminMenu v-if="route.meta.portalDirector" /><SolicitanteMenu v-else />
 
 
     <main class="main">
@@ -439,7 +439,7 @@
             :disabled="guardando"
             @click="
               router.push(
-                '/usuario/dashboard'
+                route.meta.portalDirector ? '/admin/mis-solicitudes' : '/usuario/dashboard'
               )
             "
           >
@@ -484,6 +484,7 @@
 
 
 <script setup>
+import AdminMenu from '../components/AdminMenu.vue'
 
 import {
   computed,
@@ -1241,9 +1242,9 @@ async function crearTicket() {
 
     window.setTimeout(() => {
       const origen = typeof route.query.origen === 'string'
-        && route.query.origen.startsWith('/usuario/')
+        && (route.query.origen.startsWith('/usuario/') || (route.meta.portalDirector && ['/admin/dashboard','/admin/mis-solicitudes'].includes(route.query.origen)))
         ? route.query.origen
-        : '/usuario/dashboard'
+        : route.meta.portalDirector ? '/admin/mis-solicitudes' : '/usuario/dashboard'
       router.push(origen)
     }, 1200)
 

@@ -32,6 +32,13 @@
             Supervisión general de los procesos y
             configuración del Sistema Integral de Gestión.
           </p>
+          <label>Proceso
+            <select v-model="filtroProceso" @change="actualizarResumen">
+              <option value="">Ambos procesos</option>
+              <option value="MANTENIMIENTO">Mantenimiento</option>
+              <option value="SOPORTE">Soporte técnico</option>
+            </select>
+          </label>
 
         </div>
 
@@ -102,7 +109,7 @@
 
         <article
           class="stat-card"
-          @click="$router.push('/admin/compras')"
+          @click="$router.push({path:'/admin/compras',query:{proceso:filtroProceso}})"
         >
 
           <span>
@@ -146,7 +153,7 @@
 
         <article
           class="stat-card"
-          @click="$router.push('/admin/historial')"
+          @click="$router.push({path:'/admin/historial',query:{proceso:filtroProceso}})"
         >
 
           <span>
@@ -168,7 +175,7 @@
 
         <article
           class="stat-card"
-          @click="$router.push('/admin/historial')"
+          @click="$router.push({path:'/admin/historial',query:{proceso:filtroProceso}})"
         >
 
           <span>
@@ -314,8 +321,7 @@ import {
 import AdminMenu
   from '../components/AdminMenu.vue'
 
-import { INFORMES_MUESTRA }
-  from '../data/informesActividad.js'
+import { coincideProceso } from '../utils/portal'
 
 
 const router =
@@ -354,7 +360,7 @@ const resumen =
     // Los informes de actividad todavía no tienen origen real:
     // se leen de la misma maqueta que usa /admin/actividades
     // para que ambas pantallas digan siempre lo mismo.
-    actividades: INFORMES_MUESTRA.length,
+    actividades: 0,
   })
 
 
@@ -409,7 +415,7 @@ function grupoCompra(compra) {
     return 'EN_REVISION_DAF'
   }
 
-  return 'EN_ESPERA'
+  return estado === 'VERIFICADO_PENDIENTE_AUTORIZACION' ? 'EN_ESPERA' : 'EN_REVISION_DAF'
 }
 
 
@@ -420,11 +426,23 @@ function grupoCompra(compra) {
 const usuariosLista =
   ref([])
 
-const ticketsLista =
-  ref([])
+const ticketsTodos = ref([])
+const filtroProceso = ref('')
+const ticketsLista = computed(() => ticketsTodos.value.filter(item => coincideProceso(item, filtroProceso.value)))
 
-const comprasLista =
-  ref([])
+const comprasTodas = ref([])
+const comprasLista = computed(() => comprasTodas.value.filter(item => coincideProceso(item, filtroProceso.value)))
+
+function actualizarResumen() {
+  const compras = comprasLista.value, tickets = ticketsLista.value
+  resumen.tickets = tickets.length
+  resumen.nuevos = tickets.filter(t=>['NUEVO','RECIBIDO'].includes(t.estado_codigo)).length
+  resumen.pendientes = compras.filter(c=>grupoCompra(c)==='EN_ESPERA').length
+  resumen.aceptadas = compras.filter(c=>grupoCompra(c)==='APROBADA').length
+  resumen.rechazadas = compras.filter(c=>grupoCompra(c)==='RECHAZADA').length
+  resumen.compras = resumen.pendientes + resumen.aceptadas + resumen.rechazadas
+  resumen.actividades = tickets.filter(t=>t.informe_elevado_en && t.informe_final).length
+}
 
 
 /* =========================================================
@@ -592,7 +610,7 @@ async function cargarResumen() {
     const [
       usuariosRes,
       ticketsRes,
-      comprasRes
+      comprasRes, mantenimientoRes
     ] =
       await Promise.all([
 
@@ -622,13 +640,14 @@ async function cargarResumen() {
         /* COMPRAS */
 
         fetch(
-          '/api/compras/solicitudes/',
+          '/api/compras/solicitudes/?bandeja=direccion',
           {
             headers:
               headersAuth()
           }
         ),
 
+        fetch('/api/mantenimiento/requerimientos/', { headers: headersAuth() }),
       ])
 
 
@@ -642,7 +661,7 @@ async function cargarResumen() {
 
       ticketsRes,
 
-      comprasRes
+      comprasRes, mantenimientoRes
     ]
 
 
@@ -697,10 +716,10 @@ async function cargarResumen() {
       )
 
 
-    const tickets =
-      convertirLista(
-        ticketsDatos
-      )
+    const tickets = [
+      ...convertirLista(ticketsDatos).map(t=>({...t, proceso:'SOPORTE'})),
+      ...convertirLista(mantenimientoRes.ok ? await mantenimientoRes.json() : []).map(t=>({...t, proceso:'MANTENIMIENTO'})),
+    ]
 
 
     const compras =
@@ -718,11 +737,11 @@ async function cargarResumen() {
       usuarios
 
 
-    ticketsLista.value =
+    ticketsTodos.value =
       tickets
 
 
-    comprasLista.value =
+    comprasTodas.value =
       compras
 
 
@@ -795,6 +814,8 @@ async function cargarResumen() {
        AVISO SI UN ENDPOINT NO RESPONDE
     ====================================================== */
 
+    actualizarResumen()
+
     const errores = []
 
 
@@ -807,6 +828,8 @@ async function cargarResumen() {
       errores.push('soporte técnico')
     }
 
+
+    if (!mantenimientoRes.ok) errores.push('mantenimiento')
 
     if (!comprasRes.ok) {
       errores.push('compras')
@@ -897,7 +920,7 @@ const statConfig = {
   },
 
   tickets: {
-    titulo: 'Requerimientos de soporte',
+    titulo: 'Requerimientos de soporte y mantenimiento',
     placeholder: 'Buscar por código o título...',
   },
 
