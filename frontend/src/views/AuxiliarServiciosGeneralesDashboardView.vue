@@ -531,7 +531,7 @@ async function enviarRequerimiento() {
     
     cerrarOrden()
     vista.value = 'compras'
-    alert('Requerimiento enviado a la jefatura para evaluar su viabilidad.')
+    alert('Requerimiento derivado al Jefe de Mantenimiento para proceder con la solicitud de compra.')
   } catch (e) { alert(e.message) }
   finally { procesando.value = false }
 }

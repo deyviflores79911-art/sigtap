@@ -219,6 +219,7 @@
         <button class="btn-success-close" @click="cerrarModalExito">Aceptar</button>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -246,6 +247,7 @@ const mostrarModalExito = ref(false)
 function cerrarModalExito() {
   mostrarModalExito.value = false
 }
+
 
 const porCertificar = computed(() => items.value.filter(r => !r.certificacion_presupuestaria && r.estado !== 'RECHAZADO' && r.estado !== 'CERRADO_SIN_COMPRA'))
 

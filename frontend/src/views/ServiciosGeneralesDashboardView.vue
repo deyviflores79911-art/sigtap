@@ -227,7 +227,6 @@
             <div class="workflow-card">
               <div class="wf-header">Armado de Expediente para la DAF</div>
               <div class="wf-body">
-                
                 <div v-if="!formCompra.viable" class="wf-step active">
                   <div class="step-num">!</div>
                   <div class="step-content" style="border-color: var(--sigta-error)">
