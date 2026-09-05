@@ -63,6 +63,7 @@ from .serializers import (
     RolPermisoSerializer,
     DelegacionAprobacionSerializer,
     InformeJefaturaSerializer,
+    generar_password_temporal,
 )
 
 
@@ -1053,6 +1054,56 @@ class UsuarioViewSet(
         )
 
 
+    # ======================================================
+    # RESTABLECER CONTRASEÑA
+    # ======================================================
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="restablecer-password"
+    )
+    @transaction.atomic
+    def restablecer_password(self, request, pk=None):
+
+        usuario = self.get_object()
+        password_temporal = generar_password_temporal()
+        password_validation.validate_password(password_temporal, user=usuario)
+
+        usuario.set_password(password_temporal)
+        usuario.must_change_password = True
+        usuario.failed_attempts = 0
+        usuario.locked_until = None
+        usuario.save(update_fields=[
+            "password",
+            "must_change_password",
+            "failed_attempts",
+            "locked_until",
+        ])
+
+        # Las sesiones por token anteriores dejan de ser válidas.
+        Token.objects.filter(user=usuario).delete()
+
+        registrar_bitacora(
+            request=request,
+            usuario=request.user,
+            accion="RESTABLECER_PASSWORD_USUARIO",
+            modulo="Administración",
+            detalle=(
+                f"Se restableció la contraseña del usuario {usuario.email}."
+            ),
+            nivel="SECURITY",
+        )
+
+        return Response(
+            {
+                "mensaje": "Contraseña restablecida correctamente.",
+                "password_temporal": password_temporal,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 # ==========================================================
 # USUARIO - ROL
 # ==========================================================
@@ -1260,6 +1311,63 @@ class DelegacionAprobacionViewSet(
 # ==========================================================
 # LOGIN
 # ==========================================================
+
+@api_view(["GET", "PATCH"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def mi_perfil(request):
+    """Consulta y actualiza solamente datos propios existentes en SIGTA."""
+
+    usuario = request.user
+    asignacion = (
+        UsuarioRol.objects
+        .filter(usuario=usuario, activo=True, rol__activo=True)
+        .select_related("area", "rol")
+        .order_by("id")
+        .first()
+    )
+
+    if request.method == "PATCH":
+        nombre = str(request.data.get("nombre_completo", "")).strip()
+        if not nombre:
+            return Response(
+                {"nombre_completo": "El nombre completo es obligatorio."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            area = Area.objects.get(pk=request.data.get("area_id"), activo=True)
+        except (Area.DoesNotExist, TypeError, ValueError):
+            return Response(
+                {"area_id": "Seleccione un área activa válida."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        usuario.nombre_completo = nombre
+        usuario.save(update_fields=["nombre_completo", "updated_at"])
+
+        if asignacion:
+            asignacion.area = area
+            asignacion.save(update_fields=["area"])
+
+        registrar_bitacora(
+            request=request,
+            usuario=usuario,
+            accion="ACTUALIZAR_PERFIL_PROPIO",
+            modulo="Usuarios",
+            detalle="El usuario actualizó su nombre y área desde Mi perfil.",
+            nivel="INFO",
+        )
+
+    return Response({
+        "id": usuario.id,
+        "nombre_completo": usuario.nombre_completo,
+        "email": usuario.email,
+        "area_id": asignacion.area_id if asignacion else None,
+        "area_nombre": asignacion.area.nombre if asignacion and asignacion.area else None,
+        "rol_nombre": asignacion.rol.nombre if asignacion else None,
+    })
+
 
 @api_view([
     "POST"

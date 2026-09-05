@@ -56,16 +56,34 @@ class FlujoCajaChicaTests(APITestCase):
         self.assertEqual(r.data["estado"], "APROBADO_PARA_DESEMBOLSO")
 
         self.autenticar("TESORERIA")
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/desembolsar/", {"monto_desembolsado": "100.00", "responsable_adquisicion": "Almacén"}, format="json")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/desembolsar/", {
+            "monto_desembolsado": "100.00",
+            "responsable_adquisicion": "Almacén",
+            "tipo_desembolso": "Efectivo",
+            "comprobante_desembolso": self.archivo("desembolso.pdf"),
+        }, format="multipart")
         self.assertEqual(r.data["estado"], "FONDOS_DESEMBOLSADOS")
 
         self.autenticar("ENCARGADO_COMPRAS_ALMACEN")
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-compra/", {"monto_real": "100.00", "proveedor": "Proveedor", "componente_verificado": True}, format="json")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/confirmar-recepcion-fondos/", {}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-compra/", {
+            "monto_real": "100.00",
+            "proveedor": "Proveedor",
+            "componente_verificado": True,
+            "comprobante_compra": self.archivo("compra.pdf"),
+        }, format="multipart")
         self.assertEqual(r.data["estado"], "COMPRA_REGISTRADA", r.data)
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-ingreso-almacen/", {}, format="json")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-ingreso-almacen/", {
+            "cantidad_recibida": 1,
+            "responsable_recepcion": "Almacén",
+        }, format="json")
         self.assertEqual(r.status_code, 200, r.data)
         # Salida de almacén y entrega con acta son dos registros distintos.
-        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-despacho-almacen/", {}, format="json")
+        r = self.client.post(f"/api/compras/solicitudes/{pk}/registrar-despacho-almacen/", {
+            "cantidad_entregada": 1,
+            "entregado_a": "Sección solicitante",
+        }, format="json")
         self.assertEqual(r.data["estado"], "COMPRA_REGISTRADA", r.data)
 
         r = self.client.post(f"/api/compras/solicitudes/{pk}/entregar-con-acta/", {
@@ -202,11 +220,28 @@ class SeguridadFlujoComprasTests(APITestCase):
         self.autenticar("DIRECTOR")
         self.client.post(f"/api/compras/solicitudes/{pk}/visto-bueno-director/", {}, format="json")
         self.autenticar("TESORERIA")
-        self.client.post(f"/api/compras/solicitudes/{pk}/desembolsar/", {"monto_desembolsado": "100.00", "responsable_adquisicion": "Almacén"}, format="json")
+        self.client.post(f"/api/compras/solicitudes/{pk}/desembolsar/", {
+            "monto_desembolsado": "100.00",
+            "responsable_adquisicion": "Almacén",
+            "tipo_desembolso": "Efectivo",
+            "comprobante_desembolso": self.archivo("desembolso.pdf"),
+        }, format="multipart")
         self.autenticar("ENCARGADO_COMPRAS_ALMACEN")
-        self.client.post(f"/api/compras/solicitudes/{pk}/registrar-compra/", {"monto_real": "100.00", "proveedor": "Proveedor", "componente_verificado": True}, format="json")
-        self.client.post(f"/api/compras/solicitudes/{pk}/registrar-ingreso-almacen/", {}, format="json")
-        self.client.post(f"/api/compras/solicitudes/{pk}/registrar-despacho-almacen/", {}, format="json")
+        self.client.post(f"/api/compras/solicitudes/{pk}/confirmar-recepcion-fondos/", {}, format="json")
+        self.client.post(f"/api/compras/solicitudes/{pk}/registrar-compra/", {
+            "monto_real": "100.00",
+            "proveedor": "Proveedor",
+            "componente_verificado": True,
+            "comprobante_compra": self.archivo("compra.pdf"),
+        }, format="multipart")
+        self.client.post(f"/api/compras/solicitudes/{pk}/registrar-ingreso-almacen/", {
+            "cantidad_recibida": 1,
+            "responsable_recepcion": "Almacén",
+        }, format="json")
+        self.client.post(f"/api/compras/solicitudes/{pk}/registrar-despacho-almacen/", {
+            "cantidad_entregada": 1,
+            "entregado_a": "Sección solicitante",
+        }, format="json")
         self.client.post(f"/api/compras/solicitudes/{pk}/entregar-con-acta/", {
             "acta_conformidad": self.archivo("a.pdf"),
         }, format="multipart")

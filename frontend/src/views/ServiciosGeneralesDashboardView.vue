@@ -17,6 +17,8 @@
         <button class="refresh" :disabled="cargando" @click="cargar">↻ Actualizar</button>
       </header>
 
+      <p v-if="errorCarga" class="load-error">{{ errorCarga }}</p>
+
       <!-- ============================ RESUMEN ============================ -->
       <section v-if="vista==='resumen'">
         <div class="hero">
@@ -321,31 +323,66 @@
       <section v-else-if="vista==='informe'">
         <div class="instruction"><b>Conformidad e informe final</b><span>Informe la conformidad del mantenimiento y elabore el informe que se elevará a la Dirección.</span></div>
 
-        <div v-if="porConformar.length" class="cards">
-          <article v-for="r in porConformar" :key="r.id">
-            <div class="top"><span>{{ r.codigo }}</span><em>verificado</em></div>
-            <h3>{{ r.titulo }}</h3>
-            <p>Verificado el {{ fecha(r.verificado_en) }}. Informe la conformidad para continuar.</p>
-            <div class="actions"><button class="primary" @click="conformar(r)">Informar conformidad</button></div>
-          </article>
-        </div>
+        <div class="gestion-tickets-layout">
+          <div class="gestion-left">
+            <div class="gestion-left-header">
+              <h3>Informes pendientes</h3>
+              <span class="badge">{{ pendientesInforme.length }} requiere acción</span>
+            </div>
+            <div class="gestion-lista">
+              <article v-for="r in pendientesInforme" :key="r.id" :class="['ticket-item', itemActivo?.id === r.id ? 'activo' : '', r.estado_codigo === 'CONFORMIDAD_INFORMADA' ? 't-designar' : 't-clasificar']" @click="abrir(r)">
+                <div class="top"><span>{{ r.codigo }}</span><em :class="r.estado_codigo === 'CONFORMIDAD_INFORMADA' ? 'e-designar' : 'e-clasificar'">{{ r.estado_codigo === 'CONFORMIDAD_INFORMADA' ? 'Por informar' : 'Por conformar' }}</em></div>
+                <h4>{{ r.titulo }}</h4>
+                <p>👤 {{ r.solicitante_nombre || 's/d' }} · {{ r.estado_codigo === 'CONFORMIDAD_INFORMADA' ? 'Elaborar informe final' : 'Confirmar conformidad' }}</p>
+              </article>
+              <div v-if="!pendientesInforme.length" class="empty-list">Bandeja al día. No hay casos esperando conformidad ni informe final.</div>
+            </div>
+          </div>
 
-        <div v-if="!itemActivo" class="cards">
-          <article v-for="r in porInformar" :key="r.id">
-            <div class="top"><span>{{ r.codigo }}</span><em>{{ r.estado_codigo }}</em></div>
-            <h3>{{ r.titulo }}</h3>
-            <div class="actions"><button class="primary" @click="abrir(r)">Elaborar informe final</button></div>
-          </article>
-          <div v-if="!porInformar.length && !porConformar.length" class="empty"><span>✓</span><h3>Sin pendientes</h3><p>No hay casos esperando conformidad ni informe final.</p></div>
-        </div>
-        <div v-else class="panel">
-          <h3>{{ itemActivo.codigo }} — {{ itemActivo.titulo }}</h3>
-          <label class="campo">Informe final
-            <textarea v-model="formInforme.informe_final" rows="5" placeholder="Diagnóstico, trabajo realizado, repuestos, pruebas y resultado"></textarea>
-          </label>
-          <div class="actions">
-            <button @click="itemActivo=null">Cancelar</button>
-            <button class="primary" :disabled="procesando||!formInforme.informe_final.trim()" @click="elaborarInforme">Validar y elevar a la Dirección</button>
+          <div class="gestion-right">
+            <div v-if="!itemActivo" class="empty">
+              <span>←</span>
+              <h3>Seleccione un requerimiento</h3>
+              <p>Elija un caso de la bandeja para informar la conformidad y elevar su informe final paso a paso.</p>
+            </div>
+
+            <div v-else class="gestion-detalle-wrapper">
+              <div class="ticket-header-card">
+                <div class="t-head"><h2>{{ itemActivo.titulo }}</h2><span class="codigo-badge">{{ itemActivo.codigo }}</span></div>
+                <p class="t-meta"><span>👤 <b>Solicitante:</b> {{ itemActivo.solicitante_nombre || 's/d' }}</span><span>📍 <b>Ubicación:</b> {{ itemActivo.ubicacion || 's/d' }}</span></p>
+                <div class="t-content">
+                  <div class="desc-box"><strong>Resumen técnico del caso</strong><p>{{ itemActivo.descripcion || 'Sin descripción registrada.' }}</p><p v-if="itemActivo.trabajo_realizado"><b>Trabajo realizado:</b> {{ itemActivo.trabajo_realizado }}</p><p v-if="itemActivo.resultado_pruebas"><b>Pruebas técnicas:</b> {{ itemActivo.resultado_pruebas }}</p></div>
+                  <div v-if="itemActivo.fotografia_trabajo_url" class="evidence-box"><div class="evidence-info"><strong>Fotografía del trabajo</strong><span>Evidencia registrada por el técnico</span></div><a class="evidence-btn" :href="itemActivo.fotografia_trabajo_url" target="_blank" rel="noopener">Ver evidencia ↗</a></div>
+                </div>
+              </div>
+
+              <div class="workflow-card">
+                <div class="wf-header">Flujo de conformidad e informe final</div>
+                <div class="wf-body">
+                  <div :class="['wf-step', itemActivo.estado_codigo === 'CONFORMIDAD_INFORMADA' ? 'completed' : 'active']">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                      <h4>Confirmar conformidad <span v-if="itemActivo.estado_codigo === 'CONFORMIDAD_INFORMADA'" class="step-badge">✓ Completada</span></h4>
+                      <p v-if="itemActivo.estado_codigo !== 'CONFORMIDAD_INFORMADA'">Revise la reparación, las pruebas y el detalle del trabajo antes de confirmar la conformidad.</p>
+                      <p v-else>La conformidad fue registrada el {{ fecha(itemActivo.conformidad_en) }}. Ya puede elaborar el informe final.</p>
+                      <div v-if="itemActivo.estado_codigo !== 'CONFORMIDAD_INFORMADA'" class="step-actions"><button class="primary flex-btn" :disabled="procesando" @click="conformar(itemActivo)">Confirmar y continuar</button></div>
+                    </div>
+                  </div>
+
+                  <div :class="['wf-step', itemActivo.estado_codigo !== 'CONFORMIDAD_INFORMADA' ? 'locked' : 'active']">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                      <h4>Elaborar, validar y elevar informe final</h4>
+                      <p>Registre el cierre del caso. Al validarlo, el informe será enviado a la Dirección para su recepción.</p>
+                      <div v-if="itemActivo.estado_codigo === 'CONFORMIDAD_INFORMADA'">
+                        <label class="campo">Informe final<textarea v-model="formInforme.informe_final" rows="6" placeholder="Resuma el diagnóstico, trabajo realizado, componentes utilizados, pruebas y resultado final."></textarea></label>
+                        <div class="step-actions"><button class="primary flex-btn" :disabled="procesando || !formInforme.informe_final.trim()" @click="elaborarInforme">{{ procesando ? 'Validando...' : 'Validar y elevar a la Dirección' }}</button></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -414,6 +451,7 @@ const items = ref([])
 const tecnicos = ref([])
 const cargando = ref(false)
 const procesando = ref(false)
+const errorCarga = ref('')
 const itemActivo = ref(null)
 const detalle = ref(null)
 const reporte = ref(null)
@@ -432,7 +470,8 @@ const ticketsGestion = computed(() => [...porValidar.value, ...porClasificar.val
 const porEvaluarCompra = computed(() => items.value.filter(r => r.estado_compra_componente === 'SOLICITADA'))
 const porVerificar = computed(() => items.value.filter(r => r.estado_codigo === 'INFORME_REGISTRADO' && !r.verificado_en))
 const porConformar = computed(() => items.value.filter(r => r.estado_codigo === 'INFORME_REGISTRADO' && !!r.verificado_en))
-const porInformar = computed(() => items.value.filter(r => r.estado_codigo === 'CONFORMIDAD_INFORMADA'))
+const porInformar = computed(() => items.value.filter(r => r.estado_codigo === 'CONFORMIDAD_INFORMADA' && !r.informe_elevado_en))
+const pendientesInforme = computed(() => [...porConformar.value, ...porInformar.value])
 
 const menu = computed(() => [
   { id: 'resumen', icono: '⌂', nombre: 'Dashboard' },
@@ -466,14 +505,28 @@ const token = () => localStorage.getItem('sigta_token')
 
 async function cargar() {
   cargando.value = true
+  errorCarga.value = ''
   try {
     const r = await fetch(`${base}/`, { headers: { Authorization: `Token ${token()}` } })
+
+    if (r.status === 401 || r.status === 403) {
+      salir()
+      return
+    }
+
+    if (!r.ok) {
+      throw new Error('No fue posible cargar los requerimientos de mantenimiento.')
+    }
+
     const d = await r.json()
     items.value = Array.isArray(d) ? d : (d.results || [])
     const rt = await fetch('/api/usuarios/usuarios-por-rol/?rol=AUXILIAR_SERVICIOS_GENERALES', {
       headers: { Authorization: `Token ${token()}` },
     })
     tecnicos.value = rt.ok ? await rt.json() : []
+  } catch (e) {
+    console.error('No fue posible cargar Mantenimiento.', e)
+    errorCarga.value = e.message || 'No fue posible cargar los requerimientos. Intente actualizar nuevamente.'
   } finally {
     cargando.value = false
   }
@@ -491,9 +544,15 @@ async function postAccion(item, endpoint, body) {
     if (!r.ok) throw new Error(d.detalle || Object.values(d)[0] || 'No fue posible completar la acción.')
     await cargar()
     
-    if (vista.value === 'gestion' && itemActivo.value) {
+    if ((vista.value === 'gestion' || vista.value === 'informe') && itemActivo.value) {
       const found = items.value.find(i => i.id === itemActivo.value.id);
-      if (found && (found.estado_codigo === 'RECIBIDO' || found.estado_codigo === 'VALIDADO')) {
+      const permaneceEnGestion = vista.value === 'gestion'
+        && (found?.estado_codigo === 'RECIBIDO' || found?.estado_codigo === 'VALIDADO')
+      const permaneceEnInforme = vista.value === 'informe'
+        && found?.estado_codigo === 'CONFORMIDAD_INFORMADA'
+        && !found?.informe_elevado_en
+
+      if (found && (permaneceEnGestion || permaneceEnInforme)) {
         itemActivo.value = found;
       } else {
         itemActivo.value = null;
@@ -720,6 +779,7 @@ onMounted(cargar)
 textarea { width: 100%; border: 1px solid var(--sigta-borde); border-radius: 6px; padding: 10px; font-family: inherit; font-size: 13px; resize: vertical; margin-bottom: 15px; }
 .full-select { width: 100%; border: 1px solid var(--sigta-borde); border-radius: 6px; padding: 10px; font-family: inherit; font-size: 13px; color: var(--sigta-texto); background: #fff; margin-bottom: 15px; }
 .step-btn { width: 100%; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; background: var(--sigta-azul); color: var(--sigta-blanco); font-size: 14px; text-align: center; }
+.load-error { margin: -10px 0 18px; padding: 12px 14px; border-left: 4px solid var(--sigta-error); border-radius: 7px; background: var(--sigta-error-fondo); color: var(--sigta-error); font-size: 13px; font-weight: 700; }
 
 @media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.panels{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}.gestion-tickets-layout{flex-direction:column;height:auto}.gestion-left{width:100%;height:300px}}@media(max-width:760px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column;gap:12px}.detalle-fila{grid-template-columns:1fr}.p-options{grid-template-columns:1fr 1fr}}
 </style>

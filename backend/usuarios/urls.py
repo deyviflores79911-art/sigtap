@@ -18,6 +18,7 @@ from .views import (
     InformeJefaturaViewSet,
     login_view,
     mi_contexto,
+    mi_perfil,
     usuarios_por_rol,
     buscar_usuario_por_email,
     cambiar_password_obligatorio,
@@ -150,6 +151,12 @@ urlpatterns = [
         "mi-contexto/",
         mi_contexto,
         name="mi-contexto"
+    ),
+
+    path(
+        "mi-perfil/",
+        mi_perfil,
+        name="mi-perfil"
     ),
 
 

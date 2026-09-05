@@ -4,6 +4,17 @@ from django.db import transaction
 from usuarios.models import Rol, Usuario, UsuarioRol
 
 
+# Contraseña única para TODAS las cuentas de prueba: en
+# desarrollo tener una distinta por rol solo obligaba a ir a
+# buscarla al archivo de credenciales en cada cambio de usuario.
+# Cumple AUTH_PASSWORD_VALIDATORS (mayúscula, minúscula, número,
+# carácter especial y 8 caracteres), así que las cuentas con
+# must_change_password también pueden fijarla de nuevo.
+# Solo para entorno local; nunca para una instalación real.
+
+CLAVE_PRUEBA = "Hola123*"
+
+
 class Command(BaseCommand):
 
     help = (
@@ -18,77 +29,77 @@ class Command(BaseCommand):
             "email": "superuser@emi.edu.bo",
             "nombre_completo": "Admin (superuser)",
             "rol": "SUPERUSER",
-            "password": "SIGTA_Superuser#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "admin@emi.edu.bo",
             "nombre_completo": "Director",
             "rol": "ADMIN",
-            "password": "SIGTA_Admin#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "jefe.utic@emi.edu.bo",
             "nombre_completo": "Jefe UTIC",
             "rol": "JEFE_UTIC",
-            "password": "SIGTA_JefeUTIC#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "servicios.generales@emi.edu.bo",
             "nombre_completo": "Jefe Mantenimiento",
             "rol": "SERVICIOS_GENERALES",
-            "password": "SIGTA_ServiciosGrales#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "daf@emi.edu.bo",
             "nombre_completo": "Técnico de la DAF",
             "rol": "DAF",
-            "password": "SIGTA_DAF#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "almacen@emi.edu.bo",
             "nombre_completo": "Técnico de Almacén y Compras",
             "rol": "ENCARGADO_COMPRAS_ALMACEN",
-            "password": "SIGTA_Almacen#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "tesoreria@emi.edu.bo",
             "nombre_completo": "Técnico de Tesorería",
             "rol": "TESORERIA",
-            "password": "SIGTA_Tesoreria#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "especialista@emi.edu.bo",
             "nombre_completo": "Técnico de Soporte Técnico",
             "rol": "ESPECIALISTA",
-            "password": "SIGTA_Especialista#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "auxiliar.sg@emi.edu.bo",
             "nombre_completo": "Técnico de Mantenimiento",
             "rol": "AUXILIAR_SERVICIOS_GENERALES",
-            "password": "SIGTA_AuxiliarSG#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "solicitante@emi.edu.bo",
             "nombre_completo": "Usuario",
             "rol": "SOLICITANTE",
-            "password": "SIGTA_Usuario#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": False,
         },
         {
             "email": "nuevo.ingreso@emi.edu.bo",
             "nombre_completo": "Usuario Recien Creado",
             "rol": "SOLICITANTE",
-            "password": "SIGTA_Temporal#2026!",
+            "password": CLAVE_PRUEBA,
             "must_change_password": True,
         },
     ]

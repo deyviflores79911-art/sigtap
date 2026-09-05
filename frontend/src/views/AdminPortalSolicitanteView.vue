@@ -326,12 +326,8 @@ async function cargarTodo() {
 
   try {
 
-    const [
-      soporteData,
-      mantenimientoData,
-      comprasData
-    ] =
-      await Promise.all([
+    const resultados =
+      await Promise.allSettled([
 
         cargarEndpoint(
           '/api/soporte/tickets/'
@@ -346,17 +342,14 @@ async function cargarTodo() {
         ),
       ])
 
+    soporte.value = resultados[0].status === 'fulfilled' ? resultados[0].value : []
+    mantenimiento.value = resultados[1].status === 'fulfilled' ? resultados[1].value : []
+    compras.value = resultados[2].status === 'fulfilled' ? resultados[2].value : []
 
-    soporte.value =
-      soporteData
-
-
-    mantenimiento.value =
-      mantenimientoData
-
-
-    compras.value =
-      comprasData
+    const fallos = resultados.filter(resultado => resultado.status === 'rejected')
+    if (fallos.length) {
+      console.error('Portal solicitante: carga parcial', fallos.map(resultado => resultado.reason))
+    }
 
 
   } catch (error) {

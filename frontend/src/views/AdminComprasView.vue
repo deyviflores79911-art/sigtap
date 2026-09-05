@@ -12,23 +12,39 @@
 
         <div>
           <h1>
-            Solicitudes
+            {{
+              vista === 'PENDIENTES'
+                ? 'Solicitudes'
+                : 'Historial'
+            }}
           </h1>
 
-          <p>
-            Registros de solicitudes de compra y Caja Chica.
+          <p v-if="vista === 'PENDIENTES'">
+            {{ conteos.PENDIENTES }}
+            {{ conteos.PENDIENTES === 1 ? 'solicitud' : 'solicitudes' }}
+            de compra pendientes de aprobar o rechazar.
+          </p>
+
+          <p v-else>
+            {{ conteos.APROBADA }}
+            {{ conteos.APROBADA === 1 ? 'aprobada' : 'aprobadas' }}
+            y
+            {{ conteos.RECHAZADA }}
+            {{ conteos.RECHAZADA === 1 ? 'rechazada' : 'rechazadas' }}.
+            Solo consulta.
           </p>
         </div>
 
         <div class="header-actions">
 
           <select
-            v-model="filtroEstado"
+            v-if="vista === 'HISTORIAL'"
+            v-model="filtroHistorial"
             class="filtro-estado"
           >
-            <option value="">Todas las solicitudes</option>
-            <option value="APROBADA">Solicitudes aprobadas</option>
-            <option value="RECHAZADA">Solicitudes rechazadas</option>
+            <option value="">Aprobadas y rechazadas</option>
+            <option value="APROBADA">Solo aprobadas</option>
+            <option value="RECHAZADA">Solo rechazadas</option>
           </select>
 
           <button
@@ -75,7 +91,7 @@
         v-else-if="comprasFiltradas.length === 0"
         class="empty"
       >
-        No hay {{ etiquetaFiltroVacio(filtroEstado) }}.
+        {{ mensajeVacio }}
       </div>
 
 
@@ -479,6 +495,38 @@
     </div>
 
 
+    <!-- Confirmación propia de la autorización del Director. -->
+    <div
+      v-if="mostrarModalExito"
+      class="detalle-modal-backdrop modal-exito-backdrop"
+      @click.self="cerrarModalExito"
+    >
+      <section
+        class="modal-exito-director"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-modal-exito"
+      >
+        <div class="modal-exito-icono" aria-hidden="true">✓</div>
+
+        <h2 id="titulo-modal-exito">¡Autorizada con éxito!</h2>
+
+        <p>
+          La compra fue autorizada y el expediente fue derivado a
+          Tesorería para realizar el desembolso.
+        </p>
+
+        <button
+          type="button"
+          class="modal-exito-boton"
+          @click="cerrarModalExito"
+        >
+          Aceptar
+        </button>
+      </section>
+    </div>
+
+
     <!-- =================================================
          DATOS DEL SOLICITANTE
     ================================================== -->
@@ -580,6 +628,7 @@ import {
 } from 'vue'
 
 import {
+  useRoute,
   useRouter
 } from 'vue-router'
 
@@ -589,6 +638,9 @@ import AdminMenu
 
 const router =
   useRouter()
+
+const route =
+  useRoute()
 
 
 // ==========================================================
@@ -601,25 +653,137 @@ const compras =
 const cargando =
   ref(true)
 
+const mostrarModalExito =
+  ref(false)
+
 
 // ==========================================================
 // FILTRO
 // ==========================================================
 
-const filtroEstado =
+// Reparto de las solicitudes entre las dos entradas de menú que
+// comparten este componente:
+//
+//   "Solicitudes" (/admin/compras)   -> SOLO las que el Director
+//                                       decide: la DAF ya
+//                                       certificó y el expediente
+//                                       espera su autorización.
+//   "Historial"   (/admin/historial) -> SOLO las que él ya aprobó
+//                                       o rechazó.
+//
+// Mientras el expediente está en revisión de la DAF (evaluación y
+// certificación del presupuesto) NO aparece en ninguna de las dos:
+// no es trabajo suyo ni una decisión que haya tomado. Al aprobar o
+// rechazar, la solicitud cambia de estado y pasa sola al Historial.
+
+// bucketEstado() ya distingue los dos casos:
+//   EN_ESPERA        -> VERIFICADO_PENDIENTE_AUTORIZACION (él)
+//   EN_REVISION_DAF  -> pendiente DAF / pendiente certificación
+// así que basta con apoyarse en él.
+
+const vista =
+  computed(() =>
+    route.meta.vista === 'HISTORIAL'
+      ? 'HISTORIAL'
+      : 'PENDIENTES'
+  )
+
+
+const filtroHistorial =
   ref('')
+
+
+const conteos =
+  computed(() => {
+
+    const total = {
+      PENDIENTES: 0,
+      APROBADA: 0,
+      RECHAZADA: 0,
+    }
+
+    for (const compra of compras.value) {
+
+      const bucket =
+        bucketEstado(compra.estado)
+
+      if (bucket === 'EN_ESPERA') {
+        total.PENDIENTES += 1
+      }
+
+      else if (bucket === 'APROBADA') {
+        total.APROBADA += 1
+      }
+
+      else if (bucket === 'RECHAZADA') {
+        total.RECHAZADA += 1
+      }
+
+      // EN_REVISION_DAF no se cuenta: no es del Director.
+    }
+
+    total.HISTORIAL =
+      total.APROBADA
+      + total.RECHAZADA
+
+    return total
+  })
+
 
 const comprasFiltradas =
   computed(() => {
 
-    if (!filtroEstado.value) {
-      return compras.value
+    if (vista.value === 'PENDIENTES') {
+
+      return compras.value.filter(
+        compra =>
+          bucketEstado(compra.estado)
+          === 'EN_ESPERA'
+      )
     }
 
     return compras.value.filter(
-      compra =>
-        bucketEstado(compra.estado)
-        === filtroEstado.value
+      compra => {
+
+        const bucket =
+          bucketEstado(compra.estado)
+
+        // Solo lo ya decidido por el Director. Lo que sigue en
+        // revisión de la DAF no entra en el historial.
+        if (
+          bucket !== 'APROBADA'
+          && bucket !== 'RECHAZADA'
+        ) {
+          return false
+        }
+
+        if (!filtroHistorial.value) {
+          return true
+        }
+
+        return bucket === filtroHistorial.value
+      }
+    )
+  })
+
+
+const mensajeVacio =
+  computed(() => {
+
+    if (vista.value === 'PENDIENTES') {
+      return (
+        'No hay solicitudes esperando su autorización. '
+        + 'Aparecerán aquí cuando la DAF certifique el '
+        + 'presupuesto.'
+      )
+    }
+
+    return (
+      {
+        APROBADA: 'Todavía no hay solicitudes aprobadas.',
+        RECHAZADA: 'Todavía no hay solicitudes rechazadas.',
+      }[filtroHistorial.value]
+      || 'Todavía no hay solicitudes resueltas.'
     )
   })
 
@@ -775,6 +939,13 @@ function cerrarDetalle() {
     null
 
   resetearFormularios()
+}
+
+
+function cerrarModalExito() {
+
+  mostrarModalExito.value =
+    false
 }
 
 
@@ -1044,17 +1215,16 @@ async function ejecutarAccion(
       return
     }
 
+    cerrarDetalle()
+
+    await cargarCompras()
+
     if (tipo === 'aprobar') {
-      if (window.sigtaAlert) await window.sigtaAlert('¡Autorizada con éxito! El expediente ha sido enviado a Tesorería para su desembolso.');
-      else alert('¡Autorizada con éxito! El expediente ha sido enviado a Tesorería para su desembolso.');
+      mostrarModalExito.value = true
     } else {
       if (window.sigtaAlert) await window.sigtaAlert('La solicitud ha sido rechazada exitosamente.');
       else alert('La solicitud ha sido rechazada exitosamente.');
     }
-
-    cerrarDetalle()
-
-    await cargarCompras()
 
   } catch (error) {
 
@@ -2242,6 +2412,75 @@ function cerrarSesion() {
   margin-bottom: 10px;
   color: var(--sigta-texto-suave);
   font-size: 13px;
+}
+
+
+/* =========================================================
+   MODAL DE ÉXITO — AUTORIZACIÓN DEL DIRECTOR
+========================================================= */
+
+.modal-exito-backdrop {
+  z-index: 400;
+  background: rgba(10, 20, 35, .55);
+  backdrop-filter: blur(2px);
+}
+
+
+.modal-exito-director {
+  width: min(440px, 100%);
+  padding: 34px 38px;
+  border-radius: 14px;
+  background: var(--sigta-blanco);
+  box-shadow: 0 18px 45px rgba(10, 20, 35, .24);
+  text-align: center;
+}
+
+
+.modal-exito-icono {
+  display: grid;
+  width: 74px;
+  height: 74px;
+  margin: 0 auto 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
+  font-size: 42px;
+  font-weight: 800;
+}
+
+
+.modal-exito-director h2 {
+  margin: 0 0 10px;
+  color: var(--sigta-azul);
+  font-size: 24px;
+}
+
+
+.modal-exito-director p {
+  margin: 0 0 24px;
+  color: var(--sigta-texto-suave);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+
+.modal-exito-boton {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--sigta-exito);
+  color: var(--sigta-blanco);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+
+.modal-exito-boton:hover {
+  filter: brightness(.92);
 }
 
 

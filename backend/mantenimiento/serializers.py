@@ -139,6 +139,10 @@ class RequerimientoMantenimientoSerializer(
 
             "ubicacion",
 
+            "referencia_ubicacion",
+
+            "equipo_afectado",
+
             "tipo",
 
             "evidencia",

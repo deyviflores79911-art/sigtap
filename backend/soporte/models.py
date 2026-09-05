@@ -280,12 +280,30 @@ class Ticket(models.Model):
         blank=True
     )
 
+    observaciones_diagnostico = models.TextField(blank=True)
+
+    evidencia_diagnostico = models.FileField(
+        upload_to="soporte/diagnosticos/%Y/%m/",
+        blank=True,
+        null=True,
+    )
+
     plan_solucion = models.TextField(
         blank=True
     )
 
     solucion = models.TextField(
         blank=True
+    )
+
+    acciones_realizadas = models.TextField(blank=True)
+
+    componentes_utilizados = models.TextField(blank=True)
+
+    evidencia_intervencion = models.FileField(
+        upload_to="soporte/intervenciones/%Y/%m/",
+        blank=True,
+        null=True,
     )
 
 
@@ -297,6 +315,8 @@ class Ticket(models.Model):
         default=False
     )
 
+    cantidad_componente = models.PositiveIntegerField(default=1)
+
     componente_requerido = models.CharField(
         max_length=200,
         blank=True
@@ -305,6 +325,10 @@ class Ticket(models.Model):
     especificaciones_tecnicas = models.TextField(
         blank=True
     )
+
+    justificacion_compra = models.TextField(blank=True)
+
+    proveedor_cotizacion = models.CharField(max_length=200, blank=True)
 
     costo_estimado = models.DecimalField(
         max_digits=12,
@@ -346,6 +370,7 @@ class Ticket(models.Model):
     # ------------------------------------------------------
 
     ESTADOS_COMPRA_COMPONENTE = [
+        ("BORRADOR", "Borrador"),
         ("SOLICITADA", "Solicitada"),
         ("NO_VIABLE", "No viable"),
         ("VIABLE", "Viable"),
@@ -369,6 +394,12 @@ class Ticket(models.Model):
 
     resultado_pruebas = models.TextField(
         blank=True
+    )
+
+    evidencia_pruebas = models.FileField(
+        upload_to="soporte/pruebas/%Y/%m/",
+        blank=True,
+        null=True,
     )
 
     conformidad_usuario = models.BooleanField(

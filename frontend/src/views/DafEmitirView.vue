@@ -215,7 +215,7 @@
       <div class="success-modal">
         <div class="success-icon">✓</div>
         <h2>¡Generada con Éxito!</h2>
-        <p>Su certificación fue generada exitosamente. El expediente ha avanzado al siguiente paso.</p>
+        <p>Su certificación fue generada exitosamente. El expediente fue derivado al Director para autorizar la compra.</p>
         <button class="btn-success-close" @click="cerrarModalExito">Aceptar</button>
       </div>
     </div>

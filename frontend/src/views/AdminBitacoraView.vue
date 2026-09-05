@@ -1108,7 +1108,8 @@ function cerrarSesion() {
 
 
 .table-content {
-  min-width: 1050px;
+  width: 100%;
+  min-width: 1000px;
 }
 
 
@@ -1116,16 +1117,22 @@ function cerrarSesion() {
 .table-row {
   display: grid;
   grid-template-columns:
-    150px
-    180px
-    minmax(300px,1fr)
-    150px
-    120px
-    120px;
+    205px
+    minmax(190px,1.1fr)
+    minmax(280px,2fr)
+    130px
+    95px
+    125px;
 
   gap: 12px;
 
   align-items: center;
+}
+
+
+.table-header > :first-child,
+.table-row > :first-child {
+  white-space: nowrap;
 }
 
 

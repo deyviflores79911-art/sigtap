@@ -43,6 +43,9 @@ import AdminSMTPView
 import AdminPreferenciasView
   from '../views/AdminPreferenciasView.vue'
 
+import AdminActividadesView
+  from '../views/AdminActividadesView.vue'
+
 
 /* =========================================================
    SUPERUSUARIO
@@ -222,6 +225,38 @@ const router = createRouter({
       meta: {
         requiereAuth: true,
         admin: true,
+        vista: 'PENDIENTES',
+      },
+    },
+
+    /* Mismo componente que /admin/compras, en modo archivo:
+       solo solicitudes ya aprobadas o rechazadas. */
+    {
+      path: '/admin/historial',
+      name: 'admin-historial',
+      component: AdminComprasView,
+      meta: {
+        requiereAuth: true,
+        admin: true,
+        vista: 'HISTORIAL',
+      },
+    },
+
+
+    /* -----------------------------------------------------
+       ACTIVIDADES (solo Director)
+
+       Maqueta visual de los informes que remiten las
+       jefaturas de UTIC y Mantenimiento. No consume API.
+    ----------------------------------------------------- */
+
+    {
+      path: '/admin/actividades',
+      name: 'admin-actividades',
+      component: AdminActividadesView,
+      meta: {
+        requiereAuth: true,
+        admin: true,
       },
     },
 
@@ -257,19 +292,9 @@ const router = createRouter({
 
 
     /* -----------------------------------------------------
-       BITÁCORA (misma pantalla, ruta propia por portal
-       para que cada uno conserve su propio sidebar)
+       BITÁCORA (solo el Superusuario; el Director ya no
+       tiene acceso a esta sección)
     ----------------------------------------------------- */
-
-    {
-      path: '/admin/auditoria',
-      name: 'admin-auditoria',
-      component: AdminBitacoraView,
-      meta: {
-        requiereAuth: true,
-        roles: ['ADMIN', 'SUPERUSER'],
-      },
-    },
 
     {
       path: '/superuser/auditoria',
@@ -277,7 +302,7 @@ const router = createRouter({
       component: AdminBitacoraView,
       meta: {
         requiereAuth: true,
-        roles: ['ADMIN', 'SUPERUSER'],
+        roles: ['SUPERUSER'],
       },
     },
 

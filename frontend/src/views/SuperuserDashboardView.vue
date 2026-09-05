@@ -89,9 +89,7 @@
           type="button"
           @click="router.push('/superuser/smtp')"
         >
-          <div class="quick-icon">
-            📧
-          </div>
+          <IconoSigta class="quick-icon" nombre="correo" :tamano="22" />
 
           <div>
             <strong>
@@ -250,7 +248,22 @@ const router =
   justify-content: center;
   border-radius: 8px;
   background: var(--sigta-azul);
+  color: var(--sigta-mostaza);
   font-size: 22px;
+  box-shadow: 0 4px 10px rgba(7,35,60,.16);
+  transition:
+    background .2s,
+    color .2s,
+    transform .2s,
+    box-shadow .2s;
+}
+
+
+.quick-card:hover .quick-icon {
+  background: var(--sigta-mostaza);
+  color: var(--sigta-azul);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(7,35,60,.2);
 }
 
 

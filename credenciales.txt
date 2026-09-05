@@ -2,57 +2,60 @@ Credenciales de prueba de SIGTA
 
 Uso exclusivo para desarrollo local. Este archivo contiene contraseñas en texto visible. No debe incluirse en un repositorio público ni utilizarse en producción.
 
+TODAS las cuentas usan la misma contraseña: Hola123*
+Cumple la política del sistema (mayúscula, minúscula, número, carácter especial y 8 caracteres).
+
 
 Admin (superuser)
 Correo: superuser@emi.edu.bo
-Contraseña: SIGTA_Superuser#2026!
+Contraseña: Hola123*
 Ruta: /superuser/dashboard
 
 Director
 Correo: admin@emi.edu.bo
-Contraseña: SIGTA_Admin#2026!
+Contraseña: Hola123*
 Ruta: /admin/dashboard
 
 Jefe UTIC
 Correo: jefe.utic@emi.edu.bo
-Contraseña: SIGTA_JefeUTIC#2026!
+Contraseña: Hola123*
 Ruta: /jefe-utic/dashboard
 
 Jefe Mantenimiento
 Correo: servicios.generales@emi.edu.bo
-Contraseña: SIGTA_ServiciosGrales#2026!
+Contraseña: Hola123*
 Ruta: /servicios-generales/dashboard
 
 DAF (Dirección de Asuntos Financieros)
 Correo: daf@emi.edu.bo
-Contraseña: SIGTA_DAF#2026!
+Contraseña: Hola123*
 Ruta: /daf/dashboard
 
 Técnico de Almacén y Compras
 Correo: almacen@emi.edu.bo
-Contraseña: SIGTA_Almacen#2026!
+Contraseña: Hola123*
 Ruta: /almacen/dashboard
 
 Técnico de Tesorería
 Correo: tesoreria@emi.edu.bo
-Contraseña: SIGTA_Tesoreria#2026!
+Contraseña: Hola123*
 Ruta: /tesoreria/dashboard
 
 Técnico de Soporte Técnico
 Depende de: Jefe UTIC
 Correo: especialista@emi.edu.bo
-Contraseña: SIGTA_Especialista#2026!
+Contraseña: Hola123*
 Ruta: /especialista/dashboard
 
 Técnico de Mantenimiento
 Depende de: Jefe Mantenimiento
 Correo: auxiliar.sg@emi.edu.bo
-Contraseña: SIGTA_AuxiliarSG#2026!
+Contraseña: Hola123*
 Ruta: /auxiliar-servicios-generales/dashboard
 
 Usuario
 Correo: solicitante@emi.edu.bo
-Contraseña: SIGTA_Usuario#2026!
+Contraseña: Hola123*
 Ruta: /usuario/dashboard
 
 
@@ -60,7 +63,7 @@ Cuenta para probar HU-01 / HU-02 (cambio obligatorio de contraseña)
 
 Solicitante (recién creado)
 Correo: nuevo.ingreso@emi.edu.bo
-Contraseña temporal: SIGTA_Temporal#2026!
+Contraseña temporal: Hola123*
 Comportamiento esperado: must_change_password=true. Al iniciar sesión, el sistema exige cambiar la contraseña antes de permitir cualquier otra acción (bloqueado también en el backend, no solo en el redireccionamiento del frontend).
 
 
