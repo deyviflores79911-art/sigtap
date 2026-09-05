@@ -174,6 +174,10 @@ class TicketSerializer(
         serializers.SerializerMethodField()
     )
 
+    evidencia_diagnostico_url = serializers.SerializerMethodField()
+    evidencia_intervencion_url = serializers.SerializerMethodField()
+    evidencia_pruebas_url = serializers.SerializerMethodField()
+
 
     # ======================================================
     # META
@@ -297,9 +301,23 @@ class TicketSerializer(
 
             "diagnostico",
 
+            "observaciones_diagnostico",
+
+            "evidencia_diagnostico",
+
+            "evidencia_diagnostico_url",
+
             "plan_solucion",
 
             "solucion",
+
+            "acciones_realizadas",
+
+            "componentes_utilizados",
+
+            "evidencia_intervencion",
+
+            "evidencia_intervencion_url",
 
 
             # ------------------------------------------------
@@ -308,9 +326,15 @@ class TicketSerializer(
 
             "requiere_compra",
 
+            "cantidad_componente",
+
             "componente_requerido",
 
             "especificaciones_tecnicas",
+
+            "justificacion_compra",
+
+            "proveedor_cotizacion",
 
             "costo_estimado",
 
@@ -334,6 +358,10 @@ class TicketSerializer(
             # ------------------------------------------------
 
             "resultado_pruebas",
+
+            "evidencia_pruebas",
+
+            "evidencia_pruebas_url",
 
             "conformidad_usuario",
 
@@ -429,18 +457,34 @@ class TicketSerializer(
 
             "diagnostico",
 
+            "observaciones_diagnostico",
+
+            "evidencia_diagnostico",
+
             "plan_solucion",
 
             "solucion",
+
+            "acciones_realizadas",
+
+            "componentes_utilizados",
+
+            "evidencia_intervencion",
 
 
             # Compra
 
             "requiere_compra",
 
+            "cantidad_componente",
+
             "componente_requerido",
 
             "especificaciones_tecnicas",
+
+            "justificacion_compra",
+
+            "proveedor_cotizacion",
 
             "costo_estimado",
 
@@ -458,6 +502,8 @@ class TicketSerializer(
             # Resultados
 
             "resultado_pruebas",
+
+            "evidencia_pruebas",
 
             "conformidad_usuario",
 
@@ -567,6 +613,25 @@ class TicketSerializer(
     # ======================================================
     # URL DE LA COTIZACIÓN DEL COMPONENTE
     # ======================================================
+
+    def _archivo_url(self, archivo):
+        if not archivo:
+            return None
+        try:
+            url = archivo.url
+        except ValueError:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request else url
+
+    def get_evidencia_diagnostico_url(self, obj):
+        return self._archivo_url(obj.evidencia_diagnostico)
+
+    def get_evidencia_intervencion_url(self, obj):
+        return self._archivo_url(obj.evidencia_intervencion)
+
+    def get_evidencia_pruebas_url(self, obj):
+        return self._archivo_url(obj.evidencia_pruebas)
 
     def get_cotizacion_archivo_url(
         self,

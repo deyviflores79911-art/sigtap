@@ -90,6 +90,15 @@
 
       </router-link>
 
+      <router-link
+        :to="{ path: '/usuario/mis-solicitudes', query: { vista: 'verificaciones' } }"
+        class="menu-item"
+      >
+        <IconoSigta class="icon" nombre="verificacion" />
+        <span class="menu-label">Verificaciones pendientes</span>
+        <strong v-if="verificacionesPendientes" class="menu-count">{{ verificacionesPendientes }}</strong>
+      </router-link>
+
 
       <!-- PERFIL -->
 
@@ -138,6 +147,7 @@
 import IconoSigta from './IconoSigta.vue'
 
 import {
+  onMounted,
   ref
 } from 'vue'
 
@@ -156,6 +166,26 @@ const router =
 
 const menuAbierto =
   ref(false)
+
+const verificacionesPendientes = ref(0)
+
+onMounted(async () => {
+  const token = localStorage.getItem('sigta_token')
+  if (!token) return
+  try {
+    const respuesta = await fetch('/api/soporte/tickets/', {
+      headers: { Authorization: `Token ${token}`, Accept: 'application/json' },
+    })
+    if (!respuesta.ok) return
+    const datos = await respuesta.json()
+    const tickets = Array.isArray(datos) ? datos : (datos.results || [])
+    verificacionesPendientes.value = tickets.filter(
+      ticket => ticket.estado_codigo === 'PENDIENTE_CONFORMIDAD'
+    ).length
+  } catch (error) {
+    console.error('No se pudo cargar el contador de verificaciones:', error)
+  }
+})
 
 
 // ==========================================================
@@ -460,6 +490,20 @@ nav {
   font-size: 20px;
 
   line-height: 1;
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.menu-count {
+  min-width: 25px;
+  padding: 3px 7px;
+  border-radius: 12px;
+  background: var(--sigta-mostaza);
+  color: var(--sigta-azul);
+  font-size: 12px;
+  text-align: center;
 }
 
 

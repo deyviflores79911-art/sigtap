@@ -1,390 +1,84 @@
 <template>
   <div class="layout sigta-role-layout">
-    <aside :class="{ abierto: menuAbierto }">
-      <div class="brand-row">
-        <div class="brand"><b><img src="/img/emi.jpg" alt="EMI"></b><div><strong>SIGTA</strong><small>Soporte Técnico</small></div></div>
-        <button type="button" class="menu-toggle" :aria-expanded="menuAbierto" aria-label="Mostrar opciones del menú" @click="menuAbierto = !menuAbierto"><span></span><span></span><span></span></button>
-      </div>
+    <aside :class="{abierto:menuAbierto}">
+      <div class="brand"><b><img src="/img/emi.jpg" alt="EMI"></b><div><strong>SIGTA</strong><small>Soporte Técnico</small></div><button class="toggle" @click="menuAbierto=!menuAbierto">☰</button></div>
       <div class="profile"><i>{{ iniciales }}</i><div><b>{{ nombre }}</b><small>Jefe de UTIC</small></div></div>
       <p>GESTIÓN DE TICKETS</p>
-      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id; menuAbierto=false"><span>{{ m.icono }}</span>{{ m.nombre }}<em v-if="m.total!==undefined">{{ m.total }}</em></button>
-      <div class="bottom"><button @click="salir"><span>↪</span>Cerrar sesión</button></div>
+      <button v-for="m in menu" :key="m.id" :class="{active:vista===m.id}" @click="vista=m.id;menuAbierto=false"><span>{{m.icono}}</span>{{m.nombre}}<em v-if="m.total!==undefined">{{m.total}}</em></button>
+      <div class="bottom"><button @click="salir">↪ Cerrar sesión</button></div>
     </aside>
-
     <main>
-      <header>
-        <div><small>SIGTA / SOPORTE / {{ titulo }}</small><h1>{{ titulo }}</h1><p>Recepción, clasificación y asignación de tickets de Soporte Técnico.</p></div>
-        <button class="refresh" @click="cargar">↻ Actualizar</button>
-      </header>
+      <header><div><small>SIGTA / JEFE UTIC / {{titulo}}</small><h1>{{titulo}}</h1><p>{{subtitulo}}</p></div><button class="refresh" @click="cargar">↻ Actualizar</button></header>
 
-      <section v-if="vista==='resumen'">
-        <div class="hero">
-          <div><small>LÍDER DE TI</small><h2>{{ saludo }}, {{ primerNombre }}</h2><p>Tickets que requieren su gestión hoy.</p></div>
-          <span>UTIC</span>
-        </div>
-        <div class="stats">
-          <article @click="vista='validacion'"><i class="blue">VA</i><div><small>Por validar</small><b>{{ porValidar.length }}</b><p>tickets nuevos</p></div></article>
-          <article @click="vista='clasificacion'"><i class="gold">CL</i><div><small>Por clasificar</small><b>{{ porClasificar.length }}</b><p>prioridad / SLA</p></div></article>
-          <article @click="vista='asignacion'"><i class="green">AS</i><div><small>Por asignar</small><b>{{ porAsignar.length }}</b><p>especialista</p></div></article>
-          <article @click="vista='compra'"><i class="navy">CO</i><div><small>Compras por validar</small><b>{{ pendientesViabilidad.length }}</b><p>elevar a DAF</p></div></article>
-        </div>
-        <div class="panels">
-          <section class="panel">
-            <div class="panel-head"><div><small>FLUJO BPMN</small><h3>Proceso de soporte técnico</h3></div></div>
-            <button class="flow" @click="vista='validacion'"><i class="blue">1</i><div><b>Recibir y validar ticket</b><small>Confirmar que el ticket es válido o devolverlo al solicitante</small></div><strong>›</strong></button>
-            <button class="flow" @click="vista='clasificacion'"><i class="gold">2</i><div><b>Clasificar prioridad y SLA</b><small>Definir prioridad y calcular el tiempo de atención</small></div><strong>›</strong></button>
-            <button class="flow" @click="vista='asignacion'"><i class="green">3</i><div><b>Asignar especialista responsable</b><small>Designar al técnico que atenderá el ticket</small></div><strong>›</strong></button>
-            <button class="flow" @click="vista='compra'"><i class="navy">4</i><div><b>Validar y elevar compra</b><small>Revisar el requerimiento del técnico y elevarlo a DAF</small></div><strong>›</strong></button>
-            <button class="flow" @click="vista='verificacion'"><i class="blue">5</i><div><b>Verificar funcionamiento</b><small>Confirmar que la solución resolvió el problema</small></div><strong>›</strong></button>
-            <button class="flow" @click="vista='informe'"><i class="gold">6</i><div><b>Elaborar y elevar informe final</b><small>Cerrar el expediente y elevarlo a la Dirección</small></div><strong>›</strong></button>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><div><small>IDENTIDAD</small><h3>Delegación de aprobación</h3></div></div>
-            <p class="copy">Si va a estar ausente, delegue temporalmente su rol de Jefe de UTIC a otro usuario habilitado.</p>
-            <button class="wide primary" @click="vista='delegar'">Gestionar delegaciones →</button>
-          </section>
-        </div>
+      <section v-if="vista==='dashboard'">
+        <div class="hero"><div><small>GESTIÓN OPERATIVA</small><h2>{{saludo}}, {{primerNombre}}</h2><p>Resumen de tickets que requieren seguimiento de la Jefatura UTIC.</p></div><b>UTIC</b></div>
+        <div class="stats"><article v-for="c in definicionColumnas" :key="c.id" @click="vista='tickets'"><i>{{c.sigla}}</i><div><small>{{c.nombre}}</small><b>{{columnas[c.id].length}}</b><p>{{c.ayuda}}</p></div></article></div>
+        <section class="panel"><div class="panel-head"><div><small>PENDIENTES PRIORITARIOS</small><h3>Tickets que requieren gestión</h3></div><button class="link" @click="vista='tickets'">Ver todos →</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Ticket</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Especialista</th><th>Acción</th></tr></thead><tbody><tr v-for="t in pendientesDashboard" :key="t.id"><td><b>{{t.codigo}}</b></td><td>{{t.titulo}}</td><td><span :class="['badge',(t.prioridad||'sin').toLowerCase()]">{{prioridadTexto(t.prioridad)}}</span></td><td>{{t.estado_nombre}}</td><td>{{t.tecnico_nombre||'Sin asignar'}}</td><td><button class="link" @click="verTicket(t)">Ver detalle</button></td></tr><tr v-if="!pendientesDashboard.length"><td colspan="6" class="empty">No existen tickets pendientes.</td></tr></tbody></table></div>
+        </section>
       </section>
 
-      <section v-else-if="vista==='validacion'">
-        <div class="instruction"><b>¿Es válido el ticket?</b><span>Reciba y valide, o devuelva el ticket al solicitante indicando el motivo.</span></div>
-        <div class="toolbar"><label>⌕ <input v-model="busqueda" placeholder="Buscar ticket o unidad"></label></div>
+      <section v-else-if="vista==='tickets'">
+        <div class="toolbar"><label>⌕ <input v-model="busqueda" placeholder="Buscar por ID, asunto o solicitante"></label><span>{{ticketsKanban.length}} ticket(s)</span></div>
         <div v-if="cargando" class="empty">Consultando tickets…</div>
-        <div v-else-if="filtrar(porValidar).length" class="cards">
-          <article v-for="t in filtrar(porValidar)" :key="t.id">
-            <div class="top"><span>{{ t.codigo }}</span><em>{{ t.estado_codigo }}</em></div>
-            <h3>{{ t.titulo }}</h3>
-            <p>{{ (t.descripcion||'').slice(0,130) }}</p>
-            <div class="actions">
-              <button @click="verTicket(t)">Ver detalle</button>
-              <button class="reject" @click="rechazarTicket(t)">Rechazar</button>
-              <button class="primary" @click="validarTicket(t)">Validar</button>
-            </div>
-          </article>
-        </div>
-        <div v-else class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay tickets pendientes de validación.</p></div>
+        <div v-else class="kanban"><section v-for="c in definicionColumnas" :key="c.id" class="column"><div class="column-head"><b><i :class="c.id"></i>{{c.nombre}}</b><em>{{columnas[c.id].length}}</em></div><article v-for="t in columnas[c.id]" :key="t.id" class="ticket-card"><div class="card-top"><b>{{t.codigo}}</b><span :class="['badge',(t.prioridad||'sin').toLowerCase()]">{{prioridadTexto(t.prioridad)}}</span></div><h3>{{t.titulo}}</h3><dl><div><dt>Solicitante</dt><dd>{{t.solicitante_nombre}}</dd></div><div><dt>Ubicación</dt><dd>{{t.ubicacion||t.area_nombre||'Sin especificar'}}</dd></div><div><dt>Especialista</dt><dd>{{t.tecnico_nombre||'Sin asignar'}}</dd></div><div><dt>SLA</dt><dd>{{slaTexto(t)}}</dd></div><div><dt>Estado</dt><dd>{{t.estado_nombre}}</dd></div></dl><button class="detail" @click="verTicket(t)">Ver detalle</button></article><div v-if="!columnas[c.id].length" class="empty small">Sin tickets</div></section></div>
       </section>
 
-      <section v-else-if="vista==='clasificacion'">
-        <div class="instruction"><b>Clasificar prioridad y SLA</b><span>Defina la prioridad y registre el criterio técnico de clasificación.</span></div>
-        <div v-if="!ticketActivo" class="cards">
-          <article v-for="t in porClasificar" :key="t.id">
-            <div class="top"><span>{{ t.codigo }}</span><em>{{ t.estado_codigo }}</em></div>
-            <h3>{{ t.titulo }}</h3>
-            <div class="actions"><button class="primary" @click="ticketActivo=t;formClasificacion.prioridad='';formClasificacion.criterio_tecnico=''">Clasificar</button></div>
-          </article>
-          <div v-if="!porClasificar.length" class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay tickets pendientes de clasificación.</p></div>
-        </div>
-        <div v-else class="panel">
-          <h3>{{ ticketActivo.codigo }} — {{ ticketActivo.titulo }}</h3>
-          <label class="campo">Prioridad
-            <select v-model="formClasificacion.prioridad">
-              <option value="">Seleccione…</option>
-              <option value="BAJA">Baja (48 h)</option>
-              <option value="MEDIA">Media (24 h)</option>
-              <option value="ALTA">Alta (8 h)</option>
-              <option value="CRITICA">Crítica (4 h)</option>
-            </select>
-          </label>
-          <label class="campo">Criterio técnico
-            <textarea v-model="formClasificacion.criterio_tecnico" rows="3" placeholder="Justifique la prioridad asignada"></textarea>
-          </label>
-          <div class="actions">
-            <button @click="ticketActivo=null">Cancelar</button>
-            <button class="primary" :disabled="procesando||!formClasificacion.prioridad||!formClasificacion.criterio_tecnico.trim()" @click="clasificarTicket">Guardar clasificación</button>
-          </div>
-        </div>
-      </section>
-
-      <section v-else-if="vista==='asignacion'">
-        <div class="instruction"><b>Asignar especialista responsable</b><span>Seleccione al Especialista que atenderá el ticket.</span></div>
-        <div v-if="!ticketActivo" class="cards">
-          <article v-for="t in porAsignar" :key="t.id">
-            <div class="top"><span>{{ t.codigo }}</span><em>{{ t.prioridad }}</em></div>
-            <h3>{{ t.titulo }}</h3>
-            <div class="actions"><button class="primary" @click="ticketActivo=t;formAsignacion.tecnico_id=''">Asignar</button></div>
-          </article>
-          <div v-if="!porAsignar.length" class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay tickets pendientes de asignación.</p></div>
-        </div>
-        <div v-else class="panel">
-          <h3>{{ ticketActivo.codigo }} — {{ ticketActivo.titulo }}</h3>
-          <label class="campo">Especialista responsable
-            <select v-model="formAsignacion.tecnico_id">
-              <option value="">Seleccione…</option>
-              <option v-for="e in especialistas" :key="e.id" :value="e.id">{{ e.nombre_completo || e.email }}</option>
-            </select>
-          </label>
-          <small v-if="!especialistas.length">No hay especialistas activos disponibles.</small>
-          <div class="actions">
-            <button @click="ticketActivo=null">Cancelar</button>
-            <button class="primary" :disabled="procesando||!formAsignacion.tecnico_id" @click="designarRevision">Designar especialista</button>
-          </div>
-        </div>
-      </section>
-
-      <section v-else-if="vista==='compra'">
-        <div class="instruction"><b>Evaluar viabilidad de compra</b><span>El especialista ya solicitó el componente con su cotización. Confirme si es viable antes de generar el expediente de Compra Caja Chica.</span></div>
-        <div v-if="!ticketActivo" class="cards">
-          <article v-for="t in pendientesViabilidad" :key="t.id">
-            <div class="top"><span>{{ t.codigo }}</span><em>{{ t.estado_codigo }}</em></div>
-            <h3>{{ t.titulo }}</h3>
-            <p>{{ t.componente_requerido }} — Bs. {{ t.costo_estimado || 's/d' }}</p>
-            <div class="actions"><button class="primary" @click="ticketActivo=t;formCompra.viable=true;formCompra.motivo_no_viable=''">Evaluar</button></div>
-          </article>
-          <div v-if="!pendientesViabilidad.length" class="empty"><span>✓</span><h3>Sin pendientes</h3><p>Ningún requerimiento de componente esperando evaluación.</p></div>
-        </div>
-        <div v-else class="panel">
-          <h3>{{ ticketActivo.codigo }} — {{ ticketActivo.titulo }}</h3>
-          <p class="copy"><b>Componente:</b> {{ ticketActivo.componente_requerido }}<br><b>Especificaciones:</b> {{ ticketActivo.especificaciones_tecnicas || 's/d' }}<br><b>Costo estimado:</b> Bs. {{ ticketActivo.costo_estimado || 's/d' }}</p>
-          <label class="campo">¿Es viable la compra?
-            <select v-model="formCompra.viable">
-              <option :value="true">Sí, es viable</option>
-              <option :value="false">No es viable</option>
-            </select>
-          </label>
-          <label v-if="formCompra.viable===false" class="campo">Motivo de no viabilidad<textarea v-model="formCompra.motivo_no_viable" rows="2"></textarea></label>
-          <div class="actions">
-            <button @click="ticketActivo=null">Cancelar</button>
-            <button class="primary" :disabled="procesando||(formCompra.viable===false&&!formCompra.motivo_no_viable.trim())" @click="evaluarViabilidad">{{ formCompra.viable===false ? 'Cerrar sin compra' : 'Generar expediente de compra' }}</button>
-          </div>
-        </div>
-      </section>
-
-      <section v-else-if="vista==='verificacion'">
-        <div class="instruction"><b>Verificar funcionamiento</b><span>Confirme si el equipo o servicio quedó operativo tras la intervención del técnico.</span></div>
-        <div v-if="cargando" class="empty">Consultando tickets…</div>
-        <div v-else-if="porVerificar.length" class="cards">
-          <article v-for="t in porVerificar" :key="t.id">
-            <div class="top"><span>{{ t.codigo }}</span><em>{{ t.estado_codigo }}</em></div>
-            <h3>{{ t.titulo }}</h3>
-            <p>{{ (t.resultado_pruebas||'').slice(0,130) }}</p>
-            <div class="actions">
-              <button @click="verTicket(t)">Ver detalle</button>
-              <button class="reject" @click="verificarFuncionamiento(t,false)">No resuelto</button>
-              <button class="primary" @click="verificarFuncionamiento(t,true)">Problema resuelto</button>
-            </div>
-          </article>
-        </div>
-        <div v-else class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay tickets pendientes de verificación.</p></div>
-      </section>
-
-      <section v-else-if="vista==='informe'">
-        <div class="instruction"><b>Elaborar y validar informe final</b><span>Al guardarlo, el informe se eleva automáticamente a la Dirección para su conocimiento.</span></div>
-        <div v-if="!ticketActivo" class="cards">
-          <article v-for="t in cerradosSinInforme" :key="t.id">
-            <div class="top"><span>{{ t.codigo }}</span><em>CERRADO</em></div>
-            <h3>{{ t.titulo }}</h3>
-            <div class="actions"><button class="primary" @click="ticketActivo=t;formInforme.informe_final=''">Elaborar informe</button></div>
-          </article>
-          <div v-if="!cerradosSinInforme.length" class="empty"><span>✓</span><h3>Sin pendientes</h3><p>No hay tickets cerrados esperando informe final.</p></div>
-        </div>
-        <div v-else class="panel">
-          <h3>{{ ticketActivo.codigo }} — {{ ticketActivo.titulo }}</h3>
-          <label class="campo">Informe final<textarea v-model="formInforme.informe_final" rows="5" placeholder="Resumen técnico del caso, causa raíz y solución aplicada"></textarea></label>
-          <div class="actions">
-            <button @click="ticketActivo=null">Cancelar</button>
-            <button class="primary" :disabled="procesando||!formInforme.informe_final.trim()" @click="elaborarInformeFinal">Guardar informe final</button>
-          </div>
-        </div>
-      </section>
-
-      <section v-else-if="vista==='delegar'">
-        <DelegacionesPanel rol-codigo="JEFE_UTIC" rol-nombre="Jefe de UTIC" />
+      <section v-else-if="vista==='historial'">
+        <div class="filters"><label>Buscar<input v-model="filtros.texto" placeholder="ID o asunto"></label><label>Estado<select v-model="filtros.estado"><option value="">Todos</option><option v-for="e in estados" :key="e">{{e}}</option></select></label><label>Prioridad<select v-model="filtros.prioridad"><option value="">Todas</option><option value="BAJA">Baja</option><option value="MEDIA">Media</option><option value="ALTA">Alta</option><option value="CRITICA">Crítica</option></select></label><label>Especialista<select v-model="filtros.especialista"><option value="">Todos</option><option value="sin">Sin asignar</option><option v-for="e in especialistas" :key="e.id" :value="String(e.id)">{{e.nombre_completo||e.email}}</option></select></label><label>Desde<input v-model="filtros.desde" type="date"></label><label>Hasta<input v-model="filtros.hasta" type="date"></label></div>
+        <section class="panel"><div class="table-wrap"><table class="history"><thead><tr><th>ID</th><th>Asunto</th><th>Solicitante</th><th>Prioridad</th><th>Especialista</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody><tr v-for="t in historial" :key="t.id"><td><b>{{t.codigo}}</b></td><td>{{t.titulo}}</td><td>{{t.solicitante_nombre}}</td><td>{{prioridadTexto(t.prioridad)}}</td><td>{{t.tecnico_nombre||'Sin asignar'}}</td><td>{{t.estado_nombre}}</td><td>{{fecha(t.creado_en)}}</td><td><button class="link" @click="verTicket(t)">Ver detalle</button></td></tr><tr v-if="!historial.length"><td colspan="8" class="empty">No hay resultados.</td></tr></tbody></table></div></section>
       </section>
     </main>
 
-    <div v-if="ticketDetalle" class="detalle-modal-backdrop" @click.self="ticketDetalle=null">
-      <div class="detalle-modal">
-        <div class="detalle-modal-header">
-          <div><h3>{{ ticketDetalle.codigo }}</h3><small>{{ ticketDetalle.titulo }}</small></div>
-          <button class="detalle-modal-close" @click="ticketDetalle=null">✕</button>
-        </div>
-        <div class="detalle-modal-body">
-          <div class="detalle-fila">
-            <div class="detalle-campo"><b>Estado</b><span>{{ ticketDetalle.estado_nombre }}</span></div>
-            <div class="detalle-campo"><b>Prioridad</b><span>{{ ticketDetalle.prioridad || 's/d' }}</span></div>
-          </div>
-          <div class="detalle-fila">
-            <div class="detalle-campo"><b>Solicitante</b><span>{{ ticketDetalle.solicitante_nombre }}</span></div>
-            <div class="detalle-campo"><b>Especialista asignado</b><span>{{ ticketDetalle.tecnico_nombre || 's/d' }}</span></div>
-          </div>
-          <div class="detalle-campo"><b>Descripción</b><p>{{ ticketDetalle.descripcion || 's/d' }}</p></div>
-          <div class="detalle-fila">
-            <div class="detalle-campo"><b>Ubicación</b><span>{{ ticketDetalle.ubicacion || 's/d' }}<template v-if="ticketDetalle.referencia_ubicacion"><br><small>{{ ticketDetalle.referencia_ubicacion }}</small></template></span></div>
-            <div class="detalle-campo"><b>Equipo afectado</b><span>{{ ticketDetalle.equipo_afectado || 's/d' }}</span></div>
-          </div>
-          <div class="detalle-campo" v-if="ticketDetalle.criterio_tecnico"><b>Criterio de validación</b><p>{{ ticketDetalle.criterio_tecnico }}</p></div>
-          <div class="detalle-campo" v-if="ticketDetalle.diagnostico"><b>Diagnóstico</b><p>{{ ticketDetalle.diagnostico }}</p></div>
-          <div class="detalle-campo" v-if="ticketDetalle.plan_solucion"><b>Plan de solución</b><p>{{ ticketDetalle.plan_solucion }}</p></div>
-          <div class="detalle-campo" v-if="ticketDetalle.componente_requerido"><b>Componente requerido</b><p>{{ ticketDetalle.componente_requerido }} — {{ ticketDetalle.especificaciones_tecnicas || 'sin especificaciones' }} — Bs. {{ ticketDetalle.costo_estimado || 's/d' }}</p></div>
-          <div class="detalle-campo" v-if="ticketDetalle.codigo_compra_vinculada"><b>Expediente de compra</b><span>{{ ticketDetalle.codigo_compra_vinculada }}</span></div>
-          <div class="detalle-campo" v-if="ticketDetalle.solucion"><b>Intervención realizada</b><p>{{ ticketDetalle.solucion }}</p></div>
-          <div class="detalle-campo" v-if="ticketDetalle.resultado_pruebas"><b>Resultado de pruebas técnicas</b><p>{{ ticketDetalle.resultado_pruebas }}</p></div>
-          <div class="detalle-campo" v-if="ticketDetalle.observaciones_usuario"><b>Observaciones del solicitante</b><p>{{ ticketDetalle.observaciones_usuario }}</p></div>
-          <div class="detalle-campo" v-if="ticketDetalle.informe_final"><b>Informe final</b><p>{{ ticketDetalle.informe_final }}</p></div>
-          <div class="detalle-campo" v-if="ticketDetalle.evidencia_archivo_url"><b>Evidencia adjunta</b><a :href="ticketDetalle.evidencia_archivo_url" target="_blank">Abrir archivo →</a></div>
-        </div>
-      </div>
-    </div>
+    <div v-if="ticket" class="backdrop" @click.self="cerrar"><section class="modal">
+      <header class="modal-head"><button class="back" @click="cerrar">← Volver</button><div><small>EXPEDIENTE {{ticket.codigo}}</small><h2>{{ticket.titulo}}</h2></div><button aria-label="Cerrar" @click="cerrar">×</button></header>
+      <div class="modal-body"><div class="summary"><span><small>Estado</small><b>{{ticket.estado_nombre}}</b></span><span><small>Prioridad</small><b>{{prioridadTexto(ticket.prioridad)}}</b></span><span><small>SLA</small><b>{{slaTexto(ticket)}}</b></span><span><small>Especialista</small><b>{{ticket.tecnico_nombre||'Sin asignar'}}</b></span></div>
+        <div class="detail-grid"><section class="box"><h3>Información original del ticket</h3><dl class="info"><div><dt>Solicitante</dt><dd>{{ticket.solicitante_nombre}}</dd></div><div><dt>Correo</dt><dd>{{ticket.solicitante_email}}</dd></div><div><dt>Área</dt><dd>{{ticket.area_nombre||'Sin especificar'}}</dd></div><div><dt>Ubicación</dt><dd>{{ticket.ubicacion||'Sin especificar'}}</dd></div><div><dt>Referencia</dt><dd>{{ticket.referencia_ubicacion||'Sin referencia'}}</dd></div><div><dt>Equipo</dt><dd>{{ticket.equipo_afectado||'Sin especificar'}}</dd></div></dl><div class="description"><b>Descripción / requerimiento</b><p>{{ticket.descripcion||'Sin descripción'}}</p></div><div v-if="ticket.evidencia_archivo_url" class="evidence evidence-card"><b>Evidencia del solicitante</b><img v-if="esImagen(ticket.evidencia_archivo_url)" :src="ticket.evidencia_archivo_url" alt="Evidencia del solicitante"><small>{{nombreArchivo(ticket.evidencia_archivo_url)}}</small><button type="button" class="evidence-button" @click="visorEvidencia=ticket.evidencia_archivo_url">{{esImagen(ticket.evidencia_archivo_url)?'👁 Ver evidencia':'📄 Visualizar documento'}}</button></div></section>
+          <section class="box workflow"><h3>Flujo de gestión</h3><ol><li v-for="(nombrePaso,i) in pasos" :key="nombrePaso" :class="pasoClase(i+1)"><i>{{pasoClase(i+1)==='done'?'✓':i+1}}</i><div><b>{{nombrePaso}}</b><small>{{pasoEstado(i+1)}}</small></div></li></ol></section></div>
+
+        <section v-if="ticket.estado_codigo==='NUEVO'" class="action"><small>PASO 1</small><h3>Validación del ticket</h3><p>Verifique que la información permita iniciar la atención.</p><div class="checklist"><label v-for="x in checklistItems" :key="x"><input v-model="checklist" type="checkbox" :value="x">{{x}}</label></div><div class="actions"><button class="danger" @click="confirmar('rechazar')">Rechazar ticket</button><button class="primary" :disabled="checklist.length!==checklistItems.length" @click="confirmar('validar')">Validar ticket</button></div></section>
+        <section v-else-if="necesitaClasificar" class="action"><small>PASO 2</small><h3>Clasificar prioridad y SLA</h3><div class="priorities"><button v-for="p in prioridades" :key="p.codigo" :class="{selected:clasificacion.prioridad===p.codigo}" @click="clasificacion.prioridad=p.codigo"><b>{{p.nombre}}</b><span>{{p.horas}} horas</span></button></div><label class="field">Criterio técnico<textarea v-model="clasificacion.criterio" rows="3" placeholder="Justifique la prioridad"></textarea></label><div class="actions"><button class="primary" :disabled="procesando||!clasificacion.prioridad||!clasificacion.criterio.trim()" @click="clasificar">Guardar y continuar</button></div></section>
+        <section v-else-if="necesitaAsignar" class="action"><small>PASO 3</small><h3>Asignar especialista</h3><label class="field">Especialista activo de UTIC<select v-model="tecnicoId"><option value="">Seleccione…</option><option v-for="e in especialistas" :key="e.id" :value="e.id">{{e.nombre_completo||e.email}}</option></select></label><div class="actions"><button class="primary" :disabled="!tecnicoId" @click="confirmar('asignar')">Asignar especialista</button></div></section>
+        <section v-if="ticket.estado_compra_componente==='SOLICITADA'" class="action"><small>REQUERIMIENTO DE COMPRA RECIBIDO</small><h3>Validar viabilidad</h3><dl class="purchase"><div><dt>Técnico</dt><dd>{{ticket.tecnico_nombre}}</dd></div><div><dt>Diagnóstico</dt><dd>{{ticket.diagnostico}}</dd></div><div><dt>Componente / cantidad</dt><dd>{{ticket.componente_requerido}} · {{ticket.cantidad_componente}}</dd></div><div><dt>Características</dt><dd>{{ticket.especificaciones_tecnicas}}</dd></div><div><dt>Justificación</dt><dd>{{ticket.justificacion_compra}}</dd></div><div><dt>Precio estimado</dt><dd>Bs. {{ticket.costo_estimado||'Sin especificar'}}</dd></div></dl><a v-if="ticket.cotizacion_archivo_url" class="file-button" :href="ticket.cotizacion_archivo_url" target="_blank">Visualizar cotización</a><div class="actions"><button class="danger" @click="confirmar('noViable')">No viable</button><button class="primary" @click="confirmar('compra')">Aprobar y elevar a Compras</button></div></section>
+        <section v-if="ticket.estado_codigo==='EN_VERIFICACION'||ticket.estado_codigo==='PENDIENTE_CONFORMIDAD'" class="action"><small>VERIFICACIÓN DEL SOLICITANTE</small><h3>Pendiente de conformidad</h3><p>El especialista concluyó la atención. La confirmación de funcionamiento corresponde al usuario solicitante.</p></section>
+        <section v-if="ticket.informe_tecnico||['PENDIENTE_INFORME_FINAL','CERRADO'].includes(ticket.estado_codigo)" class="action"><small>CIERRE TÉCNICO</small><h3>Informe final</h3><div v-if="ticket.informe_tecnico" class="description"><b>Informe del especialista</b><p>{{ticket.informe_tecnico}}</p></div><div v-if="ticket.conformidad_usuario===true" class="description conformity-record"><b>Conformidad del solicitante</b><p><strong>Estado:</strong> Conforme<br><strong>Fecha:</strong> {{fecha(ticket.conformidad_en)}}<br><strong>Usuario:</strong> {{ticket.solicitante_nombre}}</p></div><div v-if="ticket.informe_final" class="description"><b>Informe final validado</b><p>{{ticket.informe_final}}</p></div><template v-else-if="ticket.estado_codigo==='PENDIENTE_INFORME_FINAL'"><label class="field">Informe final<textarea v-model="informe" rows="4"></textarea></label><div class="actions"><button class="primary" :disabled="!informe.trim()" @click="elevarInforme">Validar y elevar informe</button></div></template></section>
+      </div></section></div>
+
+    <div v-if="confirmacion" class="backdrop confirm-bg" @click.self="confirmacion=null"><section class="confirm"><i>!</i><h3>{{confirmTitle}}</h3><p>{{confirmText}}</p><label v-if="['rechazar','noViable'].includes(confirmacion)" class="field">Motivo obligatorio<textarea v-model="motivo" rows="3"></textarea></label><div v-if="confirmacion==='asignar'" class="selected-user"><b>Especialista</b><span>{{especialistaElegido?.nombre_completo||especialistaElegido?.email}}</span></div><div class="actions"><button @click="confirmacion=null">Cancelar</button><button class="primary" :disabled="procesando||(['rechazar','noViable'].includes(confirmacion)&&!motivo.trim())" @click="ejecutar">Confirmar</button></div></section></div>
+    <div v-if="mensaje" class="backdrop confirm-bg" @click.self="mensaje=null"><section class="confirm" :class="mensaje.tipo"><i>{{mensaje.tipo==='error'?'!':'✓'}}</i><h3>{{mensaje.titulo}}</h3><p>{{mensaje.texto}}</p><div class="actions"><button class="primary" @click="mensaje=null">Entendido</button></div></section></div>
+    <div v-if="visorEvidencia" class="backdrop evidence-viewer" @click.self="visorEvidencia=null"><section><header><button type="button" @click="visorEvidencia=null">← Volver al expediente</button><div><small>EVIDENCIA DEL TICKET</small><h3>{{ticket?.codigo}}</h3></div><button type="button" aria-label="Cerrar" @click="visorEvidencia=null">×</button></header><div class="viewer-body"><img v-if="esImagen(visorEvidencia)" :src="visorEvidencia" alt="Evidencia ampliada"><iframe v-else :src="visorEvidencia" title="Documento de evidencia"></iframe></div></section></div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import DelegacionesPanel from '../components/DelegacionesPanel.vue'
-
-const router = useRouter()
-const usuario = ref(JSON.parse(localStorage.getItem('sigta_usuario') || '{}'))
-const vista = ref('resumen')
-const menuAbierto = ref(false)
-const tickets = ref([])
-const especialistas = ref([])
-const cargando = ref(false)
-const procesando = ref(false)
-const busqueda = ref('')
-const ticketActivo = ref(null)
-
-const nombre = computed(() => usuario.value.nombre || usuario.value.nombre_completo || 'Jefe de UTIC')
-const primerNombre = computed(() => nombre.value.split(' ')[0])
-const iniciales = computed(() => nombre.value.split(' ').slice(0, 2).map(x => x[0]).join('').toUpperCase())
-const saludo = computed(() => new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 19 ? 'Buenas tardes' : 'Buenas noches')
-
-const porValidar = computed(() => tickets.value.filter(t => t.estado_codigo === 'NUEVO'))
-const porClasificar = computed(() => tickets.value.filter(t => t.estado_codigo === 'EN_ANALISIS' && !t.prioridad))
-const porAsignar = computed(() => tickets.value.filter(t => t.estado_codigo === 'EN_ANALISIS' && !!t.prioridad))
-const pendientesViabilidad = computed(() => tickets.value.filter(t => t.estado_compra_componente === 'SOLICITADA'))
-const porVerificar = computed(() => tickets.value.filter(t => t.estado_codigo === 'EN_VERIFICACION'))
-const cerradosSinInforme = computed(() => tickets.value.filter(t => t.estado_codigo === 'CERRADO' && !t.informe_final))
-
-const menu = computed(() => [
-  { id: 'resumen', icono: '⌂', nombre: 'Dashboard' },
-  { id: 'validacion', icono: 'VA', nombre: 'Validar tickets', total: porValidar.value.length },
-  { id: 'clasificacion', icono: 'CL', nombre: 'Clasificar prioridad', total: porClasificar.value.length },
-  { id: 'asignacion', icono: 'AS', nombre: 'Asignar especialista', total: porAsignar.value.length },
-  { id: 'compra', icono: 'CO', nombre: 'Validar y elevar compra', total: pendientesViabilidad.value.length },
-  { id: 'verificacion', icono: 'VF', nombre: 'Verificar funcionamiento', total: porVerificar.value.length },
-  { id: 'informe', icono: 'IF', nombre: 'Informe final', total: cerradosSinInforme.value.length },
-  { id: 'delegar', icono: 'DL', nombre: 'Delegar aprobación' },
-])
-
-const titulo = computed(() => ({
-  resumen: 'Dashboard del Jefe de UTIC',
-  validacion: 'Validar tickets',
-  clasificacion: 'Clasificar prioridad y SLA',
-  asignacion: 'Asignar especialista',
-  compra: 'Validar y elevar compra',
-  verificacion: 'Verificar funcionamiento',
-  informe: 'Elaborar y elevar informe final',
-  delegar: 'Delegar aprobación temporal',
-}[vista.value]))
-
-function filtrar(lista) {
-  if (!busqueda.value.trim()) return lista
-  return lista.filter(t => JSON.stringify(t).toLowerCase().includes(busqueda.value.toLowerCase()))
-}
-
-function headersJson() {
-  return { Authorization: `Token ${localStorage.getItem('sigta_token')}`, 'Content-Type': 'application/json' }
-}
-
-async function cargar() {
-  cargando.value = true
-  try {
-    const r = await fetch('/api/soporte/tickets/', { headers: { Authorization: `Token ${localStorage.getItem('sigta_token')}` } })
-    const d = await r.json()
-    tickets.value = Array.isArray(d) ? d : (d.results || [])
-    const re = await fetch('/api/usuarios/usuarios-por-rol/?rol=ESPECIALISTA', { headers: { Authorization: `Token ${localStorage.getItem('sigta_token')}` } })
-    especialistas.value = re.ok ? await re.json() : []
-  } finally {
-    cargando.value = false
-  }
-}
-
-function salir() {
-  localStorage.removeItem('sigta_token')
-  localStorage.removeItem('sigta_usuario')
-  router.push('/login')
-}
-
-async function postAccion(ticket, endpoint, body) {
-  procesando.value = true
-  try {
-    const r = await fetch(`/api/soporte/tickets/${ticket.id}/${endpoint}/`, { method: 'POST', headers: headersJson(), body: JSON.stringify(body || {}) })
-    const d = await r.json().catch(() => ({}))
-    if (!r.ok) throw new Error(d.detalle || Object.values(d)[0] || 'No fue posible completar la acción.')
-    await cargar()
-    ticketActivo.value = null
-    return d
-  } finally {
-    procesando.value = false
-  }
-}
-
-const ticketDetalle = ref(null)
-function verTicket(t) {
-  ticketDetalle.value = t
-}
-
-async function validarTicket(t) {
-  try {
-    await postAccion(t, 'validar-ticket', { es_valido: true })
-  } catch (e) { alert(e.message) }
-}
-
-async function rechazarTicket(t) {
-  const motivo = prompt('Indique el motivo del rechazo:')
-  if (!motivo?.trim()) return
-  try {
-    await postAccion(t, 'validar-ticket', { es_valido: false, motivo_rechazo: motivo.trim() })
-  } catch (e) { alert(e.message) }
-}
-
-const formClasificacion = reactive({ prioridad: '', criterio_tecnico: '' })
-async function clasificarTicket() {
-  try {
-    await postAccion(ticketActivo.value, 'clasificar-prioridad', { prioridad: formClasificacion.prioridad, criterio_tecnico: formClasificacion.criterio_tecnico.trim() })
-  } catch (e) { alert(e.message) }
-}
-
-const formAsignacion = reactive({ tecnico_id: '' })
-async function designarRevision() {
-  try {
-    await postAccion(ticketActivo.value, 'designar-revision', { tecnico_id: Number(formAsignacion.tecnico_id), especialistas_apoyo: [] })
-  } catch (e) { alert(e.message) }
-}
-
-const formCompra = reactive({ viable: true, motivo_no_viable: '' })
-async function evaluarViabilidad() {
-  try {
-    const d = await postAccion(ticketActivo.value, 'evaluar-viabilidad-compra', {
-      viable: formCompra.viable,
-      motivo_no_viable: formCompra.motivo_no_viable.trim(),
-    })
-    if (d) {
-      if (formCompra.viable) alert(`Expediente de compra ${d.ticket?.codigo_compra_vinculada || ''} generado y vinculado al ticket.`)
-      else alert('Compra marcada como no viable. El ticket se cerró sin compra.')
-    }
-  } catch (e) { alert(e.message) }
-}
-
-async function verificarFuncionamiento(t, funciona) {
-  try {
-    await postAccion(t, 'verificar-funcionamiento', { funciona_correctamente: funciona })
-  } catch (e) { alert(e.message) }
-}
-
-const formInforme = reactive({ informe_final: '' })
-async function elaborarInformeFinal() {
-  try {
-    await postAccion(ticketActivo.value, 'elaborar-informe-final', { informe_final: formInforme.informe_final.trim() })
-    alert('Informe final validado y elevado a la Dirección.')
-  } catch (e) { alert(e.message) }
-}
-
+import {computed,onMounted,reactive,ref} from 'vue'
+import {useRouter} from 'vue-router'
+const router=useRouter(), usuario=ref(JSON.parse(localStorage.getItem('sigta_usuario')||'{}')), vista=ref('dashboard'), menuAbierto=ref(false), tickets=ref([]), especialistas=ref([]), cargando=ref(false), procesando=ref(false), busqueda=ref(''), ticket=ref(null), confirmacion=ref(null), motivo=ref(''), checklist=ref([]), tecnicoId=ref(''), informe=ref(''), mensaje=ref(null), visorEvidencia=ref(null)
+const filtros=reactive({texto:'',estado:'',prioridad:'',especialista:'',desde:'',hasta:''}), clasificacion=reactive({prioridad:'',criterio:''})
+const checklistItems=['Datos del solicitante verificados','Ubicación y equipo identificados','Descripción suficiente para iniciar atención','Evidencia revisada cuando existe'], pasos=['Validación','Prioridad / SLA','Asignación','Diagnóstico','Compra','Reparación','Pruebas','Conformidad','Informe final'], prioridades=[{codigo:'BAJA',nombre:'Baja',horas:48},{codigo:'MEDIA',nombre:'Media',horas:24},{codigo:'ALTA',nombre:'Alta',horas:8},{codigo:'CRITICA',nombre:'Crítica',horas:4}], definicionColumnas=[{id:'validar',nombre:'Por validar',sigla:'PV',ayuda:'tickets nuevos'},{id:'gestionar',nombre:'Por gestionar',sigla:'PG',ayuda:'clasificación y asignación'},{id:'atencion',nombre:'En atención',sigla:'EA',ayuda:'seguimiento técnico'},{id:'cerrar',nombre:'Por cerrar',sigla:'PC',ayuda:'verificación e informe'}]
+const nombre=computed(()=>usuario.value.nombre||usuario.value.nombre_completo||'Jefe de UTIC'),primerNombre=computed(()=>nombre.value.split(' ')[0]),iniciales=computed(()=>nombre.value.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase()),saludo=computed(()=>new Date().getHours()<12?'Buenos días':new Date().getHours()<19?'Buenas tardes':'Buenas noches')
+const menu=computed(()=>[{id:'dashboard',icono:'⌂',nombre:'Dashboard'},{id:'tickets',icono:'TK',nombre:'Tickets de soporte',total:activos.value.length},{id:'historial',icono:'HI',nombre:'Historial'}]),titulo=computed(()=>({dashboard:'Dashboard del Jefe de UTIC',tickets:'Tickets de soporte',historial:'Historial de tickets'}[vista.value])),subtitulo=computed(()=>({dashboard:'Gestión y seguimiento centralizado de soporte técnico.',tickets:'Gestione el flujo completo desde una sola bandeja.',historial:'Consulta consolidada del ciclo de vida de los tickets.'}[vista.value]))
+function columnaTicket(t){if(t.estado_codigo==='NUEVO')return'validar';if(t.estado_codigo==='EN_ANALISIS'||t.estado_compra_componente==='SOLICITADA')return'gestionar';if(['EN_VERIFICACION','PENDIENTE_CONFORMIDAD','PENDIENTE_INFORME_FINAL','CERRADO'].includes(t.estado_codigo))return'cerrar';return'atencion'}
+const activos=computed(()=>tickets.value.filter(t=>!['RECHAZADO','CERRADO_SIN_COMPRA','FINALIZADO','ARCHIVADO'].includes(t.estado_codigo)&&!(t.estado_codigo==='CERRADO'&&t.informe_final))),ticketsKanban=computed(()=>{const q=busqueda.value.trim().toLowerCase();return q?activos.value.filter(t=>`${t.codigo} ${t.titulo} ${t.solicitante_nombre}`.toLowerCase().includes(q)):activos.value}),columnas=computed(()=>({validar:ticketsKanban.value.filter(t=>columnaTicket(t)==='validar'),gestionar:ticketsKanban.value.filter(t=>columnaTicket(t)==='gestionar'),atencion:ticketsKanban.value.filter(t=>columnaTicket(t)==='atencion'),cerrar:ticketsKanban.value.filter(t=>columnaTicket(t)==='cerrar')})),pendientesDashboard=computed(()=>[...columnas.value.validar,...columnas.value.gestionar,...columnas.value.cerrar].slice(0,7))
+const necesitaClasificar=computed(()=>ticket.value?.estado_codigo==='EN_ANALISIS'&&!ticket.value?.prioridad),necesitaAsignar=computed(()=>ticket.value?.estado_codigo==='EN_ANALISIS'&&!!ticket.value?.prioridad&&!ticket.value?.tecnico_asignado),estados=computed(()=>[...new Set(tickets.value.map(t=>t.estado_nombre).filter(Boolean))].sort()),especialistaElegido=computed(()=>especialistas.value.find(e=>String(e.id)===String(tecnicoId.value)))
+const historial=computed(()=>tickets.value.filter(t=>{const q=filtros.texto.trim().toLowerCase(),f=(t.creado_en||'').slice(0,10);return(!q||`${t.codigo} ${t.titulo}`.toLowerCase().includes(q))&&(!filtros.estado||t.estado_nombre===filtros.estado)&&(!filtros.prioridad||t.prioridad===filtros.prioridad)&&(!filtros.especialista||(filtros.especialista==='sin'?!t.tecnico_asignado:String(t.tecnico_asignado)===filtros.especialista))&&(!filtros.desde||f>=filtros.desde)&&(!filtros.hasta||f<=filtros.hasta)})),confirmTitle=computed(()=>({validar:'Validar ticket',rechazar:'Rechazar ticket',asignar:'Confirmar asignación',noViable:'Compra no viable',compra:'Elevar solicitud de compra'}[confirmacion.value])),confirmText=computed(()=>({validar:'¿Confirma que el ticket puede continuar a clasificación?',rechazar:'El ticket será devuelto al solicitante y quedará inactivo.',asignar:'El especialista seleccionado quedará como responsable.',noViable:'El ticket se cerrará sin compra.',compra:'Se generará y elevará el expediente de compra vinculado.'}[confirmacion.value]))
+async function cargar(){cargando.value=true;try{const h={Authorization:`Token ${localStorage.getItem('sigta_token')}`},[r,re]=await Promise.all([fetch('/api/soporte/tickets/',{headers:h}),fetch('/api/usuarios/usuarios-por-rol/?rol=ESPECIALISTA',{headers:h})]),d=await r.json();tickets.value=Array.isArray(d)?d:d.results||[];especialistas.value=re.ok?await re.json():[];if(ticket.value)ticket.value=tickets.value.find(t=>t.id===ticket.value.id)||null}finally{cargando.value=false}}
+function salir(){localStorage.removeItem('sigta_token');localStorage.removeItem('sigta_usuario');router.push('/login')} function verTicket(t){ticket.value=t;checklist.value=[];clasificacion.prioridad=t.prioridad||'';clasificacion.criterio=t.criterio_tecnico||'';tecnicoId.value=t.tecnico_asignado||'';informe.value=t.informe_final||''} function cerrar(){ticket.value=null;confirmacion.value=null} function confirmar(x){confirmacion.value=x;motivo.value=''}
+async function post(endpoint,body){procesando.value=true;try{const r=await fetch(`/api/soporte/tickets/${ticket.value.id}/${endpoint}/`,{method:'POST',headers:{Authorization:`Token ${localStorage.getItem('sigta_token')}`,'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.detalle||Object.values(d)[0]||'No fue posible completar la acción.');await cargar();return d}finally{procesando.value=false}}
+function notificar(titulo,texto,tipo='ok'){mensaje.value={titulo,texto,tipo}}
+async function ejecutar(){try{if(confirmacion.value==='validar')await post('validar-ticket',{es_valido:true});if(confirmacion.value==='rechazar')await post('validar-ticket',{es_valido:false,motivo_rechazo:motivo.value.trim()});if(confirmacion.value==='asignar')await post('designar-revision',{tecnico_id:Number(tecnicoId.value),especialistas_apoyo:[]});if(confirmacion.value==='noViable')await post('evaluar-viabilidad-compra',{viable:false,motivo_no_viable:motivo.value.trim()});if(confirmacion.value==='compra')await post('evaluar-viabilidad-compra',{viable:true,motivo_no_viable:''});confirmacion.value=null;notificar('Acción completada','El expediente fue actualizado correctamente.')}catch(e){notificar('No se pudo completar la acción',String(e.message),'error')}} async function clasificar(){try{await post('clasificar-prioridad',{prioridad:clasificacion.prioridad,criterio_tecnico:clasificacion.criterio.trim()});notificar('Prioridad guardada','El SLA fue calculado y el expediente avanzó a asignación.')}catch(e){notificar('No se pudo clasificar',String(e.message),'error')}} async function verificar(ok){try{await post('verificar-funcionamiento',{funciona_correctamente:ok});notificar('Verificación registrada','El estado del expediente fue actualizado.')}catch(e){notificar('No se pudo verificar',String(e.message),'error')}} async function elevarInforme(){try{await post('elaborar-informe-final',{informe_final:informe.value.trim()});notificar('Informe final enviado','El informe fue validado y elevado a la Dirección.')}catch(e){notificar('No se pudo enviar el informe',String(e.message),'error')}}
+function prioridadTexto(p){return({BAJA:'Baja',MEDIA:'Media',ALTA:'Alta',CRITICA:'Crítica'}[p]||'Sin clasificar')} function slaTexto(t){return t.sla_horas?`${t.sla_horas} h${t.sla_estado?' · '+t.sla_estado:''}`:'Sin asignar'} function fecha(f){return f?new Intl.DateTimeFormat('es-BO',{dateStyle:'short'}).format(new Date(f)):'—'} function esImagen(u){return /\.(png|jpe?g|gif|webp)(\?|$)/i.test(u||'')} function nombreArchivo(u){return decodeURIComponent((u||'').split('/').pop().split('?')[0])}
+function pasoClase(p){const t=ticket.value,hecho=[t.estado_codigo!=='NUEVO',!!t.prioridad,!!t.tecnico_asignado,!!t.diagnostico,!t.requiere_compra||['VIABLE','NO_VIABLE','ENTREGADA'].includes(t.estado_compra_componente),!!t.solucion,!!t.resultado_pruebas,t.conformidad_usuario!==null,!!t.informe_final];if(hecho[p-1])return'done';const primero=hecho.findIndex(x=>!x)+1;return p===primero?'active':''} function pasoEstado(p){return pasoClase(p)==='done'?'Completado':pasoClase(p)==='active'?'Etapa actual':'Aún no disponible'}
 onMounted(cargar)
 </script>
 
 <style scoped>
-*{box-sizing:border-box}.layout{min-height:100vh;background:var(--sigta-azul-tenue);color:var(--sigta-texto);font-family: var(--sigta-fuente)}aside{position:fixed;inset:0 auto 0 0;width:var(--sigta-sidebar);background:var(--sigta-azul);color:white;padding:22px 16px;display:flex;flex-direction:column}.brand,.profile{display:flex;align-items:center;gap:12px}.brand{padding:0 10px 20px;border-bottom:1px solid #ffffff20}.brand>b{background:var(--sigta-mostaza-clara);color:var(--sigta-azul);padding:14px 10px;border-radius:9px}.brand strong,.brand small,.profile b,.profile small{display:block}.brand strong{font-size:23px}.brand small,.profile small{color:var(--sigta-azul-texto-claro);margin-top:3px}.profile{padding:22px 10px}.profile>i{width:42px;height:42px;border-radius:50%;background:var(--sigta-mostaza-clara);color:var(--sigta-azul);display:grid;place-items:center;font-style:normal;font-weight:900}aside>p{font-size:10px;color:var(--sigta-texto-suave);font-weight:800;letter-spacing:1.4px;margin:14px 10px 8px}aside button{border:0;background:transparent;color:var(--sigta-azul-texto-claro);border-radius:8px;padding:12px;display:flex;gap:11px;align-items:center;text-align:left;cursor:pointer;margin:2px 0;width:100%}aside button>span{font-size:10px;font-weight:900;width:28px}aside button em{margin-left:auto;background:#ffffff1c;padding:2px 8px;border-radius:10px;font-style:normal}aside button.active,aside button:hover{background:#ffffff14;box-shadow:inset 3px 0 var(--sigta-mostaza-clara)}.bottom{margin-top:auto;border-top:1px solid #ffffff20;padding-top:10px}.bottom button{width:100%}main{margin-left:var(--sigta-sidebar);padding:30px 38px 55px;max-width:1650px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:27px}header small{color:var(--sigta-texto-suave)}h1{font-size:29px;margin:6px 0}header p{margin:0;color:var(--sigta-texto-suave)}.refresh{border:1px solid var(--sigta-azul-texto-claro);background:white;color:var(--sigta-texto-suave);padding:10px 14px;border-radius:8px}.hero{background:linear-gradient(120deg,var(--sigta-azul),var(--sigta-texto-suave));color:white;border-radius:13px;padding:28px 30px;display:flex;justify-content:space-between;align-items:center}.hero small,.panel-head small{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--sigta-mostaza-clara)}.hero h2{font-size:24px;margin:7px 0}.hero p{margin:0;color:var(--sigta-azul-texto-claro)}.hero>span{width:68px;height:68px;border:1px solid #edc65a88;border-radius:50%;display:grid;place-items:center;font-weight:900}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0}.stats article{background:white;border:1px solid var(--sigta-borde);border-radius:10px;padding:19px;display:flex;gap:13px}.stats i,.flow i{font-style:normal;width:37px;height:37px;border-radius:8px;display:grid;place-items:center;color:white;font-size:10px;font-weight:900}.blue{background:var(--sigta-azul)}.gold{background:var(--sigta-mostaza)}.green{background:var(--sigta-azul-medio)}.navy{background:var(--sigta-azul-medio)}.stats small,.stats b,.stats p{display:block}.stats b{font-size:25px;margin:3px 0}.stats p{font-size:11px;color:var(--sigta-texto-suave);margin:0}.panels{display:grid;grid-template-columns:2fr 1fr;gap:18px}.panel{background:white;border:1px solid var(--sigta-borde);border-radius:11px;padding:22px}.panel-head h3{margin:5px 0 14px}.flow{width:100%;border:0;border-top:1px solid var(--sigta-borde);background:white;padding:15px 2px;display:flex;gap:13px;align-items:center;text-align:left;cursor:pointer}.flow div{flex:1}.flow b,.flow small{display:block}.flow small{color:var(--sigta-texto-suave);margin-top:4px}.flow>strong{font-size:20px}.copy{color:var(--sigta-texto-suave);font-size:12px;line-height:1.7}.wide{width:100%;padding:10px;border-radius:7px}.toolbar{display:flex;justify-content:space-between;margin-bottom:17px}.toolbar label{width:350px;background:white;border:1px solid var(--sigta-azul-texto-claro);border-radius:8px;padding:9px 12px}.toolbar input{border:0;outline:0;margin-left:7px;width:88%}.primary{background:var(--sigta-azul)!important;color:white!important;border-color:var(--sigta-azul)!important}.instruction{background:var(--sigta-mostaza-suave);border-left:4px solid var(--sigta-mostaza);padding:14px 17px;margin-bottom:17px;border-radius:7px}.instruction b,.instruction span{display:block}.instruction span{font-size:12px;color:var(--sigta-texto-suave);margin-top:4px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.cards article{background:white;border:1px solid var(--sigta-borde);border-radius:10px;padding:19px}.top{display:flex;justify-content:space-between}.top span{font-size:12px;font-weight:800;color:var(--sigta-texto-suave)}.top em{font-size:10px;background:var(--sigta-azul-tenue);padding:4px 8px;border-radius:10px;font-style:normal}.cards h3{font-size:17px;margin:15px 0 7px}.cards article>p{font-size:12px;color:var(--sigta-texto-suave);min-height:42px}.actions{display:flex;gap:7px;border-top:1px solid var(--sigta-borde);padding-top:13px;margin-top:10px}.actions button{flex:1;padding:9px 6px;border-radius:7px;border:1px solid var(--sigta-borde);background:white;color:var(--sigta-texto-suave);font-weight:700;cursor:pointer}.reject{color:var(--sigta-error)!important;border-color:var(--sigta-error-fondo)!important}.empty{text-align:center;background:white;border:1px dashed var(--sigta-borde);padding:65px;border-radius:10px;color:var(--sigta-texto-suave)}.empty>span{font-size:31px;color:var(--sigta-exito)}.campo{display:block;margin:14px 0;font-size:12px;font-weight:700;color:var(--sigta-texto-suave)}.campo input,.campo select,.campo textarea{display:block;width:100%;margin-top:6px;padding:9px 11px;border:1px solid var(--sigta-azul-texto-claro);border-radius:7px;font-family:inherit;font-size:13px;font-weight:400;color:var(--sigta-texto)}@media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.panels{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}@media(max-width:720px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}.toolbar,header{align-items:flex-start;flex-direction:column;gap:12px}.toolbar label{width:100%}}
+*{box-sizing:border-box}.layout{min-height:100vh;background:#f3f7fc;color:#17324f;font-family:var(--sigta-fuente)}aside{position:fixed;inset:0 auto 0 0;width:var(--sigta-sidebar);background:var(--sigta-azul);color:#fff;padding:22px 16px;display:flex;flex-direction:column;z-index:20}.brand,.profile{display:flex;align-items:center;gap:12px}.brand{padding:0 8px 20px;border-bottom:1px solid #ffffff22}.brand>b{width:48px;height:48px;background:#fff;border-radius:10px;overflow:hidden}.brand img{width:100%;height:100%;object-fit:cover}.brand strong,.brand small,.profile b,.profile small{display:block}.brand strong{font-size:23px}.brand small,.profile small{color:#c7d8ea}.toggle{display:none;margin-left:auto!important}.profile{padding:22px 10px}.profile>i{width:42px;height:42px;border-radius:50%;background:var(--sigta-mostaza-clara);color:var(--sigta-azul);display:grid;place-items:center;font-style:normal;font-weight:900}aside>p{font-size:10px;color:#9db3cc;font-weight:800;letter-spacing:1.4px;margin:14px 10px 8px}aside button{border:0;background:transparent;color:#d7e4f2;border-radius:8px;padding:12px;display:flex;gap:11px;align-items:center;text-align:left;cursor:pointer;margin:2px 0;width:100%}aside button>span{font-size:11px;font-weight:900;width:28px}aside button em{margin-left:auto;background:#ffffff1c;padding:2px 8px;border-radius:10px;font-style:normal}aside button.active,aside button:hover{background:#ffffff16;box-shadow:inset 3px 0 var(--sigta-mostaza-clara);color:#fff}.bottom{margin-top:auto;border-top:1px solid #ffffff22;padding-top:10px}main{margin-left:var(--sigta-sidebar);padding:30px 38px 55px;max-width:1700px}header,.panel-head,.column-head,.card-top,.actions{display:flex;justify-content:space-between;align-items:center}header{margin-bottom:24px}header small{color:#64748b;font-size:11px;font-weight:700}h1{font-size:28px;margin:6px 0}header p{margin:0;color:#64748b}.refresh,.link{border:1px solid #cad7e6;background:#fff;color:var(--sigta-azul);padding:9px 13px;border-radius:8px;font-weight:700;cursor:pointer}.link{border:0;padding:6px}.hero{background:linear-gradient(120deg,var(--sigta-azul),#285786);color:#fff;border-radius:14px;padding:25px 30px;display:flex;justify-content:space-between;align-items:center}.hero small,.panel-head small,.action>small{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--sigta-mostaza-clara)}.hero h2{margin:6px 0}.hero p{margin:0;color:#cfdeed}.hero>b{width:64px;height:64px;border:1px solid #edc65a88;border-radius:50%;display:grid;place-items:center}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:17px 0}.stats article{background:#fff;border:1px solid #d9e3ef;border-top:3px solid var(--sigta-mostaza);border-radius:10px;padding:16px;display:flex;gap:12px;cursor:pointer}.stats i{width:38px;height:38px;border-radius:9px;background:#e9f1fa;color:var(--sigta-azul);display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:900}.stats small,.stats b,.stats p{display:block}.stats b{font-size:24px}.stats p{font-size:11px;color:#64748b;margin:0}.panel,.box,.action{background:#fff;border:1px solid #d9e3ef;border-radius:11px;padding:20px}.panel-head h3{margin:5px 0 12px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:#64748b;font-size:10px;text-transform:uppercase;padding:11px;border-bottom:1px solid #d9e3ef}td{padding:12px 11px;border-bottom:1px solid #edf1f6}.empty{text-align:center;color:#718096;padding:28px}.empty.small{padding:18px}.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;color:#64748b}.toolbar label{width:390px;background:#fff;border:1px solid #cad7e6;border-radius:8px;padding:10px}.toolbar input{border:0;outline:0;width:90%}.kanban{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:13px;align-items:start}.column{background:#eaf0f7;border:1px solid #d9e3ef;border-radius:11px;padding:11px;min-width:0}.column-head{padding:5px 3px 13px}.column-head b{display:flex;gap:8px;align-items:center}.column-head i{width:9px;height:9px;border-radius:50%;background:#789}.column-head i.validar{background:#d9a514}.column-head i.gestionar{background:#2563a6}.column-head i.atencion{background:#159071}.column-head i.cerrar{background:#744aa4}.column-head em{font-style:normal;background:#fff;border-radius:12px;padding:3px 8px}.ticket-card{background:#fff;border:1px solid #d5e0ec;border-radius:9px;padding:14px;margin-bottom:10px}.ticket-card h3{font-size:14px;margin:12px 0}.badge{font-size:9px;font-weight:800;border-radius:10px;padding:4px 7px;background:#eef2f6}.badge.critica{background:#fee2e2;color:#b42318}.badge.alta{background:#fff1da;color:#a15c00}.badge.media{background:#e0efff;color:#145b9f}.badge.baja{background:#dcf5e9;color:#087657}.ticket-card dl{margin:0}.ticket-card dl>div{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid #edf1f6;font-size:11px}.ticket-card dt{color:#718096}.ticket-card dd{margin:0;text-align:right;font-weight:600}.detail{width:100%;margin-top:12px;border:1px solid var(--sigta-azul);background:#fff;color:var(--sigta-azul);padding:8px;border-radius:7px;font-weight:800;cursor:pointer}.filters{display:grid;grid-template-columns:2fr repeat(5,1fr);gap:10px;margin-bottom:15px}.filters label,.field{font-size:11px;font-weight:700;color:#526a82}.filters input,.filters select,.field select,.field textarea{display:block;width:100%;margin-top:5px;padding:9px;border:1px solid #cbd8e6;border-radius:7px;background:#fff}.history{min-width:850px}.backdrop{position:fixed;inset:0;background:#0c2745aa;z-index:100;display:grid;place-items:center;padding:22px}.modal{width:min(1120px,96vw);max-height:94vh;background:#fff;border-radius:14px;overflow:hidden}.modal-head{margin:0;background:var(--sigta-azul);color:#fff;padding:20px 25px}.modal-head small{color:var(--sigta-mostaza-clara)}.modal-head h2{margin:5px 0;font-size:21px}.modal-head button{border:0;background:#ffffff18;color:#fff;width:36px;height:36px;border-radius:50%;font-size:24px}.modal-body{overflow:auto;max-height:calc(94vh - 80px);padding:22px}.summary{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #d9e3ef;border-radius:9px;margin-bottom:18px}.summary span{padding:13px 16px;border-right:1px solid #d9e3ef}.summary small,.summary b{display:block}.summary small{color:#718096;font-size:10px}.detail-grid{display:grid;grid-template-columns:1fr 270px;gap:18px}.box h3,.action h3{margin:0 0 13px}.info{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0}.info div,.purchase div,.selected-user{background:#f6f9fc;padding:10px;border-radius:7px}.info dt,.purchase dt{font-size:10px;color:#718096}.info dd,.purchase dd{margin:4px 0;font-size:12px;font-weight:600}.description{margin-top:14px}.description p{color:#526a82;line-height:1.5;white-space:pre-line}.evidence{display:grid;gap:8px;margin-top:14px}.evidence img{max-width:280px;max-height:170px;object-fit:cover;border-radius:8px}.workflow ol{list-style:none;padding:0}.workflow li{display:flex;gap:10px;padding-bottom:22px;color:#7a8da1}.workflow li>i{width:30px;height:30px;border-radius:50%;background:#e8eef5;display:grid;place-items:center;font-style:normal;font-weight:800}.workflow li b,.workflow li small{display:block}.workflow .done i{background:#d9f4e8;color:#087657}.workflow .active i{background:var(--sigta-mostaza);color:var(--sigta-azul)}.action{margin-top:18px;border-left:4px solid var(--sigta-mostaza);background:#fbfdff}.action>p{color:#64748b}.checklist{display:grid;gap:8px}.checklist label{border:1px solid #d9e3ef;padding:10px;border-radius:7px}.priorities{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:12px 0}.priorities button{border:1px solid #cad7e6;background:#fff;border-radius:8px;padding:11px}.priorities b,.priorities span{display:block}.priorities button.selected{border-color:var(--sigta-mostaza);background:#fff8df}.actions{justify-content:flex-end;gap:9px;margin-top:16px}.actions button{border:1px solid #cad7e6;background:#fff;padding:10px 15px;border-radius:7px;font-weight:800}.primary{background:var(--sigta-azul)!important;color:#fff!important}.danger{color:#b42318!important;border-color:#efb5b5!important}.purchase{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.confirm-bg{z-index:120}.confirm{width:min(470px,94vw);background:#fff;border-radius:13px;padding:25px;text-align:center}.confirm>i{width:44px;height:44px;border-radius:50%;background:#fff2c8;color:#9b7100;display:grid;place-items:center;margin:auto;font-style:normal;font-size:22px;font-weight:900}.confirm>p{color:#64748b}.confirm .field{text-align:left}.selected-user{display:flex;justify-content:space-between;margin-top:12px}
+@media(max-width:1150px){.kanban{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:repeat(3,1fr)}.detail-grid{grid-template-columns:1fr}}
+@media(max-width:760px){aside{position:static;width:100%}.toggle{display:block!important}.profile,aside>p,aside>button,.bottom{display:none}aside.abierto .profile,aside.abierto>p,aside.abierto>button,aside.abierto .bottom{display:flex}main{margin:0;padding:20px 14px}header{align-items:flex-start;flex-direction:column}.stats,.kanban,.filters,.info,.priorities,.purchase{grid-template-columns:1fr}.toolbar{align-items:flex-start;flex-direction:column}.toolbar label{width:100%}.summary{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr}.backdrop{padding:7px}.modal{width:100%;max-height:98vh}}
+</style>
+<style scoped>
+.evidence-card{background:#f7faff;border:1px solid #d6e1ed;border-radius:10px;padding:14px;align-items:flex-start}.evidence-card small{display:block;color:#64748b}.evidence-button{width:max-content;border:0;border-radius:7px;background:var(--sigta-azul);color:#fff;padding:10px 14px;font-weight:800;cursor:pointer;transition:background .18s,transform .18s}.evidence-button:hover{background:#174b7c;transform:translateY(-1px)}
+.evidence-viewer{z-index:140}.evidence-viewer>section{width:min(1000px,92vw);max-height:90vh;background:#fff;border-radius:14px;overflow:hidden}.evidence-viewer header{margin:0;padding:15px 18px;background:var(--sigta-azul);color:#fff}.evidence-viewer header button{border:1px solid #ffffff55;background:#ffffff12;color:#fff;border-radius:7px;padding:9px 12px;cursor:pointer}.evidence-viewer header h3{margin:3px 0}.viewer-body{height:min(74vh,760px);padding:18px;display:grid;place-items:center;background:#eef3f8}.viewer-body img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}.viewer-body iframe{width:100%;height:100%;border:0;background:#fff}
+@media(max-width:760px){.evidence-button{width:100%}.evidence-viewer>section{width:95vw;max-height:92vh}.evidence-viewer header{gap:8px;align-items:flex-start}.evidence-viewer header>div{display:none}.viewer-body{height:78vh;padding:8px}}
 </style>
