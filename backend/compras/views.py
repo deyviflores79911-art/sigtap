@@ -193,6 +193,13 @@ class SolicitudCompraViewSet(
         )
 
 
+        if self.action == "list" and self.request.query_params.get("bandeja") == "certificacion":
+            queryset = queryset.filter(estado="EVALUADO_PENDIENTE_CERTIFICACION")
+            for campo in ("informe", "proforma", "poa"):
+                queryset = queryset.exclude(**{campo: ""}).exclude(**{campo + "__isnull": True})
+            from django.db.models import Q
+            queryset = queryset.exclude(Q(origen_modulo__in=["SOPORTE", "MANTENIMIENTO"]) & (Q(pedido="") | Q(pedido__isnull=True)))
+
         # Actores del BPMN consultan la bandeja institucional. La DAF
         # recibe directamente la solicitud de compra (no existe una
         # jefatura que se la asigne previamente), así que ve la misma
@@ -485,6 +492,10 @@ class SolicitudCompraViewSet(
             solicitud.save()
             liberar_origen(solicitud, motivo, request)
             return Response(self.get_serializer(solicitud).data)
+        from .expediente import documentos_faltantes
+        faltantes = documentos_faltantes(solicitud)
+        if faltantes:
+            return Response({"detalle": "Complete el expediente antes de aprobar: " + ", ".join(faltantes) + "."}, status=400)
         return self._transicion(request, solicitud, "EVALUAR_EXPEDIENTE", ["CREADO_PENDIENTE_DAF"], "EVALUADO_PENDIENTE_CERTIFICACION", "EVALUAR_PRESUPUESTO", "La solicitud califica presupuestariamente.")
 
     @action(detail=True, methods=["post"], url_path="certificar-daf")
@@ -502,8 +513,10 @@ class SolicitudCompraViewSet(
         # BPMN: "verificar requisitos" es tarea de la DAF (informe, proforma
         # y POA). Antes lo comprobaba Tesorería en un paso posterior que el
         # proceso no contempla, así que el control se ejerce aquí.
-        if not all((solicitud.informe, solicitud.proforma, solicitud.poa)):
-            return Response({"detalle": "El expediente debe contener el informe, la proforma y el POA."}, status=400)
+        from .expediente import documentos_faltantes
+        faltantes = documentos_faltantes(solicitud)
+        if faltantes:
+            return Response({"detalle": "Documentos faltantes: " + ", ".join(faltantes) + "."}, status=400)
         solicitud.certificacion_presupuestaria = archivo
         solicitud.save(update_fields=["certificacion_presupuestaria", "actualizado_en"])
         # Emitida la certificación, el expediente queda disponible para la

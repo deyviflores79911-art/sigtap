@@ -410,7 +410,7 @@
               <div v-if="haLeidoTodo" class="acciones-botones eval-mode">
                 <button
                   class="btn-aprobar btn-eval-main"
-                  :disabled="procesando"
+                  :disabled="procesando || documentosExpediente.some(doc => !doc.url)"
                   @click="iniciarAprobacion"
                 >
                   APROBAR
@@ -693,6 +693,7 @@ const documentosExpediente =
       { label: 'Informe', url: c.informe },
       { label: 'POA', url: c.poa },
       { label: 'Proforma', url: c.proforma },
+      ...(['SOPORTE','MANTENIMIENTO'].includes(c.origen_modulo) ? [{ label: 'Proveído de jefatura', url: c.pedido }] : []),
     ]
   })
 

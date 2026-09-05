@@ -45,6 +45,8 @@
 
       <section v-else-if="vista==='curso'"><div class="work-filters"><label>Estado<select v-model="filtroCurso.estado"><option value="">Todos</option><option value="diagnostico">En diagnóstico</option><option value="reparacion">En reparación</option><option value="compra">En espera de compra</option><option value="pruebas">En pruebas</option><option value="retrabajo">Devuelta / retrabajo</option></select></label><label>Prioridad<select v-model="filtroCurso.prioridad"><option value="">Todas</option><option v-for="p in ['BAJA','MEDIA','ALTA','CRITICA']" :key="p">{{p}}</option></select></label><label>Buscar<input v-model="filtroCurso.texto" placeholder="Ticket o asunto"></label></div><div class="cards"><article v-for="t in trabajosFiltrados" :key="t.id"><div class="top"><span>{{t.codigo}}</span><em>{{etiquetaEstado(t)}}</em></div><h3>{{t.titulo}}</h3><ul class="datos"><li><b>Prioridad</b><span>{{t.prioridad}}</span></li><li><b>SLA</b><span>{{textoSla(t)}}</span></li><li v-if="t.estado_compra_componente"><b>Compra</b><span>{{t.estado_compra_componente}}</span></li><li v-if="Number(t.rework_count)"><b>Retrabajo</b><span>{{t.observaciones_usuario}}</span></li></ul><div class="actions"><button class="primary" @click="continuarOrden(t)">Continuar</button></div></article><div v-if="!trabajosFiltrados.length" class="empty"><span>✓</span><h3>No tienes trabajos pendientes</h3></div></div></section>
 
+      <section v-else-if="vista==='cotizaciones'"><div class="cards"><article v-for="t in porCotizar" :key="t.id"><div class="top"><span>{{t.codigo}}</span><em>{{t.estado_compra_componente || 'Pendiente'}}</em></div><h3>{{t.titulo}}</h3><p>{{t.diagnostico}}</p><div class="actions"><button class="primary" @click="continuarOrden(t)">Llenar informe y cotización</button></div></article><div v-if="!porCotizar.length" class="empty">No hay cotizaciones pendientes.</div></div></section>
+
       <section v-else-if="vista==='historial'" class="panel">
         <div class="toolbar-unified"><label>⌕ <input v-model="busquedaHistorial" placeholder="Buscar por ticket o asunto"></label></div>
         <div class="table-wrap"><table class="history-table"><thead><tr><th>Ticket</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody><tr v-for="t in historialFiltrado" :key="t.id"><td>{{t.codigo}}</td><td>{{t.titulo}}</td><td>{{t.prioridad||'s/d'}}</td><td>{{etiquetaEstado(t)}}</td><td>{{fecha(t.actualizado_en)}}</td><td><button class="refresh" @click="verTicket(t)">Ver orden</button></td></tr></tbody></table></div>
@@ -140,7 +142,11 @@
             <input v-model="formComponente.proveedor_cotizacion" placeholder="Opcional">
           </label>
           <label class="campo">Costo estimado (Bs.)
-            <input v-model="formComponente.costo_estimado" type="number" min="0" step="0.01">
+            <input v-monto inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" v-model="formComponente.costo_estimado" type="text" min="0" step="0.01">
+          </label>
+          <label class="campo">Informe técnico con cuadros (obligatorio)
+            <input type="file" accept=".pdf,.doc,.docx,image/*" @change="e => formComponente.informe = e.target.files?.[0] || null">
+            <a v-if="ordenAbierta?.informe_compra" :href="ordenAbierta.informe_compra" target="_blank">Ver informe guardado</a>
           </label>
           <label class="campo">Cotización / proforma
             <input type="file" accept="application/pdf,image/*" @change="onCotizacion">
@@ -148,7 +154,7 @@
           <div class="actions">
             <button @click="cerrarOrden">Cancelar</button>
             <button :disabled="procesando" @click="guardarBorrador">Guardar borrador</button>
-            <button class="primary" :disabled="procesando || !formComponente.componente_requerido.trim() || !formComponente.especificaciones_tecnicas.trim() || !formComponente.justificacion_compra.trim()" @click="enviarRequerimiento">Enviar requerimiento</button>
+            <button class="primary" :disabled="procesando || !formComponente.componente_requerido.trim() || !formComponente.especificaciones_tecnicas.trim() || !formComponente.justificacion_compra.trim() || !(formComponente.informe || ordenAbierta?.informe_compra) || !(formComponente.archivo || ordenAbierta?.cotizacion_archivo)" @click="enviarRequerimiento">Enviar requerimiento</button>
           </div>
         </template>
       </section>
@@ -178,7 +184,7 @@
       <!-- ============================================================
            D. REPARACIÓN, PRUEBAS E INFORME
       ============================================================= -->
-      <section v-else-if="vista==='trabajo'">
+      <section v-else-if="['trabajo','informes'].includes(vista)">
         <div class="instruction"><b>Reparación, pruebas e informe técnico</b><span>Documente la intervención, registre las pruebas y eleve el descargo a la jefatura.</span></div>
 
         <div v-if="!ticketActivo" class="cards">
@@ -236,7 +242,7 @@
               <textarea v-model="formPruebas.resultado_pruebas" rows="4" placeholder="Pruebas efectuadas y comportamiento del equipo"></textarea>
             </label>
             <fieldset class="compuerta"><legend>¿El equipo funciona técnicamente?</legend><label><input v-model="formPruebas.funciona_tecnicamente" type="radio" :value="true"> Sí</label><label><input v-model="formPruebas.funciona_tecnicamente" type="radio" :value="false"> No</label></fieldset>
-            <label class="campo">Evidencia de pruebas<input type="file" accept="application/pdf,image/*" @change="formPruebas.archivo=$event.target.files?.[0]||null"></label>
+            <label class="campo">Informe técnico con cuadros / evidencia de pruebas<input type="file" accept="application/pdf,image/*" @change="formPruebas.archivo=$event.target.files?.[0]||null"></label>
             <div v-if="formPruebas.funciona_tecnicamente" class="report-preview"><b>Vista previa automática del informe</b><p><strong>Ticket:</strong> {{ticketActivo.codigo}} · {{ticketActivo.titulo}}<br><strong>Solicitante:</strong> {{ticketActivo.solicitante_nombre}}<br><strong>Diagnóstico:</strong> {{ticketActivo.diagnostico}}<br><strong>Intervención:</strong> {{ticketActivo.solucion}}<br><strong>Pruebas:</strong> {{formPruebas.resultado_pruebas}}<br><strong>Responsable:</strong> {{nombre}}</p></div>
             <label v-if="formPruebas.funciona_tecnicamente" class="campo">Conclusión técnica
               <textarea v-model="formPruebas.informe_tecnico" rows="3" placeholder="Conclusión técnica final"></textarea>
@@ -355,7 +361,8 @@ const trabajosCurso = computed(() => misTickets.value.filter(t => ['EN_DIAGNOSTI
 const esperandoCompra = computed(() => misTickets.value.filter(t => t.estado_codigo === 'EN_EJECUCION' && enEsperaDeCompra(t)))
 const porIntervenir = computed(() => misTickets.value.filter(t => t.estado_codigo === 'EN_EJECUCION' && !t.solucion && !enEsperaDeCompra(t)))
 const porProbar = computed(() => misTickets.value.filter(t => t.estado_codigo === 'EN_EJECUCION' && !!t.solucion))
-const enTrabajo = computed(() => [...porIntervenir.value, ...porProbar.value])
+const enTrabajo = computed(() => vista.value==='informes' ? porProbar.value : porIntervenir.value)
+const porCotizar = computed(() => trabajosCurso.value.filter(t=>t.estado_codigo==='EN_EJECUCION' && (t.requiere_compra || t.estado_compra_componente==='BORRADOR') && !enEsperaDeCompra(t) && t.estado_compra_componente!=='ENTREGADA'))
 const conRetorno = computed(() => misTickets.value.filter(t => Number(t.rework_count) > 0 && t.estado_codigo === 'EN_EJECUCION'))
 const ticketsApoyo = computed(() => tickets.value.filter(t => (t.especialistas_apoyo || []).map(Number).includes(Number(usuario.value.id))))
 const ordenesNuevas = computed(() => porRecibir.value.filter(t => !busqueda.value.trim() || `${t.codigo} ${t.titulo}`.toLowerCase().includes(busqueda.value.toLowerCase())))
@@ -372,6 +379,10 @@ const menu = computed(() => [
   { id: 'resumen', icono: '⌂', nombre: 'Dashboard' },
   { id: 'misordenes', icono: 'OT', nombre: 'Mis órdenes', total: porRecibir.value.length },
   { id: 'curso', icono: 'TC', nombre: 'Trabajos en curso', total: trabajosCurso.value.length },
+  { id: 'cotizaciones', icono: 'CO', nombre: 'Cotizaciones y requerimientos', total: porCotizar.value.length },
+  { id: 'trabajo', icono: 'RP', nombre: 'Trabajos y anotaciones', total: porIntervenir.value.length },
+  { id: 'informes', icono: 'IF', nombre: 'Pruebas e informes', total: porProbar.value.length },
+  { id: 'compras', icono: 'CP', nombre: 'Seguimiento de compras', total: esperandoCompra.value.length },
   { id: 'historial', icono: 'HI', nombre: 'Historial' },
 ])
 
@@ -379,6 +390,8 @@ const titulo = computed(() => ({
   resumen: 'Panel del Especialista',
   misordenes: 'Mis órdenes',
   curso: 'Trabajos en curso',
+  cotizaciones: 'Cotizaciones y requerimientos',
+  informes: 'Pruebas e informes técnicos',
   historial: 'Historial de órdenes',
   ordenes: ordenAbierta.value ? 'Inspección y diagnóstico' : 'Bandeja de órdenes de trabajo',
   trabajo: 'Reparación, pruebas e informe',
@@ -519,7 +532,7 @@ async function aceptarOrden(t) {
 function continuarOrden(t) {
   if (t.estado_codigo === 'ASIGNADO') { aceptarOrden(t); return }
   if (t.estado_codigo === 'EN_DIAGNOSTICO') { recibirOrden(t); vista.value = 'ordenes'; return }
-  if (t.estado_codigo === 'EN_EJECUCION' && t.estado_compra_componente === 'BORRADOR') {
+  if (t.estado_codigo === 'EN_EJECUCION' && (t.estado_compra_componente === 'BORRADOR' || (t.requiere_compra && !t.estado_compra_componente))) {
     recibirOrden(t)
     modoComponente.value = true
     vista.value = 'ordenes'
@@ -527,7 +540,7 @@ function continuarOrden(t) {
   }
   if (t.estado_codigo === 'EN_EJECUCION' && !enEsperaDeCompra(t)) {
     abrirTrabajo(t)
-    vista.value = 'trabajo'
+    vista.value = t.solucion ? 'informes' : 'trabajo'
     return
   }
   verTicket(t)
@@ -540,7 +553,7 @@ function mostrarMensaje(titulo, texto, tipo='ok') { mensaje.value = { titulo, te
 ========================================================== */
 
 const formDiagnostico = reactive({ diagnostico: '', plan_solucion: '', observaciones_diagnostico: '', requiere_compra: null, archivo: null })
-const formComponente = reactive({ componente_requerido: '', cantidad_componente: 1, especificaciones_tecnicas: '', justificacion_compra: '', proveedor_cotizacion: '', costo_estimado: '', archivo: null })
+const formComponente = reactive({ componente_requerido: '', cantidad_componente: 1, especificaciones_tecnicas: '', justificacion_compra: '', proveedor_cotizacion: '', costo_estimado: '', archivo: null, informe: null })
 const formIntervencion = reactive({ solucion: '', acciones_realizadas: '', componentes_utilizados: '', archivo: null })
 const formPruebas = reactive({ resultado_pruebas: '', funciona_tecnicamente: null, informe_tecnico: '', archivo: null })
 
@@ -551,7 +564,7 @@ function recibirOrden(t) {
   formDiagnostico.plan_solucion = ''
   formDiagnostico.observaciones_diagnostico = t.observaciones_diagnostico || ''
   formDiagnostico.requiere_compra = null
-  Object.assign(formComponente, { componente_requerido:t.componente_requerido||'', cantidad_componente:t.cantidad_componente||1, especificaciones_tecnicas:t.especificaciones_tecnicas||'', justificacion_compra:t.justificacion_compra||'', proveedor_cotizacion:t.proveedor_cotizacion||'', costo_estimado:t.costo_estimado||'', archivo:null })
+  Object.assign(formComponente, { componente_requerido:t.componente_requerido||'', cantidad_componente:t.cantidad_componente||1, especificaciones_tecnicas:t.especificaciones_tecnicas||'', justificacion_compra:t.justificacion_compra||'', proveedor_cotizacion:t.proveedor_cotizacion||'', costo_estimado:t.costo_estimado||'', archivo:null, informe:null })
 }
 
 function cerrarOrden() {
@@ -574,7 +587,8 @@ async function guardarDiagnostico() {
     await postAccion(ordenAbierta.value, 'registrar-diagnostico', datos, true)
     if (formDiagnostico.requiere_compra) {
       // El requerimiento se registra sobre el ticket ya en ejecución.
-      modoComponente.value = true
+      cerrarOrden()
+      vista.value = 'cotizaciones'
     } else {
       cerrarOrden()
       vista.value = 'trabajo'
@@ -594,6 +608,7 @@ function datosRequerimiento() {
   const datos = new FormData()
   for (const campo of ['componente_requerido','cantidad_componente','especificaciones_tecnicas','justificacion_compra','proveedor_cotizacion','costo_estimado']) datos.append(campo, formComponente[campo] ?? '')
   if (formComponente.archivo) datos.append('cotizacion_archivo', formComponente.archivo)
+  if (formComponente.informe) datos.append('informe_compra', formComponente.informe)
   return datos
 }
 
@@ -632,6 +647,7 @@ async function registrarIntervencion() {
     datos.append('componentes_utilizados', formIntervencion.componentes_utilizados.trim())
     if (formIntervencion.archivo) datos.append('evidencia_intervencion', formIntervencion.archivo)
     await postAccion(ticketActivo.value, 'registrar-intervencion', datos, true)
+    vista.value = 'informes'
   } catch (e) { mostrarMensaje('No se pudo completar la acción', String(e.message), 'error') }
 }
 

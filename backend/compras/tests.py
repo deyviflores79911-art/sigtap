@@ -29,6 +29,43 @@ class FlujoCajaChicaTests(APITestCase):
     def autenticar(self, rol):
         self.client.force_authenticate(self.usuarios[rol])
 
+    def test_daf_no_aprueba_incompletos_y_solo_certifica_evaluados(self):
+        from compras.models import SolicitudCompra
+        self.autenticar("DAF")
+        solicitud = SolicitudCompra.objects.create(
+            codigo="CMP-TEST-DOCUMENTOS", titulo="Expediente incompleto",
+            solicitante=self.usuarios["SOLICITANTE"], area=self.area,
+            tipo="BIEN", cantidad=1, origen_modulo="SOPORTE",
+            estado="CREADO_PENDIENTE_DAF",
+        )
+        url = f"/api/compras/solicitudes/{solicitud.pk}"
+        self.assertEqual(self.client.post(url + "/evaluar-daf/", {"califica": True}).status_code, 400)
+        solicitud.refresh_from_db()
+        self.assertEqual(solicitud.estado, "CREADO_PENDIENTE_DAF")
+        self.assertEqual(self.client.get("/api/compras/solicitudes/?bandeja=certificacion").data, [])
+        self.assertEqual(self.client.post(url + "/certificar-daf/", {
+            "certificacion_presupuestaria": self.archivo(),
+        }, format="multipart").status_code, 409)
+        for campo in ("informe", "poa", "proforma"):
+            setattr(solicitud, campo, self.archivo(campo + ".pdf"))
+        solicitud.save()
+        self.assertEqual(self.client.post(url + "/evaluar-daf/", {"califica": True}).status_code, 400)
+        solicitud.pedido = self.archivo("proveido.pdf")
+        solicitud.save()
+        self.assertEqual(self.client.get("/api/compras/solicitudes/?bandeja=certificacion").data, [])
+        self.assertEqual(self.client.post(url + "/evaluar-daf/", {"califica": True}).status_code, 200)
+        bandeja = self.client.get("/api/compras/solicitudes/?bandeja=certificacion").data
+        self.assertEqual([r["id"] for r in bandeja], [solicitud.pk])
+
+    def test_monto_rechaza_letras_signos_exponentes_y_decimales_excesivos(self):
+        from compras.serializers import MontoEstimadoField
+        from rest_framework.exceptions import ValidationError
+        campo = MontoEstimadoField(max_digits=12, decimal_places=2, min_value=0)
+        for valor in ("abc", "100$", "-1", "+2", "1e3", "NaN", "Infinity", "12.345"):
+            with self.subTest(valor=valor), self.assertRaises(ValidationError):
+                campo.run_validation(valor)
+        self.assertEqual(str(campo.run_validation("1250.50")), "1250.50")
+
     def test_ciclo_completo_caja_chica(self):
         self.autenticar("SOLICITANTE")
         respuesta = self.client.post("/api/compras/solicitudes/", {

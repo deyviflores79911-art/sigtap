@@ -183,6 +183,14 @@ class TicketSerializer(
     # META
     # ======================================================
 
+    def to_representation(self, instance):
+        from urllib.parse import urlsplit
+        data = super().to_representation(instance)
+        for campo in ("informe_compra", "cotizacion_archivo"):
+            if data.get(campo):
+                data[campo] = urlsplit(data[campo]).path
+        return data
+
     class Meta:
 
         model = Ticket
@@ -338,7 +346,7 @@ class TicketSerializer(
 
             "costo_estimado",
 
-            "cotizacion_archivo",
+            "cotizacion_archivo", "informe_compra",
 
             "cotizacion_archivo_url",
 
@@ -488,7 +496,7 @@ class TicketSerializer(
 
             "costo_estimado",
 
-            "cotizacion_archivo",
+            "cotizacion_archivo", "informe_compra",
 
             "estado_compra_componente",
 

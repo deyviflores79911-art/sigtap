@@ -28,7 +28,7 @@
         <div class="stats">
           <article @click="irA('gestion')"><i class="blue">GT</i><div><small>Gestión</small><b>{{ ticketsGestion.length }}</b><p>tickets pendientes</p></div></article>
           <article @click="irA('compra')"><i class="navy">CO</i><div><small>Compras</small><b>{{ porEvaluarCompra.length }}</b><p>por evaluar</p></div></article>
-          <article @click="irA('verificar')"><i class="green">VF</i><div><small>Por verificar</small><b>{{ porVerificar.length }}</b><p>funcionamiento</p></div></article>
+          <article @click="irA('informe')"><i class="green">VF</i><div><small>Por verificar</small><b>{{ porVerificar.length }}</b><p>funcionamiento</p></div></article>
           <article @click="irA('informe')"><i class="gold">IF</i><div><small>Por informar</small><b>{{ porConformar.length + porInformar.length }}</b><p>conformidad</p></div></article>
         </div>
         <div class="panels">
@@ -36,7 +36,7 @@
             <div class="panel-head"><div><h3>Proceso de mantenimiento</h3></div></div>
             <button class="flow" @click="irA('gestion')"><i class="blue">1</i><div><b>Gestión integral de tickets</b><small>Validar, clasificar prioridad y designar técnico</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('compra')"><i class="gold">2</i><div><b>Recibir requerimiento y cotización</b><small>Evaluar la viabilidad de la compra</small></div><strong>›</strong></button>
-            <button class="flow" @click="irA('verificar')"><i class="green">3</i><div><b>Verificar funcionamiento</b><small>Confirmar si el problema quedó resuelto</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('informe')"><i class="green">3</i><div><b>Verificar funcionamiento</b><small>Confirmar si el problema quedó resuelto</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('informe')"><i class="gold">4</i><div><b>Conformidad e informe final</b><small>Cerrar el caso y elevarlo a la Dirección</small></div><strong>›</strong></button>
           </section>
           <section class="panel">
@@ -247,7 +247,7 @@
                   <div :class="['wf-step', formCompra.informe ? 'completed' : 'active']">
                     <div class="step-num">1</div>
                     <div class="step-content">
-                      <h4>Subir Informe <span v-if="formCompra.informe" class="step-badge">✓ Cargado</span></h4>
+                      <a v-if="itemActivo.informe_compra" :href="itemActivo.informe_compra" target="_blank" class="adjunto">Ver informe técnico recibido</a><h4>Informe técnico <span v-if="formCompra.informe" class="step-badge">✓ Cargado</span></h4>
                       <p>Adjunte el documento del informe justificativo (PDF o Word).</p>
                       <div class="step-actions" style="margin-top: 10px;">
                         <input type="file" accept=".pdf,.doc,.docx" @change="e => formCompra.informe = e.target.files[0]">
@@ -259,10 +259,10 @@
                   <div :class="['wf-step', !formCompra.informe ? 'locked' : (formCompra.proforma ? 'completed' : 'active')]">
                     <div class="step-num">2</div>
                     <div class="step-content">
-                      <h4>Subir Proforma <span v-if="formCompra.proforma" class="step-badge">✓ Cargada</span></h4>
+                      <a v-if="itemActivo.cotizacion_archivo" :href="itemActivo.cotizacion_archivo" target="_blank" class="adjunto">Ver cotización recibida</a><h4>Cotización <span v-if="formCompra.proforma" class="step-badge">✓ Cargada</span></h4>
                       <p>Adjunte la imagen de la cotización o proforma (.png, .jpg).</p>
                       <div v-if="formCompra.informe" class="step-actions" style="margin-top: 10px;">
-                        <input type="file" accept=".png,.jpg,.jpeg" @change="e => formCompra.proforma = e.target.files[0]">
+                        <input type="file" accept=".pdf,.png,.jpg,.jpeg" @change="e => formCompra.proforma = e.target.files[0]">
                       </div>
                     </div>
                   </div>
@@ -285,11 +285,11 @@
                     <div class="step-content">
                       <h4>Confirmar y Enviar a DAF</h4>
                       <p>El expediente está completo. Elija una opción para finalizar.</p>
-                      <div v-if="formCompra.poa" class="step-actions" style="margin-top: 10px; display:flex; gap: 8px">
+                      <label class="campo">Proveído de jefatura<input type="file" accept=".pdf,.doc,.docx" @change="e => formCompra.pedido = e.target.files[0]"></label><div v-if="formCompra.poa" class="step-actions" style="margin-top: 10px; display:flex; gap: 8px">
                         <button class="primary step-btn" style="background: #15803d; border-color: #15803d" :disabled="procesando" @click="evaluarCompraUpload">Aprobar y Enviar a DAF</button>
                       </div>
                       <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--sigta-borde-suave)">
-                        <button class="step-btn" style="color: var(--sigta-error); background: transparent; padding: 0" :disabled="procesando" @click="formCompra.viable = false">Rechazar compra en su lugar</button>
+                        <button class="step-btn" style="color: var(--sigta-error); background: transparent; padding: 0" :disabled="procesando || !!itemActivo.compra_vinculada" @click="formCompra.viable = false">Rechazar compra en su lugar</button>
                       </div>
                     </div>
                   </div>
@@ -351,13 +351,13 @@
                 <div class="t-head"><h2>{{ itemActivo.titulo }}</h2><span class="codigo-badge">{{ itemActivo.codigo }}</span></div>
                 <p class="t-meta"><span>👤 <b>Solicitante:</b> {{ itemActivo.solicitante_nombre || 's/d' }}</span><span>📍 <b>Ubicación:</b> {{ itemActivo.ubicacion || 's/d' }}</span></p>
                 <div class="t-content">
-                  <div class="desc-box"><strong>Resumen técnico del caso</strong><p>{{ itemActivo.descripcion || 'Sin descripción registrada.' }}</p><p v-if="itemActivo.trabajo_realizado"><b>Trabajo realizado:</b> {{ itemActivo.trabajo_realizado }}</p><p v-if="itemActivo.resultado_pruebas"><b>Pruebas técnicas:</b> {{ itemActivo.resultado_pruebas }}</p></div>
-                  <div v-if="itemActivo.fotografia_trabajo_url" class="evidence-box"><div class="evidence-info"><strong>Fotografía del trabajo</strong><span>Evidencia registrada por el técnico</span></div><a class="evidence-btn" :href="itemActivo.fotografia_trabajo_url" target="_blank" rel="noopener">Ver evidencia ↗</a></div>
+                  <div class="desc-box"><strong>Informe del técnico</strong><p>{{itemActivo.informe_trabajo}}</p><strong>Resumen técnico del caso</strong><p>{{ itemActivo.descripcion || 'Sin descripción registrada.' }}</p><p v-if="itemActivo.trabajo_realizado"><b>Trabajo realizado:</b> {{ itemActivo.trabajo_realizado }}</p><p v-if="itemActivo.resultado_pruebas"><b>Pruebas técnicas:</b> {{ itemActivo.resultado_pruebas }}</p></div>
+                  <div v-if="itemActivo.fotografia_trabajo_url" class="evidence-box"><div class="evidence-info"><strong>Informe adjunto / evidencia del trabajo</strong><span>Evidencia registrada por el técnico</span></div><a class="evidence-btn" :href="itemActivo.fotografia_trabajo_url" target="_blank" rel="noopener">Ver evidencia ↗</a></div>
                 </div>
               </div>
 
               <div class="workflow-card">
-                <div class="wf-header">Flujo de conformidad e informe final</div>
+                <div class="wf-header">Flujo de conformidad e informe final</div><div v-if="itemActivo.estado_codigo==='INFORME_REGISTRADO' && !itemActivo.verificado_en" class="wf-body"><h4>Revisar informe y funcionamiento</h4><div class="actions"><button class="reject" @click="verificar(itemActivo,false)">No resuelto</button><button class="primary" @click="verificar(itemActivo,true)">Problema resuelto</button></div></div>
                 <div class="wf-body">
                   <div :class="['wf-step', itemActivo.estado_codigo === 'CONFORMIDAD_INFORMADA' ? 'completed' : 'active']">
                     <div class="step-num">1</div>
@@ -365,7 +365,7 @@
                       <h4>Confirmar conformidad <span v-if="itemActivo.estado_codigo === 'CONFORMIDAD_INFORMADA'" class="step-badge">✓ Completada</span></h4>
                       <p v-if="itemActivo.estado_codigo !== 'CONFORMIDAD_INFORMADA'">Revise la reparación, las pruebas y el detalle del trabajo antes de confirmar la conformidad.</p>
                       <p v-else>La conformidad fue registrada el {{ fecha(itemActivo.conformidad_en) }}. Ya puede elaborar el informe final.</p>
-                      <div v-if="itemActivo.estado_codigo !== 'CONFORMIDAD_INFORMADA'" class="step-actions"><button class="primary flex-btn" :disabled="procesando" @click="conformar(itemActivo)">Confirmar y continuar</button></div>
+                      <div v-if="itemActivo.estado_codigo !== 'CONFORMIDAD_INFORMADA'" class="step-actions"><button class="primary flex-btn" :disabled="procesando || !itemActivo.verificado_en" @click="conformar(itemActivo)">Confirmar y continuar</button></div>
                     </div>
                   </div>
 
@@ -467,18 +467,17 @@ const porClasificar = computed(() => items.value.filter(r => r.estado_codigo ===
 const porDesignar = computed(() => items.value.filter(r => r.estado_codigo === 'VALIDADO' && !!r.prioridad_jefatura))
 const ticketsGestion = computed(() => [...porValidar.value, ...porClasificar.value, ...porDesignar.value])
 
-const porEvaluarCompra = computed(() => items.value.filter(r => r.estado_compra_componente === 'SOLICITADA'))
+const porEvaluarCompra = computed(() => items.value.filter(r => (r.estado_compra_componente === 'SOLICITADA' || r.compra_vinculada?.documentos_pendientes?.length)))
 const porVerificar = computed(() => items.value.filter(r => r.estado_codigo === 'INFORME_REGISTRADO' && !r.verificado_en))
 const porConformar = computed(() => items.value.filter(r => r.estado_codigo === 'INFORME_REGISTRADO' && !!r.verificado_en))
 const porInformar = computed(() => items.value.filter(r => r.estado_codigo === 'CONFORMIDAD_INFORMADA' && !r.informe_elevado_en))
-const pendientesInforme = computed(() => [...porConformar.value, ...porInformar.value])
+const pendientesInforme = computed(() => [...porVerificar.value, ...porConformar.value, ...porInformar.value])
 
 const menu = computed(() => [
   { id: 'resumen', icono: '⌂', nombre: 'Dashboard' },
   { id: 'gestion', icono: 'GT', nombre: 'Gestión de tickets', total: ticketsGestion.value.length },
   { id: 'compra', icono: 'CO', nombre: 'Solicitar compra', total: porEvaluarCompra.value.length },
-  { id: 'verificar', icono: 'VF', nombre: 'Verificar funcionamiento', total: porVerificar.value.length },
-  { id: 'informe', icono: 'IF', nombre: 'Conformidad e informe', total: porConformar.value.length + porInformar.value.length },
+  { id: 'informe', icono: 'IF', nombre: 'Informes de los técnicos', total: pendientesInforme.value.length },
   { id: 'reporte', icono: 'RM', nombre: 'Reporte mensual' },
 ])
 
@@ -549,7 +548,7 @@ async function postAccion(item, endpoint, body) {
       const permaneceEnGestion = vista.value === 'gestion'
         && (found?.estado_codigo === 'RECIBIDO' || found?.estado_codigo === 'VALIDADO')
       const permaneceEnInforme = vista.value === 'informe'
-        && found?.estado_codigo === 'CONFORMIDAD_INFORMADA'
+        && ['INFORME_REGISTRADO','CONFORMIDAD_INFORMADA'].includes(found?.estado_codigo)
         && !found?.informe_elevado_en
 
       if (found && (permaneceEnGestion || permaneceEnInforme)) {
@@ -580,9 +579,10 @@ function abrir(item) {
   formDesignar.tecnico_id = ''
   formCompra.viable = true
   formCompra.motivo_no_viable = ''
-  formCompra.informe = null
-  formCompra.proforma = null
+  formCompra.informe = item.informe_compra || item.compra_vinculada?.informe || null
+  formCompra.proforma = item.cotizacion_archivo || item.compra_vinculada?.proforma || null
   formCompra.poa = null
+  formCompra.pedido = null
   formInforme.informe_final = ''
 }
 
@@ -626,12 +626,12 @@ async function designar() {
   catch (e) { alert(e.message) }
 }
 
-const formCompra = reactive({ viable: true, motivo_no_viable: '', informe: null, proforma: null, poa: null })
+const formCompra = reactive({ viable: true, motivo_no_viable: '', informe: null, proforma: null, poa: null, pedido: null })
 
 async function evaluarCompraUpload() {
   procesando.value = true
   try {
-    if (formCompra.viable && (!formCompra.informe || !formCompra.poa || !formCompra.proforma)) {
+    if (formCompra.viable && (!formCompra.informe || !formCompra.poa || !formCompra.proforma || !formCompra.pedido)) {
       throw new Error("Debe subir todos los documentos requeridos para aprobar.")
     }
 
@@ -640,12 +640,13 @@ async function evaluarCompraUpload() {
     if (!formCompra.viable) fd.append("motivo_no_viable", formCompra.motivo_no_viable.trim())
     
     if (formCompra.viable) {
-      fd.append("informe", formCompra.informe)
-      fd.append("proforma", formCompra.proforma)
+      if (formCompra.informe instanceof File) fd.append("informe", formCompra.informe)
+      if (formCompra.proforma instanceof File) fd.append("proforma", formCompra.proforma)
       fd.append("poa", formCompra.poa)
+      fd.append("pedido", formCompra.pedido)
     }
 
-    const r = await fetch(`${base}/${itemActivo.value.id}/evaluar-viabilidad-compra/`, {
+    const r = await fetch(`${base}/${itemActivo.value.id}/${itemActivo.value.compra_vinculada?.documentos_pendientes?.length ? "completar-expediente" : "evaluar-viabilidad-compra"}/`, {
       method: 'POST',
       headers: { Authorization: `Token ${token()}` },
       body: fd,

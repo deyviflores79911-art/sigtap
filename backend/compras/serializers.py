@@ -3,6 +3,14 @@ from urllib.parse import urlsplit
 from rest_framework import serializers
 
 from .models import SolicitudCompra
+import re
+
+
+class MontoEstimadoField(serializers.DecimalField):
+    def to_internal_value(self, data):
+        if not re.fullmatch(r"[0-9]+(?:\.[0-9]{1,2})?", str(data)):
+            raise serializers.ValidationError("Ingrese un monto numérico con hasta dos decimales.")
+        return super().to_internal_value(data)
 
 
 # ==========================================================
@@ -25,6 +33,7 @@ CAMPOS_ARCHIVO = (
 
 
 class SolicitudCompraSerializer(serializers.ModelSerializer):
+    monto_estimado = MontoEstimadoField(max_digits=12, decimal_places=2, min_value=0, required=False, allow_null=True)
 
     # El expediente dice por sí mismo de quién depende ahora: evita que
     # cada área tenga que preguntar en qué punto va el trámite.
@@ -256,11 +265,26 @@ class SolicitudCompraResumenSerializer(serializers.ModelSerializer):
     los campos ni requerir permiso de Compras."""
 
     estado_nombre = serializers.CharField(source="get_estado_display", read_only=True)
+    documentos_pendientes = serializers.SerializerMethodField()
+
+    def get_documentos_pendientes(self, obj):
+        from .expediente import documentos_faltantes
+        if obj.estado in ("CREADO_PENDIENTE_DAF", "EVALUADO_PENDIENTE_CERTIFICACION"):
+            return documentos_faltantes(obj)
+        return []
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        for campo in ("informe", "proforma", "poa", "pedido"):
+            if data.get(campo):
+                data[campo] = urlsplit(data[campo]).path
+        return data
 
     class Meta:
         model = SolicitudCompra
         fields = [
             "id", "codigo", "titulo", "estado", "estado_nombre",
+            "informe", "proforma", "poa", "pedido", "documentos_pendientes",
             "acta_conformidad", "fecha_entrega_solicitante",
             "cantidad_entregada", "entregado_a", "creado_en", "actualizado_en",
         ]

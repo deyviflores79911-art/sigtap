@@ -209,12 +209,14 @@ class FlujoMantenimientoTests(APITestCase):
         r = self.client.post(
             f"/api/mantenimiento/requerimientos/{pk}/solicitar-requerimiento/",
             {
+            "informe_compra": SimpleUploadedFile("informe.pdf", b"informe con cuadros"),
+            "cotizacion_archivo": SimpleUploadedFile("cotizacion.pdf", b"cotizacion"),
                 "producto_requerido": "Compresor 12000 BTU",
                 "especificacion_producto": "Marca X",
                 "cantidad_requerida": 1,
                 "costo_estimado": "4500",
             },
-            format="json",
+            format="multipart",
         )
         self.assertEqual(r.data["requerimiento"]["estado_codigo"], "EN_ESPERA_COMPRA", r.data)
 
@@ -252,16 +254,37 @@ class FlujoMantenimientoTests(APITestCase):
             f"/api/mantenimiento/requerimientos/{pk}/registrar-diagnostico/",
             {"diagnostico": "Falta repuesto", "plan_solucion": "Comprar"}, format="json",
         )
+        url = f"/api/mantenimiento/requerimientos/{pk}"
+        r = self.client.post(url + "/solicitar-requerimiento/", {"producto_requerido": "Ventilador"}, format="json")
+        self.assertEqual(r.status_code, 400, r.data)
+        r = self.client.post(url + "/guardar-borrador-requerimiento/", {
+            "producto_requerido": "Ventilador", "especificacion_producto": "Cuadro técnico",
+            "informe_compra": SimpleUploadedFile("borrador.pdf", b"cuadros"),
+        }, format="multipart")
+        self.assertEqual(r.status_code, 200, r.data)
+        guardado = RequerimientoMantenimiento.objects.get(pk=pk)
+        self.assertFalse(guardado.estado_compra_componente)
+        self.assertEqual(guardado.especificacion_producto, "Cuadro técnico")
+        self.assertEqual(guardado.informe_compra.read(), b"cuadros")
+        self.assertFalse(SolicitudCompra.objects.filter(requerimiento_mantenimiento_id=pk).exists())
         self.client.post(
             f"/api/mantenimiento/requerimientos/{pk}/solicitar-requerimiento/",
-            {"producto_requerido": "Ventilador", "cantidad_requerida": 1, "costo_estimado": "300"},
-            format="json",
+            {
+            "informe_compra": SimpleUploadedFile("informe.pdf", b"informe con cuadros"),
+            "cotizacion_archivo": SimpleUploadedFile("cotizacion.pdf", b"cotizacion"),"producto_requerido": "Ventilador", "cantidad_requerida": 1, "costo_estimado": "300"},
+            format="multipart",
         )
 
         self.autenticar("SERVICIOS_GENERALES")
+        r = self.client.post(url + "/evaluar-viabilidad-compra/", {"viable": True}, format="json")
+        self.assertEqual(r.status_code, 400, r.data)
+        self.assertFalse(SolicitudCompra.objects.filter(requerimiento_mantenimiento_id=pk).exists())
+        self.autenticar("SERVICIOS_GENERALES")
         r = self.client.post(
             f"/api/mantenimiento/requerimientos/{pk}/evaluar-viabilidad-compra/",
-            {"viable": True}, format="json",
+            {
+            "poa": SimpleUploadedFile("poa.pdf", b"poa"),
+            "pedido": SimpleUploadedFile("proveido.pdf", b"proveido"),"viable": True}, format="multipart",
         )
         self.assertEqual(r.status_code, 200, r.data)
 
@@ -272,6 +295,10 @@ class FlujoMantenimientoTests(APITestCase):
         self.assertEqual(solicitud.origen_modulo, "MANTENIMIENTO")
         self.assertEqual(solicitud.requerimiento_mantenimiento_id, pk)
         self.assertEqual(solicitud.estado, "CREADO_PENDIENTE_DAF")
+        self.assertEqual(solicitud.informe.read(), b"informe con cuadros")
+        self.assertEqual(solicitud.proforma.read(), b"cotizacion")
+        self.assertTrue(solicitud.poa)
+        self.assertTrue(solicitud.pedido)
 
         requerimiento = RequerimientoMantenimiento.objects.get(pk=pk)
         self.assertEqual(requerimiento.estado_compra_componente, "VIABLE")

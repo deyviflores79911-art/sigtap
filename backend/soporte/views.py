@@ -1597,13 +1597,15 @@ class TicketViewSet(
             ticket.costo_estimado = Decimal(str(costo)) if costo not in (None, "") else None
         except (ValueError, TypeError, InvalidOperation):
             return Response({"detalle": "Cantidad o costo estimado inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        if request.FILES.get("informe_compra"):
+            ticket.informe_compra = request.FILES["informe_compra"]
         cotizacion = request.FILES.get("cotizacion_archivo")
         if cotizacion:
             ticket.cotizacion_archivo = cotizacion
         ticket.save(update_fields=[
             "requiere_compra", "estado_compra_componente", "componente_requerido",
             "especificaciones_tecnicas", "justificacion_compra", "proveedor_cotizacion",
-            "cantidad_componente", "costo_estimado", "cotizacion_archivo", "actualizado_en",
+            "cantidad_componente", "costo_estimado", "cotizacion_archivo", "informe_compra", "actualizado_en",
         ])
         registrar_bitacora(
             request=request, accion="BORRADOR_REQUERIMIENTO_COMPONENTE",
@@ -1742,6 +1744,11 @@ class TicketViewSet(
         ticket.justificacion_compra = justificacion
         ticket.proveedor_cotizacion = proveedor
         ticket.costo_estimado = costo_estimado
+        informe_compra = request.FILES.get("informe_compra") or ticket.informe_compra
+        cotizacion_compra = request.FILES.get("cotizacion_archivo") or ticket.cotizacion_archivo
+        if not informe_compra or not cotizacion_compra:
+            return Response({"detalle": "Adjunte el informe técnico con sus cuadros y la cotización antes de enviar a jefatura."}, status=400)
+        ticket.informe_compra = informe_compra
         ticket.estado_compra_componente = "SOLICITADA"
 
         # BPMN: el requerimiento viaja con su cotización adjunta.
@@ -1760,7 +1767,7 @@ class TicketViewSet(
                 "proveedor_cotizacion",
                 "costo_estimado",
                 "estado_compra_componente",
-                "cotizacion_archivo",
+                "cotizacion_archivo", "informe_compra",
                 "actualizado_en",
             ]
         )
@@ -1799,6 +1806,13 @@ class TicketViewSet(
     # en ese módulo (no se duplica acá).
     #
     # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="completar-expediente")
+    def completar_expediente(self, request, pk=None):
+        if not tiene_permiso(request.user, "AUTORIZAR_SOLICITUD_COMPRA_TI"):
+            return Response({"detalle": "Solo la jefatura de la sección puede completar el expediente."}, status=403)
+        from compras.expediente import completar_expediente_origen
+        return completar_expediente_origen(request, self.get_object(), "ticket_soporte")
 
     @action(
         detail=True,
@@ -1839,6 +1853,8 @@ class TicketViewSet(
 
 
         viable = request.data.get("viable")
+        if isinstance(viable, str):
+            viable = {"true": True, "false": False}.get(viable.lower())
 
         if viable not in [True, False]:
 
@@ -1929,6 +1945,13 @@ class TicketViewSet(
         # de módulo entre soporte y compras.
         from compras.models import SolicitudCompra
 
+        informe = ticket.informe_compra or request.FILES.get("informe")
+        proforma = ticket.cotizacion_archivo or request.FILES.get("proforma")
+        poa = request.FILES.get("poa")
+        pedido = request.FILES.get("pedido")
+        if not all((informe, proforma, poa, pedido)):
+            return Response({"detalle": "Para elevar a DAF se requieren informe técnico, cotización, POA y proveído de jefatura."}, status=400)
+
         solicitud = SolicitudCompra.objects.create(
             codigo=SolicitudCompra.generar_codigo(),
             titulo=f"Componente para ticket {ticket.codigo}",
@@ -1943,6 +1966,7 @@ class TicketViewSet(
             estado="CREADO_PENDIENTE_DAF",
             origen_modulo="SOPORTE",
             ticket_soporte=ticket,
+            informe=informe, proforma=proforma, poa=poa, pedido=pedido,
         )
 
         ticket.estado_compra_componente = "VIABLE"

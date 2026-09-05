@@ -285,6 +285,8 @@ class RequerimientoMantenimiento(models.Model):
         max_digits=12, decimal_places=2, null=True, blank=True
     )
 
+    informe_compra = models.FileField(upload_to="mantenimiento/informes_compra/%Y/%m/", blank=True, null=True)
+
     cotizacion_archivo = models.FileField(
         upload_to="mantenimiento/cotizaciones/%Y/%m/",
         blank=True,

@@ -337,6 +337,8 @@ class Ticket(models.Model):
         blank=True
     )
 
+    informe_compra = models.FileField(upload_to="soporte/informes_compra/%Y/%m/", blank=True, null=True)
+
     cotizacion_archivo = models.FileField(
         upload_to="soporte/cotizaciones/%Y/%m/",
         blank=True,

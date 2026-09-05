@@ -93,12 +93,14 @@ class FlujoSoporteCompraTests(APITestCase):
         # cotización — todavía no existe ningún expediente de compra.
         self.autenticar("ESPECIALISTA")
         r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
+            "informe_compra": SimpleUploadedFile("informe.pdf", b"informe con cuadros"),
+            "cotizacion_archivo": SimpleUploadedFile("cotizacion.pdf", b"cotizacion"),
             "componente_requerido": "Fuente de monitor",
             "especificaciones_tecnicas": "Fuente 19V 2A",
             "cantidad_componente": 2,
             "justificacion_compra": "Es indispensable para recuperar el monitor.",
             "costo_estimado": "250.00",
-        }, format="json")
+        }, format="multipart")
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(r.data["ticket"]["estado_codigo"], "EN_EJECUCION")
         self.assertFalse(r.data["ticket"]["codigo_compra_vinculada"])
@@ -113,8 +115,10 @@ class FlujoSoporteCompraTests(APITestCase):
         # ahí se genera el expediente real y vinculado en Compras.
         self.autenticar("JEFE_UTIC")
         r = self.client.post(f"/api/soporte/tickets/{pk}/evaluar-viabilidad-compra/", {
+            "poa": SimpleUploadedFile("poa.pdf", b"poa"),
+            "pedido": SimpleUploadedFile("proveido.pdf", b"proveido"),
             "viable": True,
-        }, format="json")
+        }, format="multipart")
         self.assertEqual(r.status_code, 200, r.data)
 
         codigo_compra = r.data["ticket"]["codigo_compra_vinculada"]
@@ -125,13 +129,21 @@ class FlujoSoporteCompraTests(APITestCase):
         self.assertEqual(solicitud.ticket_soporte_id, pk)
         self.assertEqual(solicitud.solicitante_id, self.usuarios["ESPECIALISTA"].id)
         self.assertEqual(solicitud.cantidad, 2)
+        self.assertTrue(solicitud.informe)
+        self.assertTrue(solicitud.proforma)
+        self.assertTrue(solicitud.poa)
+        self.assertTrue(solicitud.pedido)
+        self.assertEqual(solicitud.informe.read(), b"informe con cuadros")
+        self.assertEqual(solicitud.proforma.read(), b"cotizacion")
 
         # No se puede duplicar la solicitud de compra para el
         # mismo ticket.
         self.autenticar("ESPECIALISTA")
         r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
+            "informe_compra": SimpleUploadedFile("informe.pdf", b"informe con cuadros"),
+            "cotizacion_archivo": SimpleUploadedFile("cotizacion.pdf", b"cotizacion"),
             "componente_requerido": "Otro componente",
-        }, format="json")
+        }, format="multipart")
         self.assertEqual(r.status_code, 409, r.data)
 
         # Aprobar la viabilidad no basta: el flujo técnico sigue en pausa
@@ -158,11 +170,13 @@ class FlujoSoporteCompraTests(APITestCase):
 
         self.autenticar("ESPECIALISTA")
         r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
+            "informe_compra": SimpleUploadedFile("informe.pdf", b"informe con cuadros"),
+            "cotizacion_archivo": SimpleUploadedFile("cotizacion.pdf", b"cotizacion"),
             "componente_requerido": "GPU de alta gama",
             "especificaciones_tecnicas": "GPU compatible con el equipo",
             "justificacion_compra": "El equipo no puede operar sin reemplazo.",
             "costo_estimado": "9999.00",
-        }, format="json")
+        }, format="multipart")
         self.assertEqual(r.status_code, 200, r.data)
 
         self.autenticar("JEFE_UTIC")
@@ -180,8 +194,10 @@ class FlujoSoporteCompraTests(APITestCase):
 
         self.autenticar("SOLICITANTE")
         r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
+            "informe_compra": SimpleUploadedFile("informe.pdf", b"informe con cuadros"),
+            "cotizacion_archivo": SimpleUploadedFile("cotizacion.pdf", b"cotizacion"),
             "componente_requerido": "Teclado nuevo",
-        }, format="json")
+        }, format="multipart")
         self.assertEqual(r.status_code, 403, r.data)
 
     def test_especialista_no_puede_evaluar_viabilidad(self):
@@ -189,15 +205,19 @@ class FlujoSoporteCompraTests(APITestCase):
 
         self.autenticar("ESPECIALISTA")
         r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
+            "informe_compra": SimpleUploadedFile("informe.pdf", b"informe con cuadros"),
+            "cotizacion_archivo": SimpleUploadedFile("cotizacion.pdf", b"cotizacion"),
             "componente_requerido": "Mouse nuevo",
             "especificaciones_tecnicas": "Mouse USB",
             "justificacion_compra": "El periférico actual no funciona.",
-        }, format="json")
+        }, format="multipart")
         self.assertEqual(r.status_code, 200, r.data)
 
         r = self.client.post(f"/api/soporte/tickets/{pk}/evaluar-viabilidad-compra/", {
+            "poa": SimpleUploadedFile("poa.pdf", b"poa"),
+            "pedido": SimpleUploadedFile("proveido.pdf", b"proveido"),
             "viable": True,
-        }, format="json")
+        }, format="multipart")
         self.assertEqual(r.status_code, 403, r.data)
 
     def test_borrador_requerimiento_permanece_visible_y_editable(self):
@@ -210,6 +230,40 @@ class FlujoSoporteCompraTests(APITestCase):
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(r.data["ticket"]["estado_compra_componente"], "BORRADOR")
         self.assertEqual(r.data["ticket"]["estado_codigo"], "EN_EJECUCION")
+
+    def test_no_envia_requerimiento_sin_informe_y_cotizacion(self):
+        pk = self.crear_ticket_en_ejecucion("Falta documentación", "PC")
+        self.autenticar("ESPECIALISTA")
+        r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
+            "componente_requerido": "Fuente", "especificaciones_tecnicas": "ATX",
+            "justificacion_compra": "Fuente quemada", "costo_estimado": "100.00",
+        }, format="json")
+        self.assertEqual(r.status_code, 400, r.data)
+        self.assertFalse(Ticket.objects.get(pk=pk).estado_compra_componente)
+        self.assertFalse(SolicitudCompra.objects.filter(ticket_soporte_id=pk).exists())
+
+    def test_jefatura_completa_expediente_antiguo_y_daf_debe_reevaluar(self):
+        pk = self.crear_ticket_en_ejecucion("Expediente antiguo", "PC")
+        ticket = Ticket.objects.get(pk=pk)
+        compra = SolicitudCompra.objects.create(
+            codigo="CMP-LEGADO", titulo="Sin documentos", solicitante=ticket.solicitante,
+            area=ticket.area, tipo="COMPONENTE", cantidad=1, ticket_soporte=ticket,
+            origen_modulo="SOPORTE", estado="EVALUADO_PENDIENTE_CERTIFICACION",
+        )
+        url = f"/api/soporte/tickets/{pk}/completar-expediente/"
+        self.autenticar("ESPECIALISTA")
+        self.assertEqual(self.client.post(url, {}).status_code, 403)
+        self.autenticar("JEFE_UTIC")
+        self.assertEqual(self.client.post(url, {}).status_code, 400)
+        r = self.client.post(url, {
+            campo: SimpleUploadedFile(campo + ".pdf", campo.encode())
+            for campo in ("informe", "proforma", "poa", "pedido")
+        }, format="multipart")
+        self.assertEqual(r.status_code, 200, r.data)
+        compra.refresh_from_db()
+        self.assertEqual(compra.estado, "CREADO_PENDIENTE_DAF")
+        self.assertEqual(SolicitudCompra.objects.filter(ticket_soporte=ticket).count(), 1)
+        self.assertEqual(self.client.post(url, {}).status_code, 409)
 
     def test_especialista_solo_lista_ordenes_propias(self):
         pk = self.crear_ticket_en_ejecucion("Orden propia", "PC")

@@ -924,6 +924,13 @@ class RequerimientoMantenimientoViewSet(
 
     @action(detail=True, methods=["post"], url_path="solicitar-requerimiento")
     def solicitar_requerimiento(self, request, pk=None):
+        return self._guardar_requerimiento_compra(request, pk, borrador=False)
+
+    @action(detail=True, methods=["post"], url_path="guardar-borrador-requerimiento")
+    def guardar_borrador_requerimiento(self, request, pk=None):
+        return self._guardar_requerimiento_compra(request, pk, borrador=True)
+
+    def _guardar_requerimiento_compra(self, request, pk, borrador):
 
         requerimiento = self.get_object()
 
@@ -950,7 +957,7 @@ class RequerimientoMantenimientoViewSet(
 
         producto = str(request.data.get("producto_requerido", "")).strip()
 
-        if not producto:
+        if not producto and not borrador:
             return Response(
                 {"producto_requerido": "Indique el componente requerido."},
                 status=400
@@ -981,14 +988,21 @@ class RequerimientoMantenimientoViewSet(
         ).strip()
         requerimiento.cantidad_requerida = cantidad
         requerimiento.costo_estimado = costo
-        requerimiento.estado_compra_componente = "SOLICITADA"
+        informe_compra = request.FILES.get("informe_compra") or requerimiento.informe_compra
+        cotizacion_compra = request.FILES.get("cotizacion_archivo") or requerimiento.cotizacion_archivo
+        if not borrador and (not informe_compra or not cotizacion_compra):
+            return Response({"detalle": "Adjunte el informe técnico con sus cuadros y la cotización antes de enviar a jefatura."}, status=400)
+        requerimiento.informe_compra = informe_compra
+        if not borrador:
+            requerimiento.estado_compra_componente = "SOLICITADA"
 
         cotizacion = request.FILES.get("cotizacion_archivo")
 
         if cotizacion:
             requerimiento.cotizacion_archivo = cotizacion
 
-        self._cambiar_estado(requerimiento, "EN_ESPERA_COMPRA")
+        if not borrador:
+            self._cambiar_estado(requerimiento, "EN_ESPERA_COMPRA")
         requerimiento.save()
 
         registrar_bitacora(
@@ -1004,7 +1018,7 @@ class RequerimientoMantenimientoViewSet(
 
         return respuesta_requerimiento(
             requerimiento,
-            "Requerimiento enviado al Jefe de Mantenimiento para evaluar su viabilidad.",
+            "Borrador guardado." if borrador else "Requerimiento enviado al Jefe de Mantenimiento para evaluar su viabilidad.",
             request
         )
 
@@ -1012,6 +1026,13 @@ class RequerimientoMantenimientoViewSet(
     # ======================================================
     # 6. RECIBIR REQUERIMIENTO Y EVALUAR VIABILIDAD  (Jefe)
     # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="completar-expediente")
+    def completar_expediente(self, request, pk=None):
+        if not (es_admin(request.user) or tiene_rol(request.user, "SERVICIOS_GENERALES")):
+            return Response({"detalle": "Solo la jefatura de la sección puede completar el expediente."}, status=403)
+        from compras.expediente import completar_expediente_origen
+        return completar_expediente_origen(request, self.get_object(), "requerimiento_mantenimiento")
 
     @action(detail=True, methods=["post"], url_path="evaluar-viabilidad-compra")
     def evaluar_viabilidad_compra(self, request, pk=None):
@@ -1071,6 +1092,13 @@ class RequerimientoMantenimientoViewSet(
 
         from compras.models import SolicitudCompra
 
+        informe = requerimiento.informe_compra or request.FILES.get("informe")
+        proforma = requerimiento.cotizacion_archivo or request.FILES.get("proforma")
+        poa = request.FILES.get("poa")
+        pedido = request.FILES.get("pedido")
+        if not all((informe, proforma, poa, pedido)):
+            return Response({"detalle": "Para elevar a DAF se requieren informe técnico, cotización, POA y proveído de jefatura."}, status=400)
+
         solicitud = SolicitudCompra.objects.create(
             codigo=SolicitudCompra.generar_codigo(),
             titulo=requerimiento.producto_requerido or f"Reposición {requerimiento.codigo}",
@@ -1089,9 +1117,10 @@ class RequerimientoMantenimientoViewSet(
             estado="CREADO_PENDIENTE_DAF",
             origen_modulo="MANTENIMIENTO",
             requerimiento_mantenimiento=requerimiento,
-            informe=request.FILES.get("informe"),
-            poa=request.FILES.get("poa"),
-            proforma=request.FILES.get("proforma"),
+            informe=informe,
+            poa=poa,
+            proforma=proforma,
+            pedido=pedido,
         )
 
         requerimiento.estado_compra_componente = "VIABLE"

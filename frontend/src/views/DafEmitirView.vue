@@ -57,6 +57,7 @@
                 <div class="doc-links">
                   <a v-if="itemActivo.informe" :href="itemActivo.informe" target="_blank" class="evidence-btn">Informe &#x2197;</a>
                   <a v-if="itemActivo.poa" :href="itemActivo.poa" target="_blank" class="evidence-btn">POA &#x2197;</a>
+                  <a v-if="itemActivo.pedido" :href="itemActivo.pedido" target="_blank" class="evidence-btn">Proveído &#x2197;</a>
                   <a v-if="itemActivo.proforma" :href="itemActivo.proforma" target="_blank" class="evidence-btn">Proforma &#x2197;</a>
                 </div>
               </div>
@@ -249,7 +250,7 @@ function cerrarModalExito() {
 }
 
 
-const porCertificar = computed(() => items.value.filter(r => !r.certificacion_presupuestaria && r.estado !== 'RECHAZADO' && r.estado !== 'CERRADO_SIN_COMPRA'))
+const porCertificar = computed(() => items.value.filter(r => r.estado === 'EVALUADO_PENDIENTE_CERTIFICACION' && !r.certificacion_presupuestaria && r.informe && r.poa && r.proforma && (!['SOPORTE', 'MANTENIMIENTO'].includes(r.origen_modulo) || r.pedido)))
 
 // PARTIDAS
 const searchPartida = ref('')
@@ -353,12 +354,13 @@ function montoALiteral(monto) {
 async function cargar() {
   cargando.value = true
   try {
-    const r = await fetch('/api/compras/solicitudes/', {
+    const r = await fetch('/api/compras/solicitudes/?bandeja=certificacion', {
       headers: { Authorization: `Token ${token()}` }
     })
     const d = await r.json()
     if (!r.ok) throw new Error('Error al cargar')
-    items.value = Array.isArray(d) ? d : []
+    items.value = Array.isArray(d) ? d : d.results || []
+    if (itemActivo.value && !porCertificar.value.some(r=>r.id===itemActivo.value.id)) itemActivo.value = null
   } catch (e) {
     console.error(e)
   } finally {

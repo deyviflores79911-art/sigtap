@@ -398,9 +398,9 @@
                 Monto estimado (Bs)
               </label>
 
-              <input
+              <input v-monto inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?"
                 v-model="form.monto_estimado"
-                type="number"
+                type="text"
                 min="0"
                 step="0.01"
                 placeholder="Opcional"

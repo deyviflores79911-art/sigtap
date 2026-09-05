@@ -113,6 +113,14 @@ class RequerimientoMantenimientoSerializer(
     )
 
 
+    def to_representation(self, instance):
+        from urllib.parse import urlsplit
+        data = super().to_representation(instance)
+        for campo in ("informe_compra", "cotizacion_archivo"):
+            if data.get(campo):
+                data[campo] = urlsplit(data[campo]).path
+        return data
+
     class Meta:
 
         model = RequerimientoMantenimiento
@@ -211,7 +219,7 @@ class RequerimientoMantenimientoSerializer(
 
             "costo_estimado",
 
-            "cotizacion_archivo",
+            "cotizacion_archivo", "informe_compra",
 
             "motivo_no_viable",
 
@@ -267,7 +275,7 @@ class RequerimientoMantenimientoSerializer(
 
             "motivo_rechazo", "validado_en", "clasificado_en",
             "diagnostico", "plan_solucion", "diagnosticado_en",
-            "estado_compra_componente", "costo_estimado", "cotizacion_archivo",
+            "estado_compra_componente", "costo_estimado", "cotizacion_archivo", "informe_compra",
             "motivo_no_viable", "resultado_pruebas", "pruebas_en",
             "verificado_en", "rework_count", "conformidad_en",
             "informe_final", "informe_elevado_en",

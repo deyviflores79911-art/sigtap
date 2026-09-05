@@ -74,14 +74,14 @@
         </section>
       </section>
 
-      <section v-else-if="vista==='ordenes'" class="gestion-tickets-layout">
+      <section v-else-if="['ordenes','cotizaciones'].includes(vista)" class="gestion-tickets-layout">
         <div class="gestion-left">
           <div class="gestion-left-header">
             <h3>Órdenes de Trabajo</h3>
-            <span class="badge">{{ porRecibir.length }} Pendientes</span>
+            <span class="badge">{{ (vista==='cotizaciones'?porCotizar:porRecibir).length }} Pendientes</span>
           </div>
           <div class="gestion-lista">
-            <article v-for="r in porRecibir" :key="r.id" :class="['ticket-item', ordenAbierta?.id === r.id ? 'activo' : '', 't-validar']" @click="recibirOrden(r)">
+            <article v-for="r in (vista==='cotizaciones'?porCotizar:porRecibir)" :key="r.id" :class="['ticket-item', ordenAbierta?.id === r.id ? 'activo' : '', 't-validar']" @click="recibirOrden(r)">
               <div class="top">
                 <span>{{ r.codigo }}</span>
                 <em class="e-validar">{{ r.prioridad_jefatura || r.estado_codigo }}</em>
@@ -89,7 +89,7 @@
               <h4>{{ r.titulo }}</h4>
               <p>📍 {{ r.ubicacion || 's/d' }}</p>
             </article>
-            <div v-if="!porRecibir.length" class="empty-list">Bandeja al día. No tiene órdenes pendientes.</div>
+            <div v-if="!(vista==='cotizaciones'?porCotizar:porRecibir).length" class="empty-list">Bandeja al día. No tiene órdenes pendientes.</div>
           </div>
         </div>
 
@@ -158,15 +158,19 @@
                         <input v-model="formComponente.cantidad_requerida" type="number" min="1" class="full-select">
                       </label>
                       <label class="campo">Costo estimado (Bs.)
-                        <input v-model="formComponente.costo_estimado" type="number" min="0" max="9999999999.99" step="0.01" class="full-select">
+                        <input v-monto inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" v-model="formComponente.costo_estimado" type="text" min="0" max="9999999999.99" step="0.01" class="full-select">
                       </label>
-                      <label class="campo">Cotización (opcional)
+                      <label class="campo">Informe técnico con cuadros (obligatorio)
+                        <input type="file" accept=".pdf,.doc,.docx,image/*" @change="e => formComponente.informe = e.target.files?.[0] || null">
+                        <a v-if="ordenAbierta?.informe_compra" :href="ordenAbierta.informe_compra" target="_blank">Ver informe guardado</a>
+                      </label>
+                      <label class="campo">Cotización (obligatoria)
                         <input type="file" accept="application/pdf,image/*" @change="onCotizacion" class="full-select">
                       </label>
                       
                       <div class="step-actions mt-2">
                         <button class="reject" @click="retroceder">Retroceder</button>
-                        <button class="primary flex-btn" :disabled="procesando||!formComponente.producto_requerido.trim()" @click="enviarRequerimiento">Enviar requerimiento</button>
+                        <button class="step-btn" :disabled="procesando" @click="guardarBorradorCompra">Guardar borrador</button><button class="primary flex-btn" :disabled="procesando||!formComponente.producto_requerido.trim() || !(formComponente.informe || ordenAbierta?.informe_compra) || !(formComponente.archivo || ordenAbierta?.cotizacion_archivo)" @click="enviarRequerimiento">Enviar requerimiento</button>
                       </div>
                     </div>
                   </div>
@@ -198,7 +202,7 @@
       </section>
 
       <!-- ============= D. REPARACIÓN, PRUEBAS E INFORME ============= -->
-      <section v-else-if="vista==='trabajo'" class="gestion-tickets-layout">
+      <section v-else-if="['trabajo','informes'].includes(vista)" class="gestion-tickets-layout">
         <div class="gestion-left"><div class="gestion-left-header"><h3>Reparaciones pendientes</h3><span class="badge gold-badge">{{ enTrabajo.length }} requiere acción</span></div><div class="gestion-lista">
           <article v-for="r in enTrabajo" :key="r.id" :class="['ticket-item', { activo: itemActivo?.id === r.id, retorno: Number(r.rework_count) > 0 }]" @click="abrirTrabajo(r)"><div class="top"><span>{{ r.codigo }}</span><em>{{ etiqueta(r) }}</em></div><h4>{{ r.titulo }}</h4><p>{{ r.producto_requerido || r.ubicacion || 'Equipo de mantenimiento' }}</p><p class="item-meta">{{ siguientePaso(r) }}</p></article>
           <div v-if="!enTrabajo.length" class="empty-list">Bandeja al día. No hay reparaciones, pruebas ni informes pendientes.</div>
@@ -210,7 +214,7 @@
               <div class="wf-step" :class="{active:pasoTrabajo===1,completed:pasoTrabajo>1}"><div class="step-num">1</div><div class="step-content"><h4>Revisar requerimiento y documentación</h4><p>Revise el detalle, diagnóstico, evidencia y antecedentes antes de intervenir el equipo.</p><div class="step-form"><div class="revision-documentos"><div><b>Descripción del requerimiento</b><span>{{ itemActivo.descripcion || 'Sin descripción registrada.' }}</span></div><div><b>Diagnóstico técnico</b><span>{{ itemActivo.diagnostico || 'Sin diagnóstico registrado.' }}</span></div><div><b>Plan de solución</b><span>{{ itemActivo.plan_solucion || 'Sin plan registrado.' }}</span></div><a v-if="itemActivo.evidencia_archivo_url" :href="itemActivo.evidencia_archivo_url" target="_blank" class="evidence-btn">Abrir evidencia reportada</a><span v-else class="sin-adjunto">No existe evidencia adjunta.</span><a v-if="itemActivo.compra_vinculada?.acta_conformidad" :href="itemActivo.compra_vinculada.acta_conformidad" target="_blank" class="evidence-btn">Abrir acta de conformidad</a><span v-if="itemActivo.compra_vinculada && !itemActivo.compra_vinculada.acta_conformidad" class="sin-adjunto">La compra vinculada no tiene acta disponible.</span></div><button class="detalle-btn" @click="verItem(itemActivo)">Ver detalle completo</button><div v-if="pasoTrabajo===1" class="step-actions"><button class="reject" @click="cerrarTrabajo">Cancelar</button><button class="flex-btn primary" @click="pasoTrabajo=2">Siguiente</button></div></div></div></div>
               <div class="wf-step" :class="{active:pasoTrabajo===2,completed:pasoTrabajo>2,locked:pasoTrabajo<2}"><div class="step-num">2</div><div class="step-content"><h4>Registrar reparación o instalación</h4><p>El técnico documenta el trabajo ejecutado. Puede completar o corregir la información antes de continuar.</p><div v-if="pasoTrabajo>=2" class="step-form"><label class="campo">Reparación o instalación realizada<textarea v-model="formTrabajo.trabajo_realizado" rows="5" placeholder="Trabajo ejecutado sobre el equipo o instalación"></textarea></label><label class="campo">Observaciones<textarea v-model="formTrabajo.observaciones_trabajo" rows="2" placeholder="Observaciones de la intervención"></textarea></label><div v-if="pasoTrabajo===2" class="step-actions"><button class="reject" @click="pasoTrabajo=1">Retroceder</button><button class="flex-btn primary" :disabled="procesando||!formTrabajo.trabajo_realizado.trim()" @click="registrarTrabajo">Guardar reparación y continuar</button></div></div></div></div>
               <div class="wf-step" :class="{active:pasoTrabajo===3,completed:pasoTrabajo>3,locked:pasoTrabajo<3}"><div class="step-num">3</div><div class="step-content"><h4>Registrar pruebas técnicas</h4><p>El técnico registra las pruebas efectuadas y su resultado antes de preparar el informe.</p><div v-if="pasoTrabajo>=3" class="step-form"><label class="campo">Resultado de las pruebas técnicas<textarea v-model="formPruebas.resultado_pruebas" rows="4" placeholder="Pruebas efectuadas y comportamiento del equipo"></textarea></label><div v-if="pasoTrabajo===3" class="step-actions"><button class="reject" @click="pasoTrabajo=2">Retroceder</button><button class="flex-btn primary" :disabled="procesando||!formPruebas.resultado_pruebas.trim()" @click="registrarPruebas">Guardar pruebas y continuar</button></div></div></div></div>
-              <div class="wf-step" :class="{active:pasoTrabajo===4,locked:pasoTrabajo<4}"><div class="step-num">4</div><div class="step-content"><h4>Elaborar informe al Jefe de Mantenimiento</h4><p>Redacte el informe con el resumen del trabajo, las pruebas y el resultado. Al enviarlo, el Jefe de Mantenimiento recibirá el caso.</p><div v-if="pasoTrabajo===4" class="step-form"><label class="campo">Informe al Jefe de Mantenimiento<textarea v-model="formInforme.informe_trabajo" rows="6" placeholder="Describa el trabajo realizado, componentes utilizados, pruebas efectuadas y resultado final."></textarea></label><label class="campo">Fotografía del trabajo<input type="file" accept="image/*" @change="onFotografia"></label><div class="step-actions"><button class="reject" @click="pasoTrabajo=3">Retroceder</button><button class="flex-btn primary" :disabled="procesando||!formInforme.informe_trabajo.trim()" @click="registrarInforme">{{ procesando ? 'Enviando...' : 'Enviar informe al Jefe de Mantenimiento' }}</button></div></div></div></div>
+              <div class="wf-step" :class="{active:pasoTrabajo===4,locked:pasoTrabajo<4}"><div class="step-num">4</div><div class="step-content"><h4>Elaborar informe al Jefe de Mantenimiento</h4><p>Redacte el informe con el resumen del trabajo, las pruebas y el resultado. Al enviarlo, el Jefe de Mantenimiento recibirá el caso.</p><div v-if="pasoTrabajo===4" class="step-form"><label class="campo">Informe al Jefe de Mantenimiento<textarea v-model="formInforme.informe_trabajo" rows="6" placeholder="Describa el trabajo realizado, componentes utilizados, pruebas efectuadas y resultado final."></textarea></label><label class="campo">Informe técnico con cuadros / fotografía del trabajo<input type="file" accept="application/pdf,image/*" @change="onFotografia"></label><div class="step-actions"><button class="reject" @click="pasoTrabajo=3">Retroceder</button><button class="flex-btn primary" :disabled="procesando||!formInforme.informe_trabajo.trim()" @click="registrarInforme">{{ procesando ? 'Enviando...' : 'Enviar informe al Jefe de Mantenimiento' }}</button></div></div></div></div>
             </div></div>
           </div>
         </section>
@@ -292,14 +296,17 @@ const porRecibirComponente = computed(() => misItems.value.filter(r => r.estado_
 const enEsperaCompra = computed(() => misItems.value.filter(r => r.estado_codigo === 'EN_ESPERA_COMPRA' || enCompra(r)))
 const porReparar = computed(() => misItems.value.filter(r => r.estado_codigo === 'EN_MANTENIMIENTO' && !r.trabajo_realizado && !enCompra(r)))
 const porProbar = computed(() => misItems.value.filter(r => r.estado_codigo === 'EN_MANTENIMIENTO' && !!r.trabajo_realizado && !enCompra(r)))
-const enTrabajo = computed(() => misItems.value.filter(r => r.estado_codigo === 'EN_MANTENIMIENTO' && !enCompra(r)))
+const enTrabajo = computed(() => vista.value==='informes' ? porProbar.value : porReparar.value)
+const porCotizar = computed(() => misItems.value.filter(r=>r.estado_codigo==='EN_MANTENIMIENTO' && !r.estado_compra_componente))
 const conRetorno = computed(() => misItems.value.filter(r => Number(r.rework_count) > 0 && r.estado_codigo === 'EN_MANTENIMIENTO'))
 
 const menu = computed(() => [
   { id: 'resumen', icono: '⌂', nombre: 'Resumen' },
   { id: 'ordenes', icono: 'OT', nombre: 'Órdenes de trabajo', total: porRecibir.value.length },
   { id: 'recepcion', icono: 'AC', nombre: 'Recibir componente y acta', total: porRecibirComponente.value.length },
-  { id: 'trabajo', icono: 'RP', nombre: 'Reparación y pruebas', total: enTrabajo.value.length },
+  { id: 'trabajo', icono: 'RP', nombre: 'Trabajos y anotaciones', total: porReparar.value.length },
+  { id: 'cotizaciones', icono: 'CT', nombre: 'Cotizaciones y requerimientos', total: porCotizar.value.length },
+  { id: 'informes', icono: 'IF', nombre: 'Pruebas e informes', total: porProbar.value.length },
   { id: 'compras', icono: 'CO', nombre: 'En espera de compra', total: enEsperaCompra.value.length },
   { id: 'historial', icono: 'HI', nombre: 'Historial' },
 ])
@@ -309,6 +316,8 @@ const titulo = computed(() => ({
   ordenes: ordenAbierta.value ? 'Inspección técnica y diagnóstico' : 'Bandeja de órdenes de trabajo',
   recepcion: 'Recibir componente y acta',
   trabajo: 'Reparación, pruebas e informe',
+  cotizaciones: 'Cotizaciones y requerimientos',
+  informes: 'Pruebas e informes técnicos',
   compras: 'Requerimientos en espera de compra',
   historial: 'Historial de requerimientos',
 }[vista.value]))
@@ -417,7 +426,7 @@ function salir() {
 const formDiagnostico = reactive({ diagnostico: '', plan_solucion: '', requiere_compra: false })
 const formComponente = reactive({
   producto_requerido: '', especificacion_producto: '',
-  cantidad_requerida: 1, costo_estimado: '', archivo: null,
+  cantidad_requerida: 1, costo_estimado: '', archivo: null, informe: null,
 })
 const formTrabajo = reactive({ trabajo_realizado: '', observaciones_trabajo: '' })
 const formPruebas = reactive({ resultado_pruebas: '' })
@@ -449,15 +458,16 @@ async function confirmarRecepcion() {
 
 function recibirOrden(item) {
   ordenAbierta.value = item
-  modoComponente.value = false
-  formDiagnostico.diagnostico = ''
-  formDiagnostico.plan_solucion = ''
+  modoComponente.value = vista.value === 'cotizaciones'
+  formDiagnostico.diagnostico = item.diagnostico || ''
+  formDiagnostico.plan_solucion = item.plan_solucion || ''
   formDiagnostico.requiere_compra = false
-  formComponente.producto_requerido = ''
-  formComponente.especificacion_producto = ''
-  formComponente.cantidad_requerida = 1
-  formComponente.costo_estimado = ''
+  formComponente.producto_requerido = item.producto_requerido || ''
+  formComponente.especificacion_producto = item.especificacion_producto || ''
+  formComponente.cantidad_requerida = item.cantidad_requerida || 1
+  formComponente.costo_estimado = item.costo_estimado || ''
   formComponente.archivo = null
+  formComponente.informe = null
 }
 
 function cerrarOrden() {
@@ -470,27 +480,30 @@ function retroceder() {
 }
 
 async function guardarDiagnostico() {
-  if (formDiagnostico.requiere_compra) {
-    modoComponente.value = true
-    return
-  }
-  
-  procesando.value = true
   try {
     await postAccion(ordenAbierta.value, 'registrar-diagnostico', {
       diagnostico: formDiagnostico.diagnostico.trim(),
       plan_solucion: formDiagnostico.plan_solucion.trim(),
     })
+    const requiereCompra = formDiagnostico.requiere_compra
     cerrarOrden()
-    vista.value = 'trabajo'
+    vista.value = requiereCompra ? 'cotizaciones' : 'trabajo'
   } catch (e) { alert(e.message) }
-  finally { procesando.value = false }
 }
-
-
 
 function onCotizacion(evento) {
   formComponente.archivo = evento.target.files?.[0] || null
+}
+
+async function guardarBorradorCompra() {
+  try {
+    const fd = new FormData()
+    for (const campo of ['producto_requerido','especificacion_producto','cantidad_requerida','costo_estimado']) fd.append(campo, formComponente[campo] ?? '')
+    if (formComponente.archivo) fd.append('cotizacion_archivo', formComponente.archivo)
+    if (formComponente.informe) fd.append('informe_compra', formComponente.informe)
+    await postAccion(ordenAbierta.value, 'guardar-borrador-requerimiento', fd, true)
+    alert('Borrador guardado. Puede continuar después desde Cotizaciones y requerimientos.')
+  } catch(e) { alert(e.message) }
 }
 
 async function enviarRequerimiento() {
@@ -525,6 +538,7 @@ async function enviarRequerimiento() {
     datos.append('cantidad_requerida', String(formComponente.cantidad_requerida || 1))
     if (formComponente.costo_estimado) datos.append('costo_estimado', formComponente.costo_estimado)
     if (formComponente.archivo) datos.append('cotizacion_archivo', formComponente.archivo)
+    if (formComponente.informe) datos.append('informe_compra', formComponente.informe)
     
     await postAccion(ordenAbierta.value, 'solicitar-requerimiento', datos, true)
     
@@ -538,7 +552,7 @@ async function enviarRequerimiento() {
 /* ---------- Reparación, pruebas e informe ---------- */
 function abrirTrabajo(item) {
   itemActivo.value = item
-  pasoTrabajo.value = 1
+  pasoTrabajo.value = item.resultado_pruebas ? 4 : item.trabajo_realizado ? 3 : 1
   formTrabajo.trabajo_realizado = item.trabajo_realizado || ''
   formTrabajo.observaciones_trabajo = item.observaciones_trabajo || ''
   formPruebas.resultado_pruebas = item.resultado_pruebas || ''
@@ -558,6 +572,7 @@ async function registrarTrabajo() {
       observaciones_trabajo: formTrabajo.observaciones_trabajo.trim(),
     })
     pasoTrabajo.value = 3
+    vista.value = 'informes'
   } catch (e) { alert(e.message) }
 }
 
