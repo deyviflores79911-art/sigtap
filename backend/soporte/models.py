@@ -438,6 +438,12 @@ class Ticket(models.Model):
         help_text="PDF elaborado y remitido por la Jefatura UTIC a Dirección.",
     )
 
+    informe_jefe_carrera = models.TextField(blank=True)
+    informe_jefe_carrera_pdf = models.FileField(
+        upload_to="soporte/informes_jefe_carrera/%Y/%m/", blank=True, null=True,
+    )
+    informe_jefe_carrera_en = models.DateTimeField(null=True, blank=True)
+
     informe_elevado_en = models.DateTimeField(
         null=True,
         blank=True,

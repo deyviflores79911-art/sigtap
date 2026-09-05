@@ -249,3 +249,12 @@ def informe_tecnico(ticket, texto_informe):
         ("EVALUACIÓN", [("Diagnóstico", ticket.diagnostico), ("Plan de solución", ticket.plan_solucion)]),
         ("TRABAJO REALIZADO", [("Intervención", ticket.solucion), ("Resultado de pruebas", ticket.resultado_pruebas), ("Conclusión técnica", texto_informe)]),
     ], [("Código", ticket.codigo), ("Fecha de emisión", _fecha()), ("Técnico responsable", _nombre(ticket.tecnico_asignado)), ("Gestión", datetime.now().year)])
+
+
+def informe_jefe_carrera(ticket, contenido):
+    return _documento_pdf("INFORME FINAL DEL JEFE DE CARRERA", "Informe del trabajo realizado para Dirección", ticket, [
+        ("DATOS DEL TRABAJO", [("Asunto", ticket.titulo), ("Carrera / área", getattr(ticket.area, "nombre", "")), ("Solicitante", _nombre(ticket.solicitante)), ("Técnico", _nombre(ticket.tecnico_asignado))]),
+        ("RESULTADO TÉCNICO", [("Diagnóstico", ticket.diagnostico), ("Trabajo realizado", ticket.solucion), ("Pruebas", ticket.resultado_pruebas)]),
+        ("INFORME DE JEFATURA UTIC", [("Conclusión", ticket.informe_final)]),
+        ("INFORME DEL JEFE DE CARRERA", [("Conclusión y observaciones", contenido)]),
+    ], [("Código", ticket.codigo), ("Fecha de emisión", _fecha()), ("Jefe de carrera", _nombre(ticket.solicitante)), ("Gestión", datetime.now().year)])

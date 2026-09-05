@@ -323,6 +323,17 @@ class FlujoSoporteCompraTests(APITestCase):
         self.assertIsNotNone(ticket.cerrado_en)
         self.assertTrue(ticket.informe_final_pdf)
 
+        self.autenticar("SOLICITANTE")
+        r = self.client.post(
+            f"/api/soporte/tickets/{pk}/elaborar-informe-jefe-carrera/",
+            {"informe_jefe_carrera": "Trabajo revisado y conforme para conocimiento de Dirección."},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+        ticket.refresh_from_db()
+        self.assertTrue(ticket.informe_jefe_carrera_pdf)
+        self.assertIsNotNone(ticket.informe_jefe_carrera_en)
+
     def test_no_conformidad_exige_motivo_y_conserva_historial(self):
         pk = self.crear_ticket_en_ejecucion("Falla persistente", "Impresora")
         ticket = Ticket.objects.get(pk=pk)

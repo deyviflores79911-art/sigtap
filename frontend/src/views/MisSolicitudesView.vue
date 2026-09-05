@@ -766,6 +766,20 @@
         </div>
 
 
+        <div v-if="solicitudSeleccionada?.proceso === 'SOPORTE' && solicitudSeleccionada?.informe_final_pdf_url" class="field full">
+          <label>Informe final del jefe de carrera</label>
+          <template v-if="solicitudSeleccionada?.informe_jefe_carrera_en">
+            <p>{{ solicitudSeleccionada.informe_jefe_carrera }}</p>
+            <a v-if="solicitudSeleccionada.informe_jefe_carrera_pdf_url" :href="solicitudSeleccionada.informe_jefe_carrera_pdf_url" target="_blank" class="evidence-button">Ver informe PDF enviado</a>
+          </template>
+          <template v-else>
+            <textarea v-model="informeJefeCarrera" rows="4" placeholder="Registre la conclusión y observaciones del trabajo realizado."></textarea>
+            <button type="button" class="primary" :disabled="enviandoInformeCarrera || !informeJefeCarrera.trim()" @click="enviarInformeJefeCarrera">
+              {{ enviandoInformeCarrera ? 'Enviando...' : 'Generar informe y enviar al director' }}
+            </button>
+          </template>
+        </div>
+
         <div class="modal-footer">
 
           <button
@@ -1243,6 +1257,8 @@ const observacionConformidad = ref('')
 const mensajeConformidad = ref('')
 const guardandoConformidad = ref(false)
 const visorEvidencia = ref('')
+const informeJefeCarrera = ref('')
+const enviandoInformeCarrera = ref(false)
 
 const vistaVerificaciones = computed(() => route.query.vista === 'verificaciones')
 watch(() => route.query, query => {
@@ -1791,6 +1807,8 @@ function verDetalle(
   solicitudSeleccionada.value =
     item
 
+  informeJefeCarrera.value = item.informe_jefe_carrera || ''
+
 
   mostrarDetalle.value =
     true
@@ -1808,6 +1826,25 @@ function cerrarDetalle() {
 
   if (route.query.origen === 'kanban') {
     router.push(route.meta.portalDirector ? '/admin/dashboard' : '/usuario/dashboard')
+  }
+}
+
+async function enviarInformeJefeCarrera() {
+  enviandoInformeCarrera.value = true
+  try {
+    const respuesta = await fetch(`/api/soporte/tickets/${solicitudSeleccionada.value.id}/elaborar-informe-jefe-carrera/`, {
+      method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ informe_jefe_carrera: informeJefeCarrera.value.trim() }),
+    })
+    const datos = await respuesta.json().catch(() => ({}))
+    if (!respuesta.ok) throw new Error(datos.detalle || datos.informe_jefe_carrera || 'No se pudo enviar el informe.')
+    await cargarTodo()
+    solicitudSeleccionada.value = solicitudes.value.find(item => item.proceso === 'SOPORTE' && item.id === solicitudSeleccionada.value.id) || datos.ticket
+    mostrarMensaje('Informe del jefe de carrera generado y enviado al director.')
+  } catch (error) {
+    mostrarMensaje(String(error.message || error), true)
+  } finally {
+    enviandoInformeCarrera.value = false
   }
 }
 

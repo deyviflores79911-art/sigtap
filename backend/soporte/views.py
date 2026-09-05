@@ -49,7 +49,7 @@ from .serializers import (
     TicketSerializer,
     NotificacionSoporteSerializer,
 )
-from .informes_pdf import informe_final_jefatura, informe_requerimiento, informe_tecnico as generar_informe_tecnico
+from .informes_pdf import informe_final_jefatura, informe_jefe_carrera, informe_requerimiento, informe_tecnico as generar_informe_tecnico
 
 
 # ==========================================================
@@ -3180,3 +3180,25 @@ class TicketViewSet(
             ticket,
             "Informe final validado y elevado a la Dirección."
         )
+
+    @action(detail=True, methods=["post"], url_path="elaborar-informe-jefe-carrera")
+    def elaborar_informe_jefe_carrera(self, request, pk=None):
+        ticket = self.get_object()
+        if not (es_admin(request.user) or ticket.solicitante_id == request.user.id):
+            return Response({"detalle": "Solo el solicitante responsable puede elaborar este informe."}, status=403)
+        if not ticket.informe_final_pdf:
+            return Response({"detalle": "Jefatura UTIC todavía no elevó el informe final."}, status=409)
+        if ticket.informe_jefe_carrera_en:
+            return Response({"detalle": "El informe del jefe de carrera ya fue enviado."}, status=409)
+        contenido = str(request.data.get("informe_jefe_carrera", "")).strip()
+        if not contenido:
+            return Response({"informe_jefe_carrera": "Debe completar el informe final."}, status=400)
+        ticket.informe_jefe_carrera = contenido
+        ticket.informe_jefe_carrera_pdf.save(
+            f"informe-jefe-carrera-{ticket.codigo}.pdf",
+            ContentFile(informe_jefe_carrera(ticket, contenido)), save=False,
+        )
+        ticket.informe_jefe_carrera_en = timezone.now()
+        ticket.save(update_fields=["informe_jefe_carrera", "informe_jefe_carrera_pdf", "informe_jefe_carrera_en", "actualizado_en"])
+        registrar_bitacora(request=request, accion="ELEVAR_INFORME_JEFE_CARRERA", modulo="Soporte Técnico", detalle=f"Se elevó a Dirección el informe del jefe de carrera del ticket {ticket.codigo}.", nivel="INFO")
+        return respuesta_ticket(ticket, "Informe del jefe de carrera generado y enviado a Dirección.")

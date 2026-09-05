@@ -474,6 +474,7 @@ function normalizarSoporte(ticket) {
     pdf: ticket.informe_final_pdf_url,
     respaldos: [
       { nombre: 'Informe PDF generado del técnico', url: ticket.informe_tecnico_pdf_url },
+      { nombre: 'Informe final del jefe de carrera', url: ticket.informe_jefe_carrera_pdf_url },
       { nombre: 'Respaldo y cuadros del técnico', url: ticket.evidencia_pruebas_url },
       { nombre: 'Evidencia del diagnóstico', url: ticket.evidencia_diagnostico_url },
       { nombre: 'Evidencia de la intervención', url: ticket.evidencia_intervencion_url },
