@@ -16,17 +16,19 @@
         <div>
 
           <h1>
-            Mis solicitudes
+            {{ vistaVerificaciones ? 'Verificaciones pendientes' : 'Mis solicitudes' }}
           </h1>
 
           <p>
-            Consulte y dé seguimiento a sus requerimientos
-            de Soporte Técnico y Mantenimiento.
+            {{ vistaVerificaciones
+              ? 'Revise las soluciones técnicas finalizadas y confirme si el problema fue resuelto.'
+              : 'Consulte y dé seguimiento a sus requerimientos de Soporte Técnico y Mantenimiento.' }}
           </p>
 
         </div>
 
         <button
+          v-if="!vistaVerificaciones"
           class="btn-new"
           type="button"
           @click="mostrarCrear = !mostrarCrear"
@@ -36,7 +38,7 @@
 
       </header>
 
-      <section v-if="mostrarCrear" class="create-panel">
+      <section v-if="!vistaVerificaciones && mostrarCrear" class="create-panel">
         <button type="button" @click="router.push({ path: '/usuario/soporte', query: { origen: '/usuario/mis-solicitudes' } })">
           <span>🖥️</span>
           <div>
@@ -59,7 +61,7 @@
            RESUMEN
       ============================================= -->
 
-      <section class="summary">
+      <section v-if="!vistaVerificaciones" class="summary">
 
         <article>
 
@@ -118,7 +120,7 @@
            FILTROS
       ============================================= -->
 
-      <section class="filters-card">
+      <section v-if="!vistaVerificaciones" class="filters-card">
 
         <div class="search">
 
@@ -212,7 +214,32 @@
            LISTADO
       ============================================= -->
 
-      <section class="requests-card">
+      <section v-if="vistaVerificaciones" class="verification-page">
+        <div v-if="cargando" class="empty">Cargando verificaciones pendientes...</div>
+        <div v-else-if="!verificacionesPendientes.length" class="empty">
+          <span>✓</span>
+          <h3>No tiene verificaciones pendientes</h3>
+          <p>Los resultados técnicos que requieran su confirmación aparecerán aquí.</p>
+        </div>
+        <div v-else class="verification-list">
+          <article v-for="item in verificacionesPendientes" :key="item.id" class="verification-card">
+            <div class="verification-card__head">
+              <strong>{{ item.codigo }}</strong>
+              <span class="status warning">Pendiente de conformidad</span>
+            </div>
+            <h3>{{ item.titulo }}</h3>
+            <dl>
+              <div v-if="item.equipo_afectado"><dt>Equipo</dt><dd>{{ item.equipo_afectado }}</dd></div>
+              <div v-if="item.ubicacion"><dt>Ubicación</dt><dd>{{ item.ubicacion }}</dd></div>
+              <div v-if="item.tecnico_nombre"><dt>Técnico</dt><dd>{{ item.tecnico_nombre }}</dd></div>
+              <div v-if="item.pruebas_en"><dt>Fecha de atención</dt><dd>{{ formatearFecha(item.pruebas_en) }}</dd></div>
+            </dl>
+            <button type="button" class="primary verification-open" @click="abrirVerificacion(item)">Ver resultado</button>
+          </article>
+        </div>
+      </section>
+
+      <section v-else class="requests-card">
 
         <div
           v-if="cargando"
@@ -346,9 +373,7 @@
                 ]"
               >
                 {{
-                  item.estado_nombre
-                  || item.estado_codigo
-                  || 'Registrado'
+                  etiquetaEstadoSolicitante(item)
                 }}
               </span>
 
@@ -390,17 +415,9 @@
                 <button
                   v-if="item.proceso === 'SOPORTE' && item.estado_codigo === 'PENDIENTE_CONFORMIDAD'"
                   class="edit"
-                  @click="informarConformidad(item, true)"
+                  @click="abrirVerificacion(item)"
                 >
-                  Estoy conforme
-                </button>
-
-                <button
-                  v-if="item.proceso === 'SOPORTE' && item.estado_codigo === 'PENDIENTE_CONFORMIDAD'"
-                  class="cancel"
-                  @click="informarConformidad(item, false)"
-                >
-                  No conforme
+                  Verificar funcionamiento
                 </button>
 
               </div>
@@ -638,6 +655,15 @@
                   || 'Sin evidencia registrada'
                 }}
               </p>
+
+              <button
+                v-if="solicitudSeleccionada?.evidencia_archivo_url"
+                type="button"
+                class="evidence-button"
+                @click="visorEvidencia = solicitudSeleccionada.evidencia_archivo_url"
+              >
+                {{ esImagen(solicitudSeleccionada.evidencia_archivo_url) ? '👁 Ver evidencia' : '📄 Visualizar documento' }}
+              </button>
 
             </div>
 
@@ -979,6 +1005,136 @@
 
     </div>
 
+    <div
+      v-if="mostrarVerificacion && solicitudSeleccionada"
+      class="overlay verification-overlay"
+      @click.self="cerrarVerificacion"
+    >
+      <section class="verification-modal">
+        <header class="verification-modal__head">
+          <button type="button" @click="cerrarVerificacion">← Volver</button>
+          <div>
+            <small>VERIFICACIÓN DE SERVICIO</small>
+            <strong>{{ solicitudSeleccionada.codigo }}</strong>
+            <h2>{{ solicitudSeleccionada.titulo }}</h2>
+          </div>
+          <button type="button" aria-label="Cerrar" @click="cerrarVerificacion">×</button>
+        </header>
+
+        <div class="verification-modal__body">
+          <section class="result-section">
+            <h3>Información original</h3>
+            <div class="result-grid">
+              <div class="wide-result"><small>Descripción inicial</small><p>{{ solicitudSeleccionada.descripcion }}</p></div>
+              <div v-if="solicitudSeleccionada.ubicacion"><small>Ubicación</small><strong>{{ solicitudSeleccionada.ubicacion }}</strong></div>
+              <div v-if="solicitudSeleccionada.equipo_afectado"><small>Equipo</small><strong>{{ solicitudSeleccionada.equipo_afectado }}</strong></div>
+            </div>
+            <div v-if="solicitudSeleccionada.evidencia_archivo_url" class="evidence-result">
+              <img v-if="esImagen(solicitudSeleccionada.evidencia_archivo_url)" :src="solicitudSeleccionada.evidencia_archivo_url" alt="Evidencia original">
+              <div><strong>Evidencia original del solicitante</strong><button type="button" class="evidence-button" @click="visorEvidencia=solicitudSeleccionada.evidencia_archivo_url">Ver evidencia</button></div>
+            </div>
+          </section>
+
+          <section class="result-section">
+            <h3>Resultado del trabajo</h3>
+            <div class="result-grid">
+              <div v-if="solicitudSeleccionada.tecnico_nombre"><small>Técnico responsable</small><strong>{{ solicitudSeleccionada.tecnico_nombre }}</strong></div>
+              <div v-if="solicitudSeleccionada.diagnostico" class="wide-result"><small>Diagnóstico</small><p>{{ solicitudSeleccionada.diagnostico }}</p></div>
+              <div v-if="solicitudSeleccionada.solucion" class="wide-result"><small>Trabajo realizado</small><p>{{ solicitudSeleccionada.solucion }}</p></div>
+              <div v-if="solicitudSeleccionada.resultado_pruebas" class="wide-result"><small>Resultado de pruebas</small><p>{{ solicitudSeleccionada.resultado_pruebas }}</p></div>
+              <div><small>Compra</small><strong>{{ solicitudSeleccionada.requiere_compra ? 'Sí' : 'No' }}</strong></div>
+              <div v-if="solicitudSeleccionada.requiere_compra && solicitudSeleccionada.componente_requerido"><small>Componente</small><strong>{{ solicitudSeleccionada.componente_requerido }}</strong></div>
+              <div v-if="solicitudSeleccionada.requiere_compra"><small>Cantidad</small><strong>{{ solicitudSeleccionada.cantidad_componente }}</strong></div>
+            </div>
+            <div v-if="evidenciasTecnicas.length" class="technical-evidence-list">
+              <strong>Evidencias técnicas</strong>
+              <button v-for="archivo in evidenciasTecnicas" :key="archivo.url" type="button" class="evidence-button" @click="visorEvidencia=archivo.url">{{ archivo.nombre }}</button>
+            </div>
+          </section>
+
+          <section class="verification-decision">
+            <small>VERIFICACIÓN DEL FUNCIONAMIENTO</small>
+            <h3>¿El problema fue resuelto satisfactoriamente?</h3>
+            <p>Revise el trabajo registrado antes de comunicar su decisión.</p>
+            <div>
+              <button type="button" class="secondary danger-decision" @click="abrirConformidad(solicitudSeleccionada, false)">No estoy conforme</button>
+              <button type="button" class="primary" @click="abrirConformidad(solicitudSeleccionada, true)">Estoy conforme</button>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <div
+      v-if="conformidadPendiente"
+      class="overlay conformity-overlay"
+      @click.self="cerrarConformidad"
+    >
+      <section class="modal conformity-modal">
+        <div class="modal-header">
+          <div>
+            <span class="modal-code">{{ conformidadPendiente.item.codigo }}</span>
+            <h2>{{ conformidadPendiente.conforme ? 'Confirmar conformidad' : 'Informar no conformidad' }}</h2>
+            <p>{{ conformidadPendiente.item.titulo }}</p>
+          </div>
+          <button type="button" class="close" aria-label="Cerrar" @click="cerrarConformidad">×</button>
+        </div>
+
+        <div class="conformity-message">
+          <strong>{{ conformidadPendiente.conforme ? '¿Confirma que el problema fue resuelto satisfactoriamente?' : 'Indique qué inconveniente continúa presentándose.' }}</strong>
+          <dl>
+            <div><dt>Ticket</dt><dd>{{ conformidadPendiente.item.codigo }}</dd></div>
+            <div v-if="conformidadPendiente.item.equipo_afectado"><dt>Equipo</dt><dd>{{ conformidadPendiente.item.equipo_afectado }}</dd></div>
+          </dl>
+          <p v-if="conformidadPendiente.conforme">Su conformidad será registrada y el Ticket continuará a la elaboración del informe final.</p>
+          <p v-else>La orden volverá al especialista para una nueva atención y conservará todo el historial registrado.</p>
+        </div>
+
+        <div v-if="!conformidadPendiente.conforme" class="field conformity-reason">
+          <label for="motivo-no-conformidad">Motivo / observación <span aria-hidden="true">*</span></label>
+          <textarea id="motivo-no-conformidad" v-model="observacionConformidad" rows="4" maxlength="1000" placeholder="El equipo continúa presentando..." required></textarea>
+          <small>{{ observacionConformidad.trim().length }}/1000</small>
+        </div>
+
+        <p v-if="mensajeConformidad" class="modal-error">{{ mensajeConformidad }}</p>
+
+        <div class="modal-footer">
+          <button type="button" class="secondary" :disabled="guardandoConformidad" @click="cerrarConformidad">Cancelar</button>
+          <button
+            type="button"
+            class="primary"
+            :disabled="guardandoConformidad || (!conformidadPendiente.conforme && !observacionConformidad.trim())"
+            @click="confirmarConformidad"
+          >
+            {{ guardandoConformidad ? 'Guardando...' : (conformidadPendiente.conforme ? 'Confirmar conformidad' : 'Enviar observación') }}
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <div v-if="mensajeResultado" class="overlay result-message" @click.self="mensajeResultado = null">
+      <section>
+        <span>✓</span>
+        <h2>{{ mensajeResultado.titulo }}</h2>
+        <p>{{ mensajeResultado.texto }}</p>
+        <button type="button" class="primary" @click="mensajeResultado = null">Entendido</button>
+      </section>
+    </div>
+
+    <div v-if="visorEvidencia" class="overlay evidence-viewer" @click.self="visorEvidencia = ''">
+      <section>
+        <header>
+          <button type="button" @click="visorEvidencia = ''">← Volver al expediente</button>
+          <strong>Evidencia {{ solicitudSeleccionada?.codigo }}</strong>
+          <button type="button" aria-label="Cerrar" @click="visorEvidencia = ''">×</button>
+        </header>
+        <div class="viewer-body">
+          <img v-if="esImagen(visorEvidencia)" :src="visorEvidencia" alt="Evidencia ampliada">
+          <iframe v-else :src="visorEvidencia" title="Documento de evidencia"></iframe>
+        </div>
+      </section>
+    </div>
+
   </div>
 
 </template>
@@ -1068,6 +1224,9 @@ const esError =
 const mostrarDetalle =
   ref(false)
 
+const mostrarVerificacion = ref(false)
+const mensajeResultado = ref(null)
+
 const mostrarEditar =
   ref(false)
 
@@ -1076,6 +1235,26 @@ const solicitudSeleccionada =
 
 const solicitudPorCancelar =
   ref(null)
+
+const conformidadPendiente = ref(null)
+const observacionConformidad = ref('')
+const mensajeConformidad = ref('')
+const guardandoConformidad = ref(false)
+const visorEvidencia = ref('')
+
+const vistaVerificaciones = computed(() => route.query.vista === 'verificaciones')
+const verificacionesPendientes = computed(() => solicitudes.value.filter(
+  item => item.proceso === 'SOPORTE' && item.estado_codigo === 'PENDIENTE_CONFORMIDAD'
+))
+const evidenciasTecnicas = computed(() => {
+  const item = solicitudSeleccionada.value
+  if (!item) return []
+  return [
+    { nombre: 'Evidencia del diagnóstico', url: item.evidencia_diagnostico_url },
+    { nombre: 'Evidencia de la intervención', url: item.evidencia_intervencion_url },
+    { nombre: 'Evidencia de las pruebas', url: item.evidencia_pruebas_url },
+  ].filter(archivo => archivo.url)
+})
 
 
 // ==========================================================
@@ -1743,14 +1922,31 @@ function puedeEditarSoporte(
 }
 
 function pasosSolicitud(item) {
-  const grupo = bucketEstado(item?.estado_codigo)
-  const indiceActual = { PENDIENTES: 1, EN_PROCESO: 2, POR_VALIDAR: 3, FINALIZADAS: 4, CANCELADAS: 1 }[grupo] || 1
-  const nombres = ['Creada', 'Recibida por jefatura', 'Técnico asignado', 'Validación del usuario', 'Cerrada']
+  const estado = item?.estado_codigo || ''
+  const nombres = ['Creada', 'Gestión UTIC', 'Atención técnica', 'Verificación del usuario', 'Informe final', 'Cerrada']
+  const indiceActual = ['BORRADOR', 'NUEVO'].includes(estado)
+    ? 0
+    : ['EN_ANALISIS'].includes(estado)
+      ? 1
+      : ['ASIGNADO', 'EN_DIAGNOSTICO', 'EN_EJECUCION', 'EN_VERIFICACION'].includes(estado)
+        ? 2
+        : estado === 'PENDIENTE_CONFORMIDAD'
+          ? 3
+          : estado === 'PENDIENTE_INFORME_FINAL'
+            ? 4
+            : 5
+  const finalizado = ['CERRADO', 'FINALIZADO', 'ARCHIVADO'].includes(estado)
   return nombres.map((nombre, indice) => ({
     nombre,
-    completado: grupo === 'FINALIZADAS' || indice < indiceActual,
-    actual: grupo !== 'FINALIZADAS' && indice === indiceActual,
+    completado: finalizado || indice < indiceActual,
+    actual: !finalizado && indice === indiceActual,
   }))
+}
+
+function etiquetaEstadoSolicitante(item) {
+  if (item?.estado_codigo === 'PENDIENTE_CONFORMIDAD') return 'Pendiente de verificación'
+  if (item?.estado_codigo === 'PENDIENTE_INFORME_FINAL') return 'Pendiente de informe final'
+  return item?.estado_nombre || item?.estado_codigo || 'Registrado'
 }
 
 function puedeCancelar(item) {
@@ -2083,21 +2279,6 @@ async function anularSolicitud(
   item
 ) {
 
-<<<<<<< HEAD
-=======
-  const confirmar =
-    await window.sigtaConfirm(
-      `¿Confirma la cancelación de ${item.codigo}? Esta acción quedará en el historial.`
-    )
-
-
-  if (!confirmar) {
-
-    return
-  }
-
-
->>>>>>> origin/cocas_mant
   try {
 
     const endpoint = item.proceso === 'MANTENIMIENTO'
@@ -2173,45 +2354,59 @@ async function anularSolicitud(
 
 
 // ==========================================================
-// INFORMAR CONFORMIDAD (CIERRE DEL TICKET)
+// INFORMAR CONFORMIDAD
 // ==========================================================
 
-async function informarConformidad(
-  item,
-  conforme
-) {
+function abrirConformidad(item, conforme) {
+  conformidadPendiente.value = { item, conforme }
+  observacionConformidad.value = ''
+  mensajeConformidad.value = ''
+}
 
-  let observaciones = ''
+function abrirVerificacion(item) {
+  solicitudSeleccionada.value = item
+  mostrarVerificacion.value = true
+}
 
-  if (!conforme) {
+function cerrarVerificacion() {
+  mostrarVerificacion.value = false
+  solicitudSeleccionada.value = null
+}
 
-    observaciones = await window.sigtaPrompt(
-      'Indique por qué no está conforme con la solución:'
-    ) || ''
+function cerrarConformidad() {
+  if (guardandoConformidad.value) return
+  conformidadPendiente.value = null
+  observacionConformidad.value = ''
+  mensajeConformidad.value = ''
+}
 
-    if (!observaciones.trim()) {
-      return
-    }
+function esImagen(url) {
+  return /\.(png|jpe?g|gif|webp|bmp)(?:\?.*)?$/i.test(url || '')
+}
 
-  } else if (
-    !await window.sigtaConfirm(
-      `¿Confirma que está conforme con la solución de ${item.codigo}? El ticket se cerrará.`
-    )
-  ) {
+async function confirmarConformidad() {
+  const pendiente = conformidadPendiente.value
+  if (!pendiente) return
 
+  const observaciones = observacionConformidad.value.trim()
+  if (!pendiente.conforme && !observaciones) {
+    mensajeConformidad.value = 'Debe indicar por qué el problema continúa.'
     return
   }
+
+  guardandoConformidad.value = true
+  mensajeConformidad.value = ''
 
   try {
 
     const respuesta = await fetch(
-      `/api/soporte/tickets/${item.id}/informar-conformidad/`,
+      `/api/soporte/tickets/${pendiente.item.id}/informar-conformidad/`,
       {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
-          conformidad: conforme,
-          observaciones: observaciones.trim(),
+          conformidad: pendiente.conforme,
+          observaciones,
         }),
       }
     )
@@ -2225,18 +2420,24 @@ async function informarConformidad(
     }
 
     if (!respuesta.ok) {
-      mostrarMensaje(
-        datos.detalle || 'No fue posible registrar la conformidad.',
-        true
-      )
+      mensajeConformidad.value = datos.observaciones || datos.conformidad || datos.detalle || 'No fue posible registrar la conformidad.'
       return
     }
 
-    mostrarMensaje(
-      conforme
-        ? 'Conformidad registrada. El ticket fue cerrado.'
-        : 'No conformidad registrada. El ticket volvió a ejecución.'
-    )
+    const conforme = pendiente.conforme
+    conformidadPendiente.value = null
+    observacionConformidad.value = ''
+    mostrarVerificacion.value = false
+    solicitudSeleccionada.value = null
+    mensajeResultado.value = conforme
+      ? {
+          titulo: 'Conformidad registrada',
+          texto: 'Gracias. El resultado fue confirmado correctamente. El Ticket continuará con su cierre administrativo.',
+        }
+      : {
+          titulo: 'Observación enviada',
+          texto: 'La orden volvió al técnico responsable para una nueva atención y conservó su historial.',
+        }
 
     await cargarTodo()
 
@@ -2244,10 +2445,9 @@ async function informarConformidad(
 
     console.error('Error informando conformidad:', error)
 
-    mostrarMensaje(
-      'No fue posible registrar la conformidad.',
-      true
-    )
+    mensajeConformidad.value = 'No fue posible registrar la conformidad.'
+  } finally {
+    guardandoConformidad.value = false
   }
 }
 
@@ -2946,6 +3146,417 @@ function cerrarSesion() {
 
 .detail-modal {
   max-width: 740px;
+}
+
+.conformity-modal {
+  max-width: 520px;
+}
+
+.verification-page {
+  min-width: 0;
+}
+
+.verification-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+}
+
+.verification-card {
+  padding: 20px;
+  border: 1px solid var(--sigta-borde);
+  border-top: 3px solid var(--sigta-mostaza);
+  border-radius: 11px;
+  background: white;
+}
+
+.verification-card__head,
+.verification-card dl div,
+.verification-decision > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.verification-card h3 {
+  margin: 18px 0;
+  color: var(--sigta-texto);
+}
+
+.verification-card dl {
+  margin: 0 0 18px;
+}
+
+.verification-card dl div {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--sigta-borde);
+}
+
+.verification-card dt {
+  color: var(--sigta-texto-suave);
+  font-size: 12px;
+}
+
+.verification-card dd {
+  margin: 0;
+  color: var(--sigta-texto);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.verification-open {
+  width: 100%;
+  padding: 11px;
+  border: 0;
+  border-radius: 8px;
+}
+
+.verification-modal {
+  width: min(980px, 95vw);
+  max-height: 94vh;
+  overflow: hidden;
+  border-radius: 14px;
+  background: white;
+}
+
+.verification-modal__head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 18px;
+  padding: 19px 22px;
+  background: var(--sigta-azul);
+  color: white;
+}
+
+.verification-modal__head small,
+.verification-modal__head strong,
+.verification-modal__head h2 {
+  display: block;
+  color: white;
+}
+
+.verification-modal__head small {
+  color: var(--sigta-mostaza-clara);
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.verification-modal__head h2 {
+  margin: 4px 0 0;
+  font-size: 20px;
+}
+
+.verification-modal__head button {
+  border: 1px solid rgba(255,255,255,.4);
+  border-radius: 7px;
+  background: rgba(255,255,255,.1);
+  color: white;
+  padding: 8px 11px;
+  cursor: pointer;
+}
+
+.verification-modal__body {
+  max-height: calc(94vh - 100px);
+  overflow-y: auto;
+  padding: 22px;
+}
+
+.result-section {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--sigta-borde);
+  border-radius: 10px;
+}
+
+.result-section h3 {
+  margin: 0 0 15px;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.result-grid > div {
+  padding: 12px;
+  border-radius: 8px;
+  background: #f5f8fc;
+}
+
+.result-grid small,
+.result-grid strong {
+  display: block;
+}
+
+.result-grid small {
+  margin-bottom: 5px;
+  color: var(--sigta-texto-suave);
+}
+
+.result-grid p {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.wide-result {
+  grid-column: 1 / -1;
+}
+
+.evidence-result {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.evidence-result img {
+  width: 150px;
+  height: 95px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.evidence-result strong,
+.technical-evidence-list > strong {
+  display: block;
+}
+
+.technical-evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.technical-evidence-list > strong {
+  flex-basis: 100%;
+}
+
+.verification-decision {
+  padding: 20px;
+  border-left: 4px solid var(--sigta-mostaza);
+  border-radius: 10px;
+  background: var(--sigta-mostaza-suave);
+}
+
+.verification-decision > small {
+  color: var(--sigta-azul);
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.verification-decision h3 {
+  margin: 7px 0;
+}
+
+.verification-decision > div {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.verification-decision button {
+  padding: 11px 16px;
+  border-radius: 8px;
+}
+
+.danger-decision {
+  color: var(--sigta-error);
+  border-color: var(--sigta-error);
+}
+
+.conformity-message dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin: 14px 0;
+}
+
+.conformity-message dl div {
+  padding: 9px;
+  border-radius: 7px;
+  background: white;
+}
+
+.conformity-message dt {
+  color: var(--sigta-texto-suave);
+  font-size: 11px;
+}
+
+.conformity-message dd {
+  margin: 3px 0 0;
+  font-weight: 800;
+}
+
+.result-message {
+  z-index: 1300;
+}
+
+.result-message section {
+  width: min(470px, 94vw);
+  padding: 28px;
+  border-top: 4px solid var(--sigta-mostaza);
+  border-radius: 13px;
+  background: white;
+  color: var(--sigta-texto);
+  text-align: center;
+}
+
+.result-message section > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin: auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--sigta-exito-fondo);
+  color: var(--sigta-exito);
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.result-message button {
+  padding: 10px 19px;
+  border: 0;
+  border-radius: 8px;
+}
+
+.conformity-message {
+  margin: 8px 0 18px;
+  padding: 16px;
+  border-left: 4px solid var(--sigta-mostaza);
+  border-radius: 8px;
+  background: #f4f8fc;
+  color: var(--sigta-texto);
+}
+
+.conformity-message p {
+  margin: 7px 0 0;
+  color: var(--sigta-texto-suave);
+  line-height: 1.5;
+}
+
+.conformity-reason textarea {
+  resize: vertical;
+}
+
+.conformity-reason small {
+  display: block;
+  margin-top: 5px;
+  color: var(--sigta-texto-suave);
+  text-align: right;
+}
+
+.evidence-button {
+  margin-top: 8px;
+  padding: 9px 13px;
+  border: 1px solid var(--sigta-azul);
+  border-radius: 7px;
+  background: white;
+  color: var(--sigta-azul);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.evidence-viewer {
+  z-index: 1200;
+}
+
+.evidence-viewer > section {
+  width: min(1000px, 96vw);
+  max-height: 92vh;
+  overflow: hidden;
+  border-radius: 12px;
+  background: white;
+}
+
+.evidence-viewer header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 14px 18px;
+  background: var(--sigta-azul);
+  color: white;
+}
+
+.evidence-viewer header button {
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 7px;
+  background: rgba(255,255,255,.12);
+  color: white;
+  padding: 8px 11px;
+  cursor: pointer;
+}
+
+.evidence-viewer .viewer-body {
+  display: grid;
+  min-height: 420px;
+  max-height: calc(92vh - 65px);
+  place-items: center;
+  overflow: auto;
+  padding: 18px;
+  background: #edf3f9;
+}
+
+.evidence-viewer img {
+  max-width: 100%;
+  max-height: calc(92vh - 105px);
+  object-fit: contain;
+}
+
+.evidence-viewer iframe {
+  width: 100%;
+  min-height: 70vh;
+  border: 0;
+  background: white;
+}
+
+@media (max-width: 700px) {
+  .verification-modal {
+    width: 95vw;
+  }
+
+  .verification-modal__head {
+    grid-template-columns: auto 1fr auto;
+    padding: 14px;
+  }
+
+  .verification-modal__head h2 {
+    font-size: 16px;
+  }
+
+  .verification-modal__body {
+    padding: 13px;
+  }
+
+  .result-grid,
+  .conformity-message dl {
+    grid-template-columns: 1fr;
+  }
+
+  .wide-result {
+    grid-column: auto;
+  }
+
+  .evidence-result,
+  .verification-decision > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .evidence-result img {
+    width: 100%;
+    height: auto;
+    max-height: 230px;
+  }
+
+  .verification-decision button {
+    width: 100%;
+  }
 }
 
 

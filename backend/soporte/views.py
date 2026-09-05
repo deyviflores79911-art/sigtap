@@ -449,6 +449,20 @@ class TicketViewSet(
             return queryset
 
 
+        roles = obtener_roles(usuario)
+
+        # La bandeja del Especialista tiene una única fuente de verdad:
+        # solamente órdenes asignadas a él o en las que participa como apoyo.
+        if (
+            set(roles).intersection({"ESPECIALISTA", "AGENTE"})
+            and not set(roles).intersection({"JEFE_UTIC", "SUPERVISOR_AREA"})
+        ):
+            from django.db.models import Q
+            return queryset.filter(
+                Q(tecnico_asignado=usuario) | Q(especialistas_apoyo=usuario)
+            ).distinct()
+
+
         if puede_operar_soporte(
             usuario
         ):
@@ -1312,6 +1326,47 @@ class TicketViewSet(
     # 4. REALIZAR INSPECCIÓN TÉCNICA Y DIAGNÓSTICO
     # ======================================================
 
+    @action(detail=True, methods=["post"], url_path="iniciar-atencion")
+    def iniciar_atencion(self, request, pk=None):
+        if not tiene_permiso(request.user, "REALIZAR_INSPECCION_DIAGNOSTICO"):
+            return respuesta_sin_permiso("REALIZAR_INSPECCION_DIAGNOSTICO")
+        ticket = self.get_object()
+        if validar_estado_ticket(ticket, ["EN_DIAGNOSTICO"]):
+            return respuesta_ticket(
+                ticket,
+                "La orden ya fue recibida. Puede registrar el diagnóstico.",
+            )
+        if not validar_estado_ticket(ticket, ["ASIGNADO"]):
+            return Response(
+                {
+                    "detalle": (
+                        "La orden ya avanzó y no está pendiente de recepción. "
+                        f"Estado actual: {ticket.estado.nombre}."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not (es_admin(request.user) or ticket.tecnico_asignado_id == request.user.id):
+            return Response(
+                {"detalle": "Solo el especialista asignado puede recibir esta orden."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        estado_diagnostico = obtener_estado("EN_DIAGNOSTICO")
+        if not estado_diagnostico:
+            return Response(
+                {"detalle": "No existe el estado EN_DIAGNOSTICO."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ticket.estado = estado_diagnostico
+        ticket.inicio_atencion_en = timezone.now()
+        ticket.save(update_fields=["estado", "inicio_atencion_en", "actualizado_en"])
+        registrar_bitacora(
+            request=request, accion="ORDEN_RECIBIDA", modulo="Soporte Técnico",
+            detalle=f"El especialista recibió la orden {ticket.codigo} e inició la atención.",
+            nivel="INFO",
+        )
+        return respuesta_ticket(ticket, "Orden recibida. Puede registrar el diagnóstico.")
+
     @action(
         detail=True,
         methods=["post"],
@@ -1336,16 +1391,19 @@ class TicketViewSet(
         ticket = self.get_object()
 
 
-        if not validar_estado_ticket(
-            ticket,
-            ["ASIGNADO"]
-        ):
+        if not validar_estado_ticket(ticket, ["ASIGNADO", "EN_DIAGNOSTICO"]):
+
+            if validar_estado_ticket(ticket, ["EN_EJECUCION"]) and ticket.diagnostico:
+                return respuesta_ticket(
+                    ticket,
+                    "El diagnóstico ya fue registrado correctamente.",
+                )
 
             return Response(
                 {
                     "detalle": (
-                        "El ticket debe encontrarse "
-                        "ASIGNADO."
+                        "El ticket debe estar asignado o en diagnóstico. "
+                        f"Estado actual: {ticket.estado.nombre}."
                     )
                 },
                 status=
@@ -1409,18 +1467,6 @@ class TicketViewSet(
             )
 
 
-        if not plan_solucion:
-
-            return Response(
-                {
-                    "plan_solucion":
-                        "Debe registrar el plan de solución."
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST
-            )
-
-
         estado_ejecucion = obtener_estado(
             "EN_EJECUCION"
         )
@@ -1449,19 +1495,35 @@ class TicketViewSet(
             plan_solucion
         )
 
+        ticket.observaciones_diagnostico = str(
+            request.data.get("observaciones_diagnostico", "")
+        ).strip()
+
+        if "requiere_compra" in request.data:
+            valor_compra = request.data.get("requiere_compra")
+            if isinstance(valor_compra, str):
+                valor_compra = valor_compra.lower() in {"true", "1", "si", "sí"}
+            ticket.requiere_compra = bool(valor_compra)
+
+        evidencia_diagnostico = request.FILES.get("evidencia_diagnostico")
+        if evidencia_diagnostico:
+            ticket.evidencia_diagnostico = evidencia_diagnostico
+
         ticket.estado = (
             estado_ejecucion
         )
 
-        ticket.inicio_atencion_en = (
-            ahora
-        )
+        if not ticket.inicio_atencion_en:
+            ticket.inicio_atencion_en = ahora
 
 
         ticket.save(
             update_fields=[
                 "diagnostico",
                 "plan_solucion",
+                "observaciones_diagnostico",
+                "requiere_compra",
+                "evidencia_diagnostico",
                 "estado",
                 "inicio_atencion_en",
                 "actualizado_en",
@@ -1500,6 +1562,55 @@ class TicketViewSet(
     # viable en el siguiente paso.
     #
     # ======================================================
+
+    @action(detail=True, methods=["post"], url_path="guardar-borrador-requerimiento")
+    def guardar_borrador_requerimiento(self, request, pk=None):
+        if not tiene_permiso(request.user, "SOLICITAR_REQUERIMIENTO_COMPONENTE"):
+            return respuesta_sin_permiso("SOLICITAR_REQUERIMIENTO_COMPONENTE")
+
+        ticket = self.get_object()
+        if not validar_estado_ticket(ticket, ["EN_EJECUCION"]):
+            return Response(
+                {"detalle": "El ticket debe encontrarse EN_EJECUCION."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not (es_admin(request.user) or ticket.tecnico_asignado_id == request.user.id):
+            return Response(
+                {"detalle": "Solo el especialista asignado puede guardar el borrador."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if ticket.estado_compra_componente not in ["", "BORRADOR"]:
+            return Response(
+                {"detalle": "El requerimiento ya fue enviado y no puede editarse."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        ticket.requiere_compra = True
+        ticket.estado_compra_componente = "BORRADOR"
+        ticket.componente_requerido = str(request.data.get("componente_requerido", "")).strip()
+        ticket.especificaciones_tecnicas = str(request.data.get("especificaciones_tecnicas", "")).strip()
+        ticket.justificacion_compra = str(request.data.get("justificacion_compra", "")).strip()
+        ticket.proveedor_cotizacion = str(request.data.get("proveedor_cotizacion", "")).strip()
+        try:
+            ticket.cantidad_componente = max(1, int(request.data.get("cantidad_componente") or 1))
+            costo = request.data.get("costo_estimado")
+            ticket.costo_estimado = Decimal(str(costo)) if costo not in (None, "") else None
+        except (ValueError, TypeError, InvalidOperation):
+            return Response({"detalle": "Cantidad o costo estimado inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        cotizacion = request.FILES.get("cotizacion_archivo")
+        if cotizacion:
+            ticket.cotizacion_archivo = cotizacion
+        ticket.save(update_fields=[
+            "requiere_compra", "estado_compra_componente", "componente_requerido",
+            "especificaciones_tecnicas", "justificacion_compra", "proveedor_cotizacion",
+            "cantidad_componente", "costo_estimado", "cotizacion_archivo", "actualizado_en",
+        ])
+        registrar_bitacora(
+            request=request, accion="BORRADOR_REQUERIMIENTO_COMPONENTE",
+            modulo="Soporte Técnico", detalle=f"Se guardó el borrador de compra del ticket {ticket.codigo}.",
+            nivel="INFO",
+        )
+        return respuesta_ticket(ticket, "Borrador de requerimiento guardado.")
 
     @action(
         detail=True,
@@ -1558,7 +1669,7 @@ class TicketViewSet(
             )
 
 
-        if ticket.estado_compra_componente:
+        if ticket.estado_compra_componente not in ["", "BORRADOR"]:
 
             return Response(
                 {
@@ -1574,12 +1685,36 @@ class TicketViewSet(
 
         componente = str(request.data.get("componente_requerido", "")).strip()
         especificaciones = str(request.data.get("especificaciones_tecnicas", "")).strip()
+        justificacion = str(request.data.get("justificacion_compra", "")).strip()
+        proveedor = str(request.data.get("proveedor_cotizacion", "")).strip()
 
         if not componente:
 
             return Response(
                 {"componente_requerido": "Debe indicar el componente requerido."},
                 status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not especificaciones:
+            return Response(
+                {"especificaciones_tecnicas": "Debe registrar las características técnicas."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not justificacion:
+            return Response(
+                {"justificacion_compra": "Debe justificar el requerimiento."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            cantidad = int(request.data.get("cantidad_componente") or 1)
+            if cantidad < 1:
+                raise ValueError
+        except (ValueError, TypeError):
+            return Response(
+                {"cantidad_componente": "La cantidad debe ser mayor a cero."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
 
@@ -1601,8 +1736,11 @@ class TicketViewSet(
 
 
         ticket.requiere_compra = True
+        ticket.cantidad_componente = cantidad
         ticket.componente_requerido = componente
         ticket.especificaciones_tecnicas = especificaciones
+        ticket.justificacion_compra = justificacion
+        ticket.proveedor_cotizacion = proveedor
         ticket.costo_estimado = costo_estimado
         ticket.estado_compra_componente = "SOLICITADA"
 
@@ -1615,8 +1753,11 @@ class TicketViewSet(
         ticket.save(
             update_fields=[
                 "requiere_compra",
+                "cantidad_componente",
                 "componente_requerido",
                 "especificaciones_tecnicas",
+                "justificacion_compra",
+                "proveedor_cotizacion",
                 "costo_estimado",
                 "estado_compra_componente",
                 "cotizacion_archivo",
@@ -1795,9 +1936,9 @@ class TicketViewSet(
             solicitante=ticket.tecnico_asignado or ticket.solicitante,
             area=ticket.area,
             tipo="COMPONENTE",
-            cantidad=1,
+            cantidad=ticket.cantidad_componente,
             especificaciones=ticket.especificaciones_tecnicas or ticket.componente_requerido,
-            justificacion=f"Requerido para atender el ticket de soporte {ticket.codigo}.",
+            justificacion=ticket.justificacion_compra or f"Requerido para atender el ticket de soporte {ticket.codigo}.",
             monto_estimado=ticket.costo_estimado,
             estado="CREADO_PENDIENTE_DAF",
             origen_modulo="SOPORTE",
@@ -1962,10 +2103,23 @@ class TicketViewSet(
 
         ticket.solucion = solucion
 
+        ticket.acciones_realizadas = str(
+            request.data.get("acciones_realizadas", "")
+        ).strip()
+        ticket.componentes_utilizados = str(
+            request.data.get("componentes_utilizados", "")
+        ).strip()
+        evidencia_intervencion = request.FILES.get("evidencia_intervencion")
+        if evidencia_intervencion:
+            ticket.evidencia_intervencion = evidencia_intervencion
+
 
         ticket.save(
             update_fields=[
                 "solucion",
+                "acciones_realizadas",
+                "componentes_utilizados",
+                "evidencia_intervencion",
                 "actualizado_en",
             ]
         )
@@ -2072,9 +2226,36 @@ class TicketViewSet(
                     status.HTTP_400_BAD_REQUEST
             )
 
+        funciona_tecnicamente = request.data.get("funciona_tecnicamente", True)
+        if isinstance(funciona_tecnicamente, str):
+            normalizado = funciona_tecnicamente.strip().lower()
+            funciona_tecnicamente = True if normalizado in {"true", "1", "si", "sí"} else False if normalizado in {"false", "0", "no"} else funciona_tecnicamente
+        if funciona_tecnicamente not in [True, False]:
+            return Response(
+                {"funciona_tecnicamente": "Debe indicar True o False."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if funciona_tecnicamente is False:
+            ticket.resultado_pruebas = resultado
+            ticket.rework_count += 1
+            evidencia_pruebas = request.FILES.get("evidencia_pruebas")
+            if evidencia_pruebas:
+                ticket.evidencia_pruebas = evidencia_pruebas
+            ticket.save(update_fields=[
+                "resultado_pruebas", "rework_count", "evidencia_pruebas", "actualizado_en",
+            ])
+            registrar_bitacora(
+                request=request, accion="PRUEBAS_TECNICAS_NO_CONFORMES",
+                modulo="Soporte Técnico",
+                detalle=f"Las pruebas del ticket {ticket.codigo} no fueron satisfactorias; continúa en ejecución.",
+                nivel="WARNING",
+            )
+            return respuesta_ticket(ticket, "Pruebas no satisfactorias. La orden continúa en atención técnica.")
+
 
         estado_verificacion = obtener_estado(
-            "EN_VERIFICACION"
+            "PENDIENTE_CONFORMIDAD"
         )
 
 
@@ -2084,7 +2265,7 @@ class TicketViewSet(
                 {
                     "detalle": (
                         "No existe el estado "
-                        "EN_VERIFICACION."
+                        "PENDIENTE_CONFORMIDAD."
                     )
                 },
                 status=
@@ -2112,8 +2293,17 @@ class TicketViewSet(
             .strip()
         )
 
-        if informe_tecnico:
-            ticket.informe_tecnico = informe_tecnico
+        if not informe_tecnico:
+            return Response(
+                {"informe_tecnico": "Debe registrar el informe técnico."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ticket.informe_tecnico = informe_tecnico
+
+        evidencia_pruebas = request.FILES.get("evidencia_pruebas")
+        if evidencia_pruebas:
+            ticket.evidencia_pruebas = evidencia_pruebas
 
         ticket.estado = (
             estado_verificacion
@@ -2128,6 +2318,7 @@ class TicketViewSet(
             update_fields=[
                 "resultado_pruebas",
                 "informe_tecnico",
+                "evidencia_pruebas",
                 "estado",
                 "pruebas_en",
                 "actualizado_en",
@@ -2140,8 +2331,9 @@ class TicketViewSet(
             accion="REALIZAR_PRUEBAS_TECNICAS",
             modulo="Soporte Técnico",
             detalle=(
-                f"Se registraron las pruebas técnicas "
-                f"del ticket {ticket.codigo}."
+                f"Se registraron las pruebas y el informe técnico "
+                f"del ticket {ticket.codigo}. Quedó pendiente de "
+                "verificación por el solicitante."
             ),
             nivel="INFO",
         )
@@ -2149,7 +2341,7 @@ class TicketViewSet(
 
         return respuesta_ticket(
             ticket,
-            "Pruebas técnicas registradas correctamente."
+            "Informe técnico enviado. Pendiente de conformidad del solicitante."
         )
 
 
@@ -2179,6 +2371,12 @@ class TicketViewSet(
 
 
         ticket = self.get_object()
+
+        if ticket.solicitante_id != request.user.id:
+            return Response(
+                {"detalle": "Solo el solicitante propietario puede verificar este ticket."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
 
         if not validar_estado_ticket(
@@ -2457,6 +2655,12 @@ class TicketViewSet(
 
         if conformidad is False:
 
+            if not observaciones:
+                return Response(
+                    {"observaciones": "Debe indicar por qué el problema continúa."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             estado_ejecucion = obtener_estado(
                 "EN_EJECUCION"
             )
@@ -2532,7 +2736,7 @@ class TicketViewSet(
         # --------------------------------------------------
 
         estado_cerrado = obtener_estado(
-            "CERRADO"
+            "PENDIENTE_INFORME_FINAL"
         )
 
 
@@ -2541,7 +2745,7 @@ class TicketViewSet(
             return Response(
                 {
                     "detalle":
-                        "No existe el estado CERRADO."
+                        "No existe el estado PENDIENTE_INFORME_FINAL."
                 },
                 status=
                     status.HTTP_400_BAD_REQUEST
@@ -2564,10 +2768,6 @@ class TicketViewSet(
             estado_cerrado
         )
 
-        ticket.cerrado_en = (
-            ahora
-        )
-
         ticket.sla_cumplido = (
             calcular_sla_cumplido(
                 ticket,
@@ -2582,7 +2782,6 @@ class TicketViewSet(
                 "observaciones_usuario",
                 "conformidad_en",
                 "estado",
-                "cerrado_en",
                 "sla_cumplido",
                 "actualizado_en",
             ]
@@ -2595,8 +2794,8 @@ class TicketViewSet(
             modulo="Soporte Técnico",
             detalle=(
                 f"El solicitante informó "
-                f"conformidad y se cerró "
-                f"el ticket {ticket.codigo}. "
+                f"conformidad en el ticket {ticket.codigo}. "
+                "Quedó pendiente de informe final. "
                 f"SLA cumplido: "
                 f"{ticket.sla_cumplido}."
             ),
@@ -2606,7 +2805,7 @@ class TicketViewSet(
 
         return respuesta_ticket(
             ticket,
-            "Conformidad registrada. Ticket cerrado."
+            "Conformidad registrada. Ticket pendiente de informe final."
         )
 
 
@@ -2767,14 +2966,13 @@ class TicketViewSet(
 
         if not validar_estado_ticket(
             ticket,
-            ["CERRADO"]
+            ["PENDIENTE_INFORME_FINAL", "CERRADO"]
         ):
 
             return Response(
                 {
                     "detalle": (
-                        "El ticket debe estar CERRADO "
-                        "(con conformidad del solicitante) "
+                        "El ticket debe tener conformidad del solicitante "
                         "antes de elaborar el informe final."
                     )
                 },
@@ -2795,7 +2993,17 @@ class TicketViewSet(
 
         ahora = timezone.now()
 
+        estado_cerrado = obtener_estado("CERRADO")
+
+        if not estado_cerrado:
+            return Response(
+                {"detalle": "No existe el estado CERRADO."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         ticket.informe_final = informe
+        ticket.estado = estado_cerrado
+        ticket.cerrado_en = ahora
 
         # BPMN: tras validar el informe, la jefatura lo eleva y una
         # compuerta paralela lo distribuye al Director y al Jefe de
@@ -2805,6 +3013,8 @@ class TicketViewSet(
         ticket.save(
             update_fields=[
                 "informe_final",
+                "estado",
+                "cerrado_en",
                 "informe_elevado_en",
                 "actualizado_en",
             ]

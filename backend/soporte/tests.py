@@ -7,7 +7,7 @@ from usuarios.models import Area, Rol, Usuario, UsuarioRol
 
 from compras.models import SolicitudCompra
 
-from .models import CategoriaTicket, Ticket
+from .models import CategoriaTicket, EstadoTicket, Ticket
 
 
 class FlujoSoporteCompraTests(APITestCase):
@@ -76,6 +76,8 @@ class FlujoSoporteCompraTests(APITestCase):
         self.assertEqual(r.status_code, 200, r.data)
 
         self.autenticar("ESPECIALISTA")
+        r = self.client.post(f"/api/soporte/tickets/{pk}/iniciar-atencion/", {}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
         r = self.client.post(f"/api/soporte/tickets/{pk}/registrar-diagnostico/", {
             "diagnostico": "Componente dañado, requiere reemplazo.",
             "plan_solucion": "Solicitar el componente y reemplazarlo.",
@@ -93,6 +95,8 @@ class FlujoSoporteCompraTests(APITestCase):
         r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
             "componente_requerido": "Fuente de monitor",
             "especificaciones_tecnicas": "Fuente 19V 2A",
+            "cantidad_componente": 2,
+            "justificacion_compra": "Es indispensable para recuperar el monitor.",
             "costo_estimado": "250.00",
         }, format="json")
         self.assertEqual(r.status_code, 200, r.data)
@@ -120,6 +124,7 @@ class FlujoSoporteCompraTests(APITestCase):
         self.assertEqual(solicitud.origen_modulo, "SOPORTE")
         self.assertEqual(solicitud.ticket_soporte_id, pk)
         self.assertEqual(solicitud.solicitante_id, self.usuarios["ESPECIALISTA"].id)
+        self.assertEqual(solicitud.cantidad, 2)
 
         # No se puede duplicar la solicitud de compra para el
         # mismo ticket.
@@ -154,6 +159,8 @@ class FlujoSoporteCompraTests(APITestCase):
         self.autenticar("ESPECIALISTA")
         r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
             "componente_requerido": "GPU de alta gama",
+            "especificaciones_tecnicas": "GPU compatible con el equipo",
+            "justificacion_compra": "El equipo no puede operar sin reemplazo.",
             "costo_estimado": "9999.00",
         }, format="json")
         self.assertEqual(r.status_code, 200, r.data)
@@ -183,6 +190,8 @@ class FlujoSoporteCompraTests(APITestCase):
         self.autenticar("ESPECIALISTA")
         r = self.client.post(f"/api/soporte/tickets/{pk}/solicitar-requerimiento-componente/", {
             "componente_requerido": "Mouse nuevo",
+            "especificaciones_tecnicas": "Mouse USB",
+            "justificacion_compra": "El periférico actual no funciona.",
         }, format="json")
         self.assertEqual(r.status_code, 200, r.data)
 
@@ -190,3 +199,124 @@ class FlujoSoporteCompraTests(APITestCase):
             "viable": True,
         }, format="json")
         self.assertEqual(r.status_code, 403, r.data)
+
+    def test_borrador_requerimiento_permanece_visible_y_editable(self):
+        pk = self.crear_ticket_en_ejecucion("Fuente pendiente", "PC")
+        self.autenticar("ESPECIALISTA")
+        r = self.client.post(f"/api/soporte/tickets/{pk}/guardar-borrador-requerimiento/", {
+            "componente_requerido": "Fuente ATX",
+            "cantidad_componente": 1,
+        }, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual(r.data["ticket"]["estado_compra_componente"], "BORRADOR")
+        self.assertEqual(r.data["ticket"]["estado_codigo"], "EN_EJECUCION")
+
+    def test_especialista_solo_lista_ordenes_propias(self):
+        pk = self.crear_ticket_en_ejecucion("Orden propia", "PC")
+        otro = Usuario.objects.create_user(
+            username="otro_especialista", email="otro@emi.edu.bo",
+            nombre_completo="Otro Especialista", password="Prueba#2026",
+        )
+        UsuarioRol.objects.create(
+            usuario=otro, rol=Rol.objects.get(codigo="ESPECIALISTA"), activo=True,
+        )
+        self.client.force_authenticate(otro)
+        r = self.client.get("/api/soporte/tickets/")
+        self.assertEqual(r.status_code, 200, r.data)
+        ids = [item["id"] for item in (r.data if isinstance(r.data, list) else r.data["results"])]
+        self.assertNotIn(pk, ids)
+
+    def test_conformidad_positiva_espera_informe_final_del_jefe(self):
+        pk = self.crear_ticket_en_ejecucion("Equipo reparado", "PC")
+        ticket = Ticket.objects.get(pk=pk)
+        ticket.estado = EstadoTicket.objects.get(codigo="PENDIENTE_CONFORMIDAD")
+        ticket.diagnostico = "Falla de memoria"
+        ticket.solucion = "Memoria reinstalada"
+        ticket.resultado_pruebas = "Pruebas satisfactorias"
+        ticket.save(update_fields=["estado", "diagnostico", "solucion", "resultado_pruebas"])
+
+        self.autenticar("SOLICITANTE")
+        r = self.client.post(
+            f"/api/soporte/tickets/{pk}/informar-conformidad/",
+            {"conformidad": True, "observaciones": "El equipo funciona correctamente."},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual(r.data["ticket"]["estado_codigo"], "PENDIENTE_INFORME_FINAL")
+        self.assertIsNone(Ticket.objects.get(pk=pk).cerrado_en)
+
+        self.autenticar("JEFE_UTIC")
+        r = self.client.post(
+            f"/api/soporte/tickets/{pk}/elaborar-informe-final/",
+            {"informe_final": "Atención verificada y expediente validado."},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.estado.codigo, "CERRADO")
+        self.assertIsNotNone(ticket.cerrado_en)
+
+    def test_no_conformidad_exige_motivo_y_conserva_historial(self):
+        pk = self.crear_ticket_en_ejecucion("Falla persistente", "Impresora")
+        ticket = Ticket.objects.get(pk=pk)
+        ticket.estado = EstadoTicket.objects.get(codigo="PENDIENTE_CONFORMIDAD")
+        ticket.diagnostico = "Atasco del alimentador"
+        ticket.solucion = "Limpieza de rodillos"
+        ticket.resultado_pruebas = "Impresión de prueba"
+        ticket.save(update_fields=["estado", "diagnostico", "solucion", "resultado_pruebas"])
+
+        self.autenticar("SOLICITANTE")
+        r = self.client.post(
+            f"/api/soporte/tickets/{pk}/informar-conformidad/",
+            {"conformidad": False, "observaciones": ""},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 400, r.data)
+
+        r = self.client.post(
+            f"/api/soporte/tickets/{pk}/informar-conformidad/",
+            {"conformidad": False, "observaciones": "El papel vuelve a atascarse."},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.estado.codigo, "EN_EJECUCION")
+        self.assertEqual(ticket.rework_count, 1)
+        self.assertEqual(ticket.diagnostico, "Atasco del alimentador")
+        self.assertEqual(ticket.solucion, "Limpieza de rodillos")
+        self.assertEqual(ticket.resultado_pruebas, "Impresión de prueba")
+
+    def test_recibir_orden_es_idempotente(self):
+        pk = self.crear_ticket_en_ejecucion("Recepción idempotente", "PC")
+        ticket = Ticket.objects.get(pk=pk)
+        ticket.estado = EstadoTicket.objects.get(codigo="EN_DIAGNOSTICO")
+        ticket.diagnostico = ""
+        ticket.save(update_fields=["estado", "diagnostico"])
+
+        self.autenticar("ESPECIALISTA")
+        r = self.client.post(f"/api/soporte/tickets/{pk}/iniciar-atencion/", {}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual(r.data["ticket"]["estado_codigo"], "EN_DIAGNOSTICO")
+
+    def test_diagnostico_puede_recuperar_recepcion_interrumpida(self):
+        pk = self.crear_ticket_en_ejecucion("Recepción interrumpida", "Proyector")
+        ticket = Ticket.objects.get(pk=pk)
+        ticket.estado = EstadoTicket.objects.get(codigo="ASIGNADO")
+        ticket.diagnostico = ""
+        ticket.inicio_atencion_en = None
+        ticket.save(update_fields=["estado", "diagnostico", "inicio_atencion_en"])
+
+        self.autenticar("ESPECIALISTA")
+        r = self.client.post(
+            f"/api/soporte/tickets/{pk}/registrar-diagnostico/",
+            {
+                "diagnostico": "Fuente de alimentación defectuosa.",
+                "plan_solucion": "Reemplazar la fuente.",
+                "requiere_compra": True,
+            },
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.estado.codigo, "EN_EJECUCION")
+        self.assertIsNotNone(ticket.inicio_atencion_en)
