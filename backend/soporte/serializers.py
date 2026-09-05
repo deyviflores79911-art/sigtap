@@ -8,7 +8,18 @@ from .models import (
     CategoriaTicket,
     EstadoTicket,
     Ticket,
+    NotificacionSoporte,
 )
+
+
+class NotificacionSoporteSerializer(serializers.ModelSerializer):
+    ticket_codigo = serializers.CharField(source="ticket.codigo", read_only=True)
+    ticket_titulo = serializers.CharField(source="ticket.titulo", read_only=True)
+
+    class Meta:
+        model = NotificacionSoporte
+        fields = ["id", "tipo", "titulo", "mensaje", "leida", "creada_en", "leida_en", "ticket", "ticket_codigo", "ticket_titulo"]
+        read_only_fields = fields
 
 
 # ==========================================================

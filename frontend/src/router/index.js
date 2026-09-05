@@ -435,6 +435,17 @@ const router = createRouter({
       component: NotificacionesView,
       meta: {
         requiereAuth: true,
+        roles: ['SOLICITANTE'],
+      },
+    },
+
+    {
+      path: '/especialista/notificaciones',
+      name: 'especialista-notificaciones',
+      component: NotificacionesView,
+      meta: {
+        requiereAuth: true,
+        roles: ['ESPECIALISTA', 'AGENTE'],
       },
     },
 

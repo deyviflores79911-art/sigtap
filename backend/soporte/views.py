@@ -40,12 +40,14 @@ from .models import (
     CategoriaTicket,
     EstadoTicket,
     Ticket,
+    NotificacionSoporte,
 )
 
 from .serializers import (
     CategoriaTicketSerializer,
     EstadoTicketSerializer,
     TicketSerializer,
+    NotificacionSoporteSerializer,
 )
 from .informes_pdf import informe_final_jefatura, informe_requerimiento, informe_tecnico as generar_informe_tecnico
 
@@ -59,6 +61,34 @@ ROLES_ADMIN = {
     "ADMINISTRADOR",
     "ADMINISTRADOR_SIGTA",
 }
+
+
+def crear_notificacion(destinatario, ticket, tipo, titulo, mensaje):
+    if destinatario:
+        NotificacionSoporte.objects.create(destinatario=destinatario, ticket=ticket, tipo=tipo, titulo=titulo, mensaje=mensaje)
+
+
+class NotificacionSoporteViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = NotificacionSoporteSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return NotificacionSoporte.objects.filter(destinatario=self.request.user).select_related("ticket")
+
+    @action(detail=True, methods=["post"], url_path="marcar-leida")
+    def marcar_leida(self, request, pk=None):
+        notificacion = self.get_object()
+        if not notificacion.leida:
+            notificacion.leida = True
+            notificacion.leida_en = timezone.now()
+            notificacion.save(update_fields=["leida", "leida_en"])
+        return Response(self.get_serializer(notificacion).data)
+
+    @action(detail=False, methods=["post"], url_path="marcar-todas-leidas")
+    def marcar_todas_leidas(self, request):
+        self.get_queryset().filter(leida=False).update(leida=True, leida_en=timezone.now())
+        return Response({"ok": True})
 
 
 # ==========================================================
@@ -874,6 +904,12 @@ class TicketViewSet(
                 ]
             )
 
+            crear_notificacion(
+                ticket.solicitante, ticket, "RECHAZO",
+                f"{ticket.codigo} · Ticket no validado",
+                motivo,
+            )
+
             registrar_bitacora(
                 request=request,
                 accion="RECHAZAR_TICKET",
@@ -918,6 +954,12 @@ class TicketViewSet(
                 "validado_en",
                 "actualizado_en",
             ]
+        )
+
+        crear_notificacion(
+            ticket.solicitante, ticket, "EXITO",
+            f"{ticket.codigo} · Ticket validado",
+            "Jefatura UTIC validó su solicitud. El ticket continuará a clasificación y asignación técnica.",
         )
 
 
@@ -1846,14 +1888,14 @@ class TicketViewSet(
         ticket = self.get_object()
 
 
-        if ticket.estado_compra_componente != "SOLICITADA":
+        if ticket.estado_compra_componente not in ["SOLICITADA", "VIABLE"]:
 
             return Response(
                 {
                     "detalle": (
                         "Este ticket no tiene un "
                         "requerimiento de componente "
-                        "pendiente de evaluación."
+                        "pendiente de evaluación o validación final."
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST
@@ -1915,6 +1957,25 @@ class TicketViewSet(
             ticket.estado = estado_cerrado_sin_compra
             ticket.activo = False
 
+            # Si el expediente ya fue creado pero aún estaba incompleto,
+            # se conserva para auditoría y se anula; nunca se elimina.
+            if ticket.codigo_compra_vinculada:
+                from compras.models import SolicitudCompra
+                solicitud = SolicitudCompra.objects.filter(
+                    codigo=ticket.codigo_compra_vinculada
+                ).first()
+                if solicitud and solicitud.estado not in [
+                    "COMPRA_REGISTRADA",
+                    "COMPRADO_Y_ENTREGADO",
+                    "DESCARGO_PENDIENTE_LIQUIDACION",
+                    "CERRADO_ARCHIVADO",
+                ]:
+                    solicitud.estado = "ANULADO"
+                    solicitud.motivo_rechazo = motivo
+                    solicitud.save(
+                        update_fields=["estado", "motivo_rechazo", "actualizado_en"]
+                    )
+
             ticket.save(
                 update_fields=[
                     "estado_compra_componente",
@@ -1923,6 +1984,12 @@ class TicketViewSet(
                     "activo",
                     "actualizado_en",
                 ]
+            )
+
+            crear_notificacion(
+                ticket.tecnico_asignado, ticket, "RECHAZO",
+                f"{ticket.codigo} · Compra no viable",
+                motivo,
             )
 
 
@@ -1986,6 +2053,12 @@ class TicketViewSet(
                 "codigo_compra_vinculada",
                 "actualizado_en",
             ]
+        )
+
+        crear_notificacion(
+            ticket.tecnico_asignado, ticket, "EXITO",
+            f"{ticket.codigo} · Compra aprobada",
+            f"Jefatura UTIC aprobó el requerimiento. Se generó el expediente {solicitud.codigo}.",
         )
 
 

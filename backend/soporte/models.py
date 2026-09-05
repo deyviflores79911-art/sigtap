@@ -587,3 +587,21 @@ class Ticket(models.Model):
             f"{self.codigo} - "
             f"{self.titulo}"
         )
+
+
+class NotificacionSoporte(models.Model):
+    TIPOS = [("EXITO", "Aprobación"), ("RECHAZO", "Rechazo"), ("INFO", "Información")]
+    destinatario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notificaciones_soporte")
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="notificaciones")
+    tipo = models.CharField(max_length=10, choices=TIPOS, default="INFO")
+    titulo = models.CharField(max_length=160)
+    mensaje = models.TextField()
+    leida = models.BooleanField(default=False)
+    creada_en = models.DateTimeField(auto_now_add=True)
+    leida_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-creada_en"]
+
+    def __str__(self):
+        return f"{self.destinatario_id} · {self.titulo}"

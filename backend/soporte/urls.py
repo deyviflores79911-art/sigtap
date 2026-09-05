@@ -6,6 +6,7 @@ from .views import (
     CategoriaTicketViewSet,
     EstadoTicketViewSet,
     TicketViewSet,
+    NotificacionSoporteViewSet,
 )
 
 
@@ -16,6 +17,8 @@ router.register(
     CategoriaTicketViewSet,
     basename="categoria-soporte"
 )
+
+router.register(r"notificaciones", NotificacionSoporteViewSet, basename="notificacion-soporte")
 
 router.register(
     r"estados",

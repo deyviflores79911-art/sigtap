@@ -364,8 +364,8 @@ function redirigirSegunRol() {
 }
 
 .password-card.settings-sheet {
-  max-width: 880px;
-  padding: 26px 30px;
+  max-width: 980px;
+  padding: 30px 34px;
   border: 1px solid var(--sigta-borde);
   border-top: 4px solid var(--sigta-mostaza);
   border-radius: 10px;
@@ -373,11 +373,25 @@ function redirigirSegunRol() {
 }
 
 .settings-sheet form {
-  max-width: 620px;
+  max-width: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
 }
+
+.settings-sheet .form-group { margin: 0; }
+.settings-sheet .form-group:first-child { grid-column: 1 / -1; }
+.settings-sheet .requirements { margin: 0; min-height: 100%; }
+.settings-sheet .primary-button { width: auto; min-width: 230px; height: 46px; min-height: 46px; align-self: end; justify-self: end; padding: 0 28px; }
+.settings-sheet .message { grid-column: 1 / -1; margin: 0; }
 
 @media (max-width: 760px) {
   .portal-layout.con-menu { display: block; }
+  .portal-layout.con-menu .password-page { padding: 16px; }
+  .password-card.settings-sheet { max-width: 100%; padding: 22px 18px; }
+  .settings-sheet form { grid-template-columns: 1fr; }
+  .settings-sheet .form-group:first-child,.settings-sheet .message { grid-column: auto; }
+  .settings-sheet .primary-button { width: 100%; min-width: 0; min-height: 46px; justify-self: stretch; }
 }
 
 .password-card {

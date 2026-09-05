@@ -1,89 +1,251 @@
+"""PDF institucional liviano para los informes del flujo de Soporte UTIC."""
+
+from datetime import datetime
+from pathlib import Path
 from textwrap import wrap
+
+AZUL = (0.071, 0.227, 0.420)
+AZUL_CLARO = (0.941, 0.965, 0.988)
+AMARILLO = (1.0, 0.780, 0.173)
+GRIS = (0.365, 0.443, 0.522)
+BORDE = (0.780, 0.831, 0.890)
+
+
+def _logo_jpeg():
+    """Devuelve el escudo institucional y sus dimensiones sin usar Pillow."""
+    ruta = Path(__file__).resolve().parents[2] / "frontend" / "public" / "img" / "emi.jpg"
+    if not ruta.exists():
+        return None
+    datos = ruta.read_bytes()
+    indice = 2
+    while indice + 9 < len(datos):
+        if datos[indice] != 0xFF:
+            indice += 1
+            continue
+        marcador = datos[indice + 1]
+        if marcador in range(0xC0, 0xC4):
+            alto = int.from_bytes(datos[indice + 5:indice + 7], "big")
+            ancho = int.from_bytes(datos[indice + 7:indice + 9], "big")
+            return datos, ancho, alto
+        if indice + 4 > len(datos):
+            break
+        longitud = int.from_bytes(datos[indice + 2:indice + 4], "big")
+        indice += 2 + max(longitud, 2)
+    return None
 
 
 def _texto(valor):
-    return str(valor or "Sin registro").encode("latin-1", "replace").decode("latin-1")
+    return str(valor).strip() if valor not in (None, "") else "Sin registro"
 
 
-def generar_pdf(titulo, secciones):
-    lineas = [titulo, ""]
-    for etiqueta, valor in secciones:
-        lineas.append(etiqueta.upper())
-        lineas.extend(wrap(_texto(valor), width=92) or ["Sin registro"])
-        lineas.append("")
-    paginas = [lineas[i:i + 48] for i in range(0, len(lineas), 48)] or [[]]
+def _pdf_text(valor):
+    salida = []
+    for byte in _texto(valor).encode("cp1252", "replace"):
+        caracter = chr(byte)
+        if caracter in "\\()":
+            salida.append("\\" + caracter)
+        elif byte < 32 or byte > 126:
+            salida.append(f"\\{byte:03o}")
+        else:
+            salida.append(caracter)
+    return "".join(salida)
+
+
+def _lineas(valor, ancho=92):
+    resultado = []
+    for parrafo in _texto(valor).splitlines() or ["Sin registro"]:
+        resultado.extend(wrap(parrafo, width=ancho, break_long_words=False) or [""])
+    return resultado
+
+
+def _fecha(valor=None):
+    try:
+        return (valor or datetime.now()).strftime("%d/%m/%Y")
+    except AttributeError:
+        return _texto(valor)
+
+
+def _nombre(persona):
+    if not persona:
+        return "Sin registro"
+    valor = getattr(persona, "nombre_completo", None)
+    if not valor and hasattr(persona, "get_full_name"):
+        valor = persona.get_full_name()
+    return _texto(valor)
+
+
+def _datos_compra(ticket):
+    if not ticket.codigo_compra_vinculada:
+        return None
+    try:
+        from compras.models import SolicitudCompra
+        solicitud = SolicitudCompra.objects.filter(codigo=ticket.codigo_compra_vinculada).first()
+    except Exception:
+        solicitud = None
+    if not solicitud:
+        return None
+    monto = solicitud.monto_real or solicitud.monto_desembolsado or solicitud.monto_estimado
+    return solicitud.get_estado_display(), monto
+
+
+def _documento_pdf(titulo, subtitulo, ticket, secciones, meta, compra=None):
+    paginas, pagina, y = [], [], 790
+
+    def color(rgb, trazo=False):
+        pagina.append(f"{rgb[0]} {rgb[1]} {rgb[2]} {'RG' if trazo else 'rg'}")
+
+    def rect(x, abajo, ancho, alto, relleno=None, borde=None):
+        if relleno:
+            color(relleno)
+        if borde:
+            color(borde, True)
+        pagina.append(f"{x} {abajo} {ancho} {alto} re {'B' if relleno and borde else 'f' if relleno else 'S'}")
+
+    def texto(x, arriba, valor, tamano=9, negrita=False, rgb=(0.09, 0.18, 0.29)):
+        color(rgb)
+        pagina.append(f"BT /{'F2' if negrita else 'F1'} {tamano} Tf {x} {arriba} Td ({_pdf_text(valor)}) Tj ET")
+
+    def encabezado(continuacion=False):
+        nonlocal pagina, y
+        pagina = []
+        rect(42, 756, 511, 58, AZUL)
+        rect(51, 766, 45, 38, (1, 1, 1))
+        pagina.append("q 43 0 0 36 52 767 cm /Logo Do Q")
+        texto(112, 796, "ESCUELA MILITAR DE INGENIERÍA", 11, True, (1, 1, 1))
+        texto(112, 781, "MCAL. ANTONIO JOSÉ DE SUCRE  ·  BOLIVIA", 7.5, False, (1, 1, 1))
+        texto(112, 768, "UNIDAD DE TECNOLOGÍAS DE INFORMACIÓN Y COMUNICACIÓN", 7.5, False, AMARILLO)
+        y = 735
+        nombre = titulo + (" · CONTINUACIÓN" if continuacion else "")
+        texto(max(55, 297 - len(nombre) * 3.7), y, nombre, 15, True, AZUL)
+        y -= 18
+        texto(max(70, 297 - len(subtitulo) * 2.6), y, subtitulo, 9, False, GRIS)
+        y -= 24
+
+    def nueva_pagina():
+        if pagina:
+            paginas.append(pagina.copy())
+        encabezado(bool(paginas))
+
+    def asegurar(alto):
+        if y - alto < 72:
+            nueva_pagina()
+
+    def bloque_titulo(etiqueta):
+        nonlocal y
+        asegurar(32)
+        rect(42, y - 19, 511, 23, AZUL_CLARO, BORDE)
+        rect(42, y - 19, 5, 23, AMARILLO)
+        texto(54, y - 11, etiqueta, 9, True, AZUL)
+        y -= 31
+
+    def campo(etiqueta, valor):
+        nonlocal y
+        lineas = _lineas(valor)
+        alto = 20 + max(0, len(lineas) - 1) * 12
+        asegurar(alto + 7)
+        texto(49, y, etiqueta.upper(), 7, True, GRIS)
+        for indice, linea in enumerate(lineas):
+            texto(49, y - 12 - indice * 12, linea, 9)
+        y -= alto
+        color(BORDE, True)
+        pagina.append(f"49 {y + 5} m 546 {y + 5} l S")
+
+    encabezado()
+    for indice in range(0, len(meta), 2):
+        for col, (etiqueta, valor) in enumerate(meta[indice:indice + 2]):
+            x = 42 + col * 255.5
+            rect(x, y - 25, 255.5, 28, (0.985, 0.990, 0.996), BORDE)
+            texto(x + 9, y - 8, etiqueta.upper(), 6.8, True, GRIS)
+            texto(x + 9, y - 20, valor, 8.7, True, AZUL)
+        y -= 28
+    y -= 12
+    for numero, (nombre, campos) in enumerate(secciones, 1):
+        bloque_titulo(f"{numero}. {nombre}")
+        for etiqueta, valor in campos:
+            campo(etiqueta, valor)
+    if compra:
+        bloque_titulo("ANEXO · REQUERIMIENTO DE COMPRA")
+        for etiqueta, valor in compra:
+            campo(etiqueta, valor)
+    asegurar(105)
+    y -= 35
+    color(AZUL, True)
+    pagina.extend([f"80 {y} m 250 {y} l S", f"345 {y} m 515 {y} l S"])
+    texto(122, y - 16, "Elaborado por", 8, True, AZUL)
+    texto(376, y - 16, "Validado por", 8, True, AZUL)
+    texto(95, y - 29, _nombre(getattr(ticket, "tecnico_asignado", None)), 7.5, False, GRIS)
+    texto(372, y - 29, "Jefatura UTIC", 7.5, False, GRIS)
+    paginas.append(pagina.copy())
+
     objetos = []
-
     def agregar(contenido):
         objetos.append(contenido)
         return len(objetos)
-
-    catalogo, arbol, fuente = agregar(b""), agregar(b""), agregar(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-    ids_paginas = []
-    for pagina in paginas:
-        comandos = ["BT", "/F1 11 Tf", "48 790 Td", "14 TL"]
-        for numero, linea in enumerate(pagina):
-            escapada = _texto(linea).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-            if numero:
-                comandos.append("T*")
-            comandos.append(f"({escapada}) Tj")
-        comandos.append("ET")
-        flujo = "\n".join(comandos).encode("latin-1")
+    catalogo, arbol = agregar(b""), agregar(b"")
+    f1 = agregar(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
+    f2 = agregar(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>")
+    logo = _logo_jpeg()
+    logo_id = None
+    if logo:
+        datos_logo, ancho_logo, alto_logo = logo
+        logo_id = agregar(
+            f"<< /Type /XObject /Subtype /Image /Width {ancho_logo} /Height {alto_logo} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {len(datos_logo)} >>\nstream\n".encode()
+            + datos_logo + b"\nendstream"
+        )
+    else:
+        # Un píxel blanco mantiene válida la referencia /Logo del encabezado.
+        datos_logo = b"\xff\xd8\xff\xdb\x00C" + b"\x08" * 65 + b"\xff\xd9"
+        logo_id = agregar(f"<< /Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {len(datos_logo)} >>\nstream\n".encode() + datos_logo + b"\nendstream")
+    ids = []
+    for numero, comandos in enumerate(paginas, 1):
+        pie = f"BT /F1 7 Tf 42 36 Td (SIGTA - Expediente {_pdf_text(ticket.codigo)}) Tj ET BT /F1 7 Tf 500 36 Td (Página {numero} de {len(paginas)}) Tj ET"
+        flujo = ("\n".join(comandos) + "\n" + pie).encode("latin-1")
         contenido = agregar(b"<< /Length %d >>\nstream\n" % len(flujo) + flujo + b"\nendstream")
-        ids_paginas.append(agregar(
-            f"<< /Type /Page /Parent {arbol} 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 {fuente} 0 R >> >> /Contents {contenido} 0 R >>".encode()
-        ))
+        ids.append(agregar(f"<< /Type /Page /Parent {arbol} 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 {f1} 0 R /F2 {f2} 0 R >> /XObject << /Logo {logo_id} 0 R >> >> /Contents {contenido} 0 R >>".encode()))
     objetos[catalogo - 1] = f"<< /Type /Catalog /Pages {arbol} 0 R >>".encode()
-    hijos = " ".join(f"{pagina} 0 R" for pagina in ids_paginas)
-    objetos[arbol - 1] = f"<< /Type /Pages /Kids [{hijos}] /Count {len(ids_paginas)} >>".encode()
+    objetos[arbol - 1] = f"<< /Type /Pages /Kids [{' '.join(f'{item} 0 R' for item in ids)}] /Count {len(ids)} >>".encode()
     salida = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
     posiciones = [0]
     for numero, objeto in enumerate(objetos, 1):
-        posiciones.append(len(salida))
-        salida.extend(f"{numero} 0 obj\n".encode() + objeto + b"\nendobj\n")
+        posiciones.append(len(salida)); salida.extend(f"{numero} 0 obj\n".encode() + objeto + b"\nendobj\n")
     xref = len(salida)
-    salida.extend(f"xref\n0 {len(objetos) + 1}\n0000000000 65535 f \n".encode())
+    salida.extend(f"xref\n0 {len(objetos)+1}\n0000000000 65535 f \n".encode())
     for posicion in posiciones[1:]:
         salida.extend(f"{posicion:010d} 00000 n \n".encode())
-    salida.extend(f"trailer\n<< /Size {len(objetos) + 1} /Root {catalogo} 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode())
+    salida.extend(f"trailer\n<< /Size {len(objetos)+1} /Root {catalogo} 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode())
     return bytes(salida)
 
 
 def informe_requerimiento(ticket):
-    return generar_pdf("INFORME DE REQUERIMIENTO TECNICO", [
-        ("Código", ticket.codigo), ("Asunto", ticket.titulo),
-        ("Solicitante", ticket.solicitante.nombre_completo),
-        ("Técnico", getattr(ticket.tecnico_asignado, "nombre_completo", "")),
-        ("Diagnóstico", ticket.diagnostico), ("Plan de solución", ticket.plan_solucion),
-        ("Componente requerido", ticket.componente_requerido), ("Cantidad", ticket.cantidad_componente),
-        ("Especificaciones técnicas", ticket.especificaciones_tecnicas),
-        ("Justificación", ticket.justificacion_compra),
-        ("Proveedor de referencia", ticket.proveedor_cotizacion), ("Costo estimado", ticket.costo_estimado),
+    return _documento_pdf("INFORME TÉCNICO DE REQUERIMIENTO", "Solicitud de componente, repuesto o insumo", ticket, [
+        ("DATOS DEL REQUERIMIENTO", [("Asunto", ticket.titulo), ("Solicitante", _nombre(ticket.solicitante)), ("Ubicación", ticket.ubicacion), ("Equipo afectado", ticket.equipo_afectado)]),
+        ("EVALUACIÓN TÉCNICA", [("Diagnóstico", ticket.diagnostico), ("Plan de solución", ticket.plan_solucion), ("Justificación", ticket.justificacion_compra)]),
+    ], [("Código", ticket.codigo), ("Fecha de emisión", _fecha()), ("Técnico responsable", _nombre(ticket.tecnico_asignado)), ("Gestión", datetime.now().year)], [
+        ("Componente requerido", ticket.componente_requerido), ("Cantidad", ticket.cantidad_componente), ("Especificaciones técnicas", ticket.especificaciones_tecnicas), ("Proveedor de referencia", ticket.proveedor_cotizacion), ("Costo estimado", f"Bs. {_texto(ticket.costo_estimado)}"),
     ])
 
 
 def informe_final_jefatura(ticket, informe_final):
-    return generar_pdf("INFORME FINAL DE JEFATURA UTIC", [
-        ("Código", ticket.codigo), ("Asunto", ticket.titulo),
-        ("Solicitante", ticket.solicitante.nombre_completo),
-        ("Técnico", getattr(ticket.tecnico_asignado, "nombre_completo", "")),
-        ("Diagnóstico", ticket.diagnostico), ("Plan de solución", ticket.plan_solucion),
-        ("Intervención realizada", ticket.solucion), ("Resultado de pruebas", ticket.resultado_pruebas),
-        ("Informe del técnico", ticket.informe_tecnico),
-        ("Conformidad del solicitante", "Conforme" if ticket.conformidad_usuario else "No conforme"),
-        ("Observaciones del solicitante", ticket.observaciones_usuario),
-        ("Informe y validación de Jefatura UTIC", informe_final),
-    ])
+    compra = None
+    if ticket.requiere_compra:
+        datos_compra = _datos_compra(ticket)
+        estado_compra = datos_compra[0] if datos_compra else ticket.get_estado_compra_componente_display()
+        monto_compra = datos_compra[1] if datos_compra and datos_compra[1] is not None else ticket.costo_estimado
+        compra = [("¿Requirió compra?", "Sí"), ("Componente", ticket.componente_requerido), ("Cantidad", ticket.cantidad_componente), ("Especificaciones", ticket.especificaciones_tecnicas), ("Expediente vinculado", ticket.codigo_compra_vinculada), ("Estado de la compra", estado_compra), ("Monto registrado", f"Bs. {_texto(monto_compra)}")]
+    else:
+        compra = [("¿Requirió compra?", "No"), ("Resultado", "La atención fue resuelta sin adquisición de componentes o insumos.")]
+    return _documento_pdf("INFORME TÉCNICO FINAL DE SOPORTE UTIC", "Cierre y validación del servicio técnico", ticket, [
+        ("DATOS DEL REQUERIMIENTO", [("Asunto", ticket.titulo), ("Solicitante", _nombre(ticket.solicitante)), ("Ubicación", ticket.ubicacion), ("Equipo afectado", ticket.equipo_afectado), ("Descripción", ticket.descripcion)]),
+        ("DIAGNÓSTICO Y PLAN DE SOLUCIÓN", [("Diagnóstico técnico", ticket.diagnostico), ("Plan de solución", ticket.plan_solucion)]),
+        ("INTERVENCIÓN Y PRUEBAS", [("Intervención realizada", ticket.solucion), ("Resultado de pruebas", ticket.resultado_pruebas), ("Conclusión del técnico", ticket.informe_tecnico)]),
+        ("CONFORMIDAD DEL SOLICITANTE", [("Resultado", "Conforme" if ticket.conformidad_usuario else "No conforme"), ("Observaciones", ticket.observaciones_usuario)]),
+        ("VALIDACIÓN DE JEFATURA UTIC", [("Informe final", informe_final)]),
+    ], [("Nro. de informe", f"INF-TEC-{ticket.codigo}"), ("Fecha de emisión", _fecha(getattr(ticket, "cerrado_en", None))), ("Código de ticket", ticket.codigo), ("Gestión", datetime.now().year)], compra)
 
 
 def informe_tecnico(ticket, texto_informe):
-    return generar_pdf("INFORME TECNICO DE ATENCION", [
-        ("Código", ticket.codigo), ("Asunto", ticket.titulo),
-        ("Solicitante", ticket.solicitante.nombre_completo),
-        ("Técnico", getattr(ticket.tecnico_asignado, "nombre_completo", "")),
-        ("Descripción del requerimiento", ticket.descripcion),
-        ("Ubicación", ticket.ubicacion), ("Equipo afectado", ticket.equipo_afectado),
-        ("Diagnóstico", ticket.diagnostico), ("Plan de solución", ticket.plan_solucion),
-        ("Intervención realizada", ticket.solucion), ("Resultado de pruebas", ticket.resultado_pruebas),
-        ("Informe del técnico", texto_informe),
-    ])
+    return _documento_pdf("INFORME TÉCNICO DE ATENCIÓN", "Diagnóstico, intervención y pruebas", ticket, [
+        ("DATOS DE LA ORDEN", [("Asunto", ticket.titulo), ("Solicitante", _nombre(ticket.solicitante)), ("Ubicación", ticket.ubicacion), ("Equipo", ticket.equipo_afectado)]),
+        ("EVALUACIÓN", [("Diagnóstico", ticket.diagnostico), ("Plan de solución", ticket.plan_solucion)]),
+        ("TRABAJO REALIZADO", [("Intervención", ticket.solucion), ("Resultado de pruebas", ticket.resultado_pruebas), ("Conclusión técnica", texto_informe)]),
+    ], [("Código", ticket.codigo), ("Fecha de emisión", _fecha()), ("Técnico responsable", _nombre(ticket.tecnico_asignado)), ("Gestión", datetime.now().year)])

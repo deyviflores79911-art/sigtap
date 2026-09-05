@@ -14,7 +14,7 @@
     <main>
       <header>
         <div><small>SIGTA / SOPORTE / {{ titulo }}</small><h1>{{ titulo }}</h1><p>{{ subtitulo }}</p></div>
-        <button class="refresh" :disabled="cargando" @click="cargar">↻ Actualizar</button>
+        <div class="header-actions"><button class="notification-bell" title="Notificaciones" @click="router.push('/especialista/notificaciones')">🔔<b v-if="notificacionesPendientes">{{notificacionesPendientes}}</b></button><button class="refresh" :disabled="cargando" @click="cargar">↻ Actualizar</button></div>
       </header>
 
       <!-- ============================================================
@@ -41,7 +41,7 @@
         <section class="panel"><div class="panel-head"><div><small>TRABAJO PRIORITARIO</small><h3>Órdenes que requieren atención</h3></div></div><div class="priority-list"><article v-for="t in trabajoPrioritario" :key="t.id"><div><b>{{t.codigo}} · {{t.titulo}}</b><small>{{t.ubicacion}} · {{etiquetaEstado(t)}} · {{textoSla(t)}}</small></div><button class="primary" @click="continuarOrden(t)">Continuar trabajo</button></article><div v-if="!trabajoPrioritario.length" class="empty compact">No tienes trabajos prioritarios pendientes.</div></div></section>
       </section>
 
-      <section v-else-if="vista==='misordenes'"><div class="toolbar-unified"><label>⌕ <input v-model="busqueda" placeholder="Buscar orden asignada"></label><span>{{ordenesNuevas.length}} orden(es)</span></div><div class="cards"><article v-for="t in ordenesNuevas" :key="t.id"><div class="top"><span>{{t.codigo}}</span><em :class="claseSla(t)">{{etiquetaEstado(t)}}</em></div><h3>{{t.titulo}}</h3><ul class="datos"><li><b>Solicitante</b><span>{{t.solicitante_nombre}}</span></li><li><b>Prioridad / SLA</b><span>{{t.prioridad}} · {{textoSla(t)}}</span></li><li><b>Ubicación</b><span>{{t.ubicacion}}</span></li><li><b>Equipo</b><span>{{t.equipo_afectado}}</span></li><li><b>Asignada</b><span>{{fecha(t.asignado_en)}}</span></li></ul><div class="actions"><button @click="verTicket(t)">Ver detalle</button><button class="primary" :disabled="procesando" @click="aceptarOrden(t)">{{ procesando ? 'Recibiendo...' : 'Recibir orden' }}</button></div></article><div v-if="!ordenesNuevas.length" class="empty"><span>✓</span><h3>No tienes órdenes nuevas</h3><p>Las órdenes recibidas se encuentran en Trabajos en curso.</p></div></div></section>
+      <section v-else-if="vista==='misordenes'"><div class="toolbar-unified"><label>⌕ <input v-model="busqueda" placeholder="Buscar orden asignada"></label><span>{{ordenesNuevas.length}} orden(es)</span></div><div class="instruction"><b>Revise antes de iniciar</b><span>Abra la orden para comprobar ubicación, equipo, descripción y evidencia. Desde el detalle podrá recibirla e iniciar el diagnóstico.</span></div><div class="cards"><article v-for="t in ordenesNuevas" :key="t.id"><div class="top"><span>{{t.codigo}}</span><em :class="claseSla(t)">{{etiquetaEstado(t)}}</em></div><h3>{{t.titulo}}</h3><ul class="datos"><li><b>Solicitante</b><span>{{t.solicitante_nombre}}</span></li><li><b>Prioridad / SLA</b><span>{{t.prioridad}} · {{textoSla(t)}}</span></li><li><b>Ubicación</b><span>{{t.ubicacion}}</span></li><li><b>Equipo</b><span>{{t.equipo_afectado}}</span></li><li><b>Asignada</b><span>{{fecha(t.asignado_en)}}</span></li></ul><div class="actions"><button class="primary" @click="verTicket(t)">Revisar orden</button></div></article><div v-if="!ordenesNuevas.length" class="empty"><span>✓</span><h3>No tienes órdenes nuevas</h3><p>Las órdenes recibidas se encuentran en Trabajos en curso.</p></div></div></section>
 
       <section v-else-if="vista==='curso'"><div class="work-filters"><label>Estado<select v-model="filtroCurso.estado"><option value="">Todos</option><option value="diagnostico">En diagnóstico</option><option value="reparacion">En reparación</option><option value="compra">En espera de compra</option><option value="pruebas">En pruebas</option><option value="retrabajo">Devuelta / retrabajo</option></select></label><label>Prioridad<select v-model="filtroCurso.prioridad"><option value="">Todas</option><option v-for="p in ['BAJA','MEDIA','ALTA','CRITICA']" :key="p">{{p}}</option></select></label><label>Buscar<input v-model="filtroCurso.texto" placeholder="Ticket o asunto"></label></div><div class="cards"><article v-for="t in trabajosFiltrados" :key="t.id"><div class="top"><span>{{t.codigo}}</span><em>{{etiquetaEstado(t)}}</em></div><h3>{{t.titulo}}</h3><ul class="datos"><li><b>Prioridad</b><span>{{t.prioridad}}</span></li><li><b>SLA</b><span>{{textoSla(t)}}</span></li><li v-if="t.estado_compra_componente"><b>Compra</b><span>{{t.estado_compra_componente}}</span></li><li v-if="Number(t.rework_count)"><b>Retrabajo</b><span>{{t.observaciones_usuario}}</span></li></ul><div class="actions"><button class="primary" @click="continuarOrden(t)">Continuar</button></div></article><div v-if="!trabajosFiltrados.length" class="empty"><span>✓</span><h3>No tienes trabajos pendientes</h3></div></div></section>
 
@@ -165,13 +165,13 @@
           <article v-for="t in esperandoCompra" :key="t.id">
             <div class="top"><span>{{ t.codigo }}</span><em>{{ etiquetaEstado(t) }}</em></div>
             <h3>{{ t.titulo }}</h3>
+            <div class="purchase-status"><small>PRODUCTO SOLICITADO</small><strong>{{t.componente_requerido || 'Sin especificar'}}</strong><span>{{t.cantidad_componente || 1}} unidad(es) · {{t.especificaciones_tecnicas || 'Sin características registradas'}}</span></div>
             <ul class="datos">
-              <li><b>Componente</b><span>{{ t.componente_requerido || 's/d' }}</span></li>
+              <li><b>Estado actual</b><span>{{ textoEspera(t) }}</span></li>
               <li><b>Costo estimado</b><span>{{ t.costo_estimado ? `Bs. ${t.costo_estimado}` : 's/d' }}</span></li>
               <li><b>Expediente</b><span>{{ t.codigo_compra_vinculada || 'aún no generado' }}</span></li>
             </ul>
-            <p>{{ textoEspera(t) }}</p>
-            <a v-if="t.cotizacion_archivo_url" class="adjunto" :href="t.cotizacion_archivo_url" target="_blank">📎 Cotización enviada</a>
+            <button v-if="t.cotizacion_archivo_url" type="button" class="evidence-button purchase-doc" @click="abrirVisor(t.cotizacion_archivo_url,t.codigo)">📄 Ver cotización enviada</button>
             <div class="actions"><button @click="verTicket(t)">Ver detalle</button></div>
           </article>
         </div>
@@ -303,6 +303,7 @@
           <div class="detalle-campo" v-if="ticketDetalle.observaciones_usuario"><b>Observaciones del solicitante</b><p>{{ ticketDetalle.observaciones_usuario }}</p></div>
           <div class="evidence-card" v-if="ticketDetalle.evidencia_archivo_url"><img v-if="esImagen(ticketDetalle.evidencia_archivo_url)" :src="ticketDetalle.evidencia_archivo_url" alt="Evidencia del solicitante"><div><b>Evidencia del solicitante</b><small>{{nombreArchivo(ticketDetalle.evidencia_archivo_url)}}</small><button type="button" class="evidence-button" @click="abrirVisor(ticketDetalle.evidencia_archivo_url,ticketDetalle.codigo)">{{esImagen(ticketDetalle.evidencia_archivo_url)?'👁 Ver evidencia':'📄 Visualizar documento'}}</button></div></div>
           <div class="evidence-card" v-if="ticketDetalle.cotizacion_archivo_url"><div class="doc-icon">PDF</div><div><b>Cotización</b><small>Documento asociado al requerimiento</small><button type="button" class="evidence-button" @click="abrirVisor(ticketDetalle.cotizacion_archivo_url,ticketDetalle.codigo)">📄 Visualizar documento</button></div></div>
+          <div v-if="ticketDetalle.estado_codigo==='ASIGNADO'" class="receive-panel"><div><b>¿La información es suficiente?</b><small>Al recibir la orden se abrirá la hoja de diagnóstico técnico.</small></div><button class="primary" :disabled="procesando" @click="recibirDesdeDetalle(ticketDetalle)">{{procesando?'Recibiendo...':'Recibir orden e iniciar diagnóstico'}}</button></div>
         </div>
       </div>
     </div>
@@ -313,13 +314,17 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute()
 const usuario = ref(JSON.parse(localStorage.getItem('sigta_usuario') || '{}'))
-const vista = ref('resumen')
+const seccionesValidas = ['resumen','misordenes','curso','cotizaciones','trabajo','informes','compras','historial']
+const vistaInicial = seccionesValidas.includes(String(route.query.vista)) ? String(route.query.vista) : 'resumen'
+const vista = ref(vistaInicial)
 const menuAbierto = ref(false)
 const tickets = ref([])
+const notificacionesPendientes = ref(0)
 const cargando = ref(false)
 const procesando = ref(false)
 const ticketActivo = ref(null)
@@ -380,6 +385,7 @@ const menu = computed(() => [
   { id: 'trabajo', icono: 'RP', nombre: 'Trabajos y anotaciones', total: porIntervenir.value.length },
   { id: 'informes', icono: 'IF', nombre: 'Pruebas e informes', total: porProbar.value.length },
   { id: 'compras', icono: 'CP', nombre: 'Seguimiento de compras', total: esperandoCompra.value.length },
+  { id: 'notificaciones', icono: '🔔', nombre: 'Notificaciones', total: notificacionesPendientes.value },
   { id: 'historial', icono: 'HI', nombre: 'Historial' },
 ])
 
@@ -454,13 +460,15 @@ function token() { return localStorage.getItem('sigta_token') }
 async function cargar() {
   cargando.value = true
   try {
-    const r = await fetch('/api/soporte/tickets/', { headers: { Authorization: `Token ${token()}` } })
-    const d = await r.json().catch(() => ({}))
+    const [r,nr] = await Promise.all([fetch('/api/soporte/tickets/', { headers: { Authorization: `Token ${token()}` } }),fetch('/api/soporte/notificaciones/',{headers:{Authorization:`Token ${token()}`}})])
+    const d = await r.json().catch(() => ({})),nd=nr.ok?await nr.json():[]
     if (!r.ok) throw new Error(d.detalle || 'No fue posible actualizar las órdenes.')
     tickets.value = Array.isArray(d) ? d : (d.results || [])
+    const ns=Array.isArray(nd)?nd:nd.results||[];notificacionesPendientes.value=ns.filter(n=>!n.leida).length
     // Mantiene sincronizada la orden abierta tras cada acción.
     if (ordenAbierta.value) ordenAbierta.value = tickets.value.find(t => t.id === ordenAbierta.value.id) || null
     if (ticketActivo.value) ticketActivo.value = tickets.value.find(t => t.id === ticketActivo.value.id) || null
+    if(route.query.ticket&&!ticketDetalle.value)ticketDetalle.value=tickets.value.find(t=>String(t.id)===String(route.query.ticket))||null
   } finally {
     cargando.value = false
   }
@@ -497,6 +505,7 @@ async function postAccion(ticket, endpoint, body, esFormData = false) {
 }
 
 function irA(id) {
+  if (id === 'notificaciones') { router.push('/especialista/notificaciones'); return }
   vista.value = id
   menuAbierto.value = false
   ordenAbierta.value = null
@@ -523,8 +532,11 @@ async function aceptarOrden(t) {
     recibirOrden(datos.ticket || tickets.value.find(item => item.id === t.id) || t)
     vista.value = 'ordenes'
     mostrarMensaje('Orden recibida', `${t.codigo} pasó a Trabajos en curso. Registre el diagnóstico técnico.`)
-  } catch (e) { mostrarMensaje('No fue posible recibir la orden', String(e.message), 'error') }
+    return true
+  } catch (e) { mostrarMensaje('No fue posible recibir la orden', String(e.message), 'error'); return false }
 }
+
+async function recibirDesdeDetalle(t) { if (await aceptarOrden(t)) ticketDetalle.value = null }
 
 function continuarOrden(t) {
   if (t.estado_codigo === 'ASIGNADO') { aceptarOrden(t); return }
@@ -668,9 +680,14 @@ onMounted(cargar)
 .toolbar-unified{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;color:var(--sigta-texto-suave)}.toolbar-unified label{width:360px;background:#fff;border:1px solid var(--sigta-borde);border-radius:8px;padding:10px}.toolbar-unified input{border:0;outline:0;width:90%}.kanban-unified{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:13px;align-items:start}.kanban-col{background:#eaf0f7;border:1px solid var(--sigta-borde);border-radius:11px;padding:11px}.kanban-title{display:flex;justify-content:space-between;padding:5px 3px 13px}.kanban-title em{font-style:normal;background:#fff;border-radius:12px;padding:3px 8px}.orden-card{background:#fff;border:1px solid var(--sigta-borde);border-radius:9px;padding:14px;margin-bottom:10px}.orden-card.retorno{border-left:4px solid var(--sigta-error)}.orden-card h3{font-size:14px}.compra-indicator{font-size:10px;background:var(--sigta-mostaza-suave);padding:7px;border-radius:6px}.compact{padding:18px}.table-wrap{overflow:auto}.history-table{width:100%;border-collapse:collapse;min-width:700px}.history-table th,.history-table td{text-align:left;padding:11px;border-bottom:1px solid var(--sigta-borde);font-size:12px}.history-table th{color:var(--sigta-texto-suave);font-size:10px;text-transform:uppercase}@media(max-width:1100px){.kanban-unified{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.kanban-unified{grid-template-columns:1fr}.toolbar-unified{align-items:flex-start;flex-direction:column;gap:10px}.toolbar-unified label{width:100%}.hoja{max-width:100%}.compuerta{align-items:flex-start;flex-direction:column}}
 </style>
 <style scoped>
+.header-actions{display:flex;gap:9px}.notification-bell{position:relative;border:1px solid var(--sigta-borde);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.notification-bell b{position:absolute;right:-5px;top:-7px;background:var(--sigta-error);color:#fff;border-radius:12px;padding:2px 6px;font-size:10px}@media(max-width:720px){.header-actions{width:100%}.header-actions>*{flex:1}}
+</style>
+<style scoped>
 .evidence-button{display:inline-block;background:var(--sigta-azul)!important;color:#fff!important;border:0;text-decoration:none;padding:9px 13px;border-radius:7px;font-weight:800;font-size:12px;cursor:pointer;transition:background .18s,transform .18s}.evidence-button:hover{background:#174b7c!important;transform:translateY(-1px)}
+.purchase-status{display:grid;gap:5px;margin:13px 0;padding:13px;border-radius:9px;background:#f4f8fc;border-left:4px solid var(--sigta-mostaza)}.purchase-status small{color:var(--sigta-texto-suave);font-size:9px;font-weight:900;letter-spacing:1px}.purchase-status strong{color:var(--sigta-azul)}.purchase-status span{font-size:11px;color:var(--sigta-texto-suave);line-height:1.45}.purchase-doc{width:100%;margin:3px 0 7px}.receive-panel{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:15px;border-radius:9px;background:var(--sigta-mostaza-suave);border-left:4px solid var(--sigta-mostaza)}.receive-panel b,.receive-panel small{display:block}.receive-panel small{margin-top:4px;color:var(--sigta-texto-suave)}.receive-panel button{border:0;border-radius:7px;padding:11px 14px;font-weight:800;white-space:nowrap;cursor:pointer}
+.decision-notices{display:grid;gap:10px;margin:17px 0}.decision-notices article{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:13px;background:#fff7f7;border:1px solid #efc4c4;border-left:4px solid var(--sigta-error);border-radius:9px;padding:14px}.decision-notices i{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:var(--sigta-error-fondo);color:var(--sigta-error);font-style:normal;font-weight:900}.decision-notices small,.decision-notices b,.decision-notices span{display:block}.decision-notices small{font-size:9px;color:var(--sigta-error);font-weight:900;letter-spacing:1px}.decision-notices p{margin:4px 0;color:var(--sigta-texto)}.decision-notices span{font-size:11px;color:var(--sigta-texto-suave)}.decision-notices button{border:1px solid var(--sigta-error);background:#fff;color:var(--sigta-error);border-radius:7px;padding:9px 12px;font-weight:800;cursor:pointer}
 .evidence-viewer{z-index:100}.evidence-viewer>section{width:min(1000px,92vw);max-height:90vh;background:#fff;border-radius:14px;overflow:hidden}.evidence-viewer header{display:flex;justify-content:space-between;align-items:center;margin:0;padding:15px 18px;background:var(--sigta-azul);color:#fff}.evidence-viewer header button{border:1px solid #ffffff55;background:#ffffff12;color:#fff;border-radius:7px;padding:9px 12px;cursor:pointer}.evidence-viewer header h3{margin:3px 0}.viewer-body{height:min(74vh,760px);padding:18px;display:grid;place-items:center;background:#eef3f8}.viewer-body img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}.viewer-body iframe{width:100%;height:100%;border:0;background:#fff}
-@media(max-width:720px){.evidence-button{width:100%}.evidence-viewer>section{width:95vw}.evidence-viewer header>div{display:none}.viewer-body{height:78vh;padding:8px}}
+@media(max-width:720px){.evidence-button{width:100%}.receive-panel{align-items:stretch;flex-direction:column}.receive-panel button{white-space:normal}.decision-notices article{grid-template-columns:36px 1fr}.decision-notices button{grid-column:1/-1;width:100%}.evidence-viewer>section{width:95vw}.evidence-viewer header>div{display:none}.viewer-body{height:78vh;padding:8px}}
 </style>
 <style scoped>
 .detalle-modal{width:min(920px,94vw)}

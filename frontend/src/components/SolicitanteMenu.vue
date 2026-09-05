@@ -103,6 +103,12 @@
         <strong v-if="verificacionesPendientes" class="menu-count">{{ verificacionesPendientes }}</strong>
       </router-link>
 
+      <router-link to="/usuario/notificaciones" class="menu-item">
+        <IconoSigta class="icon" nombre="notificaciones" />
+        <span class="menu-label">Notificaciones</span>
+        <strong v-if="notificacionesPendientes" class="menu-count">{{notificacionesPendientes}}</strong>
+      </router-link>
+
 
       <!-- PERFIL -->
 
@@ -175,20 +181,22 @@ const menuAbierto =
   ref(false)
 
 const verificacionesPendientes = ref(0)
+const notificacionesPendientes = ref(0)
 
 onMounted(async () => {
   const token = localStorage.getItem('sigta_token')
   if (!token) return
   try {
-    const respuesta = await fetch('/api/soporte/tickets/?propias=1', {
+    const [respuesta,respuestaNotificaciones] = await Promise.all([fetch('/api/soporte/tickets/?propias=1', {
       headers: { Authorization: `Token ${token}`, Accept: 'application/json' },
-    })
+    }),fetch('/api/soporte/notificaciones/',{headers:{Authorization:`Token ${token}`,Accept:'application/json'}})])
     if (!respuesta.ok) return
     const datos = await respuesta.json()
     const tickets = Array.isArray(datos) ? datos : (datos.results || [])
     verificacionesPendientes.value = tickets.filter(
       ticket => ticket.estado_codigo === 'PENDIENTE_CONFORMIDAD'
     ).length
+    if(respuestaNotificaciones.ok){const datosNotificaciones=await respuestaNotificaciones.json();const lista=Array.isArray(datosNotificaciones)?datosNotificaciones:datosNotificaciones.results||[];notificacionesPendientes.value=lista.filter(item=>!item.leida).length}
   } catch (error) {
     console.error('No se pudo cargar el contador de verificaciones:', error)
   }
