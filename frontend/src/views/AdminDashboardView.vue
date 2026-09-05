@@ -271,12 +271,12 @@
               <small v-if="item.meta">{{ item.meta }}</small>
 
               <button
-                v-if="statCategoria === 'compras'"
+                v-if="item.ruta"
                 type="button"
                 class="stat-item-revisar"
-                @click="router.push('/admin/compras')"
+                @click="router.push(item.ruta)"
               >
-                Ir a revisar
+                {{ item.accion }}
               </button>
 
             </div>
@@ -361,8 +361,13 @@ const resumen =
 /* =========================================================
    CLASIFICACIÓN DE SOLICITUDES DE COMPRA
 
-   Mismos grupos que usa la pantalla de Solicitudes: lo que no
-   está rechazado ni aprobado sigue esperando decisión.
+   Mismos grupos que usa la pantalla de Solicitudes, para que
+   las tarjetas y las listas digan lo mismo.
+
+   Las que están EN_REVISION_DAF no le corresponden al Director
+   y no aparecen en sus pantallas, así que tampoco se cuentan en
+   ninguna tarjeta: si se contaran solo en el total, este no
+   cuadraría con la suma de las otras tres.
 ========================================================= */
 
 const ESTADOS_RECHAZADA = [
@@ -379,6 +384,11 @@ const ESTADOS_APROBADA = [
   'CERRADO_ARCHIVADO',
 ]
 
+const ESTADOS_REVISION_DAF = [
+  'CREADO_PENDIENTE_DAF',
+  'EVALUADO_PENDIENTE_CERTIFICACION',
+]
+
 
 function grupoCompra(compra) {
 
@@ -393,6 +403,10 @@ function grupoCompra(compra) {
 
   if (ESTADOS_APROBADA.includes(estado)) {
     return 'APROBADA'
+  }
+
+  if (ESTADOS_REVISION_DAF.includes(estado)) {
+    return 'EN_REVISION_DAF'
   }
 
   return 'EN_ESPERA'
@@ -724,10 +738,7 @@ async function cargarResumen() {
       tickets.length
 
 
-    resumen.compras =
-      compras.length
-
-
+    // Lo que espera SU decisión (la DAF ya certificó).
     resumen.pendientes =
       compras.filter(
         compra => grupoCompra(compra) === 'EN_ESPERA'
@@ -744,6 +755,15 @@ async function cargarResumen() {
       compras.filter(
         compra => grupoCompra(compra) === 'RECHAZADA'
       ).length
+
+
+    // El total es la suma de las otras tres tarjetas, no todas
+    // las filas de la tabla: las que siguen en revisión de la DAF
+    // no se le muestran al Director en ninguna pantalla.
+    resumen.compras =
+      resumen.pendientes
+      + resumen.aceptadas
+      + resumen.rechazadas
 
 
     resumen.nuevos =
@@ -968,14 +988,38 @@ const statItemsBase =
 
     if (statCategoria.value === 'compras') {
 
-      return comprasLista.value.map(
-        c => ({
-          id: c.id,
-          titulo: `${c.codigo || 'S/C'} · ${c.titulo || 'Sin título'}`,
-          subtitulo: c.estado_nombre || c.estado || '',
-          meta: c.area_nombre || '',
-        })
-      )
+      // Las mismas que cuenta la tarjeta: sin las que siguen en
+      // revisión de la DAF, o el listado mostraría más filas de
+      // las que anuncia el número.
+      return comprasLista.value
+        .filter(
+          c => grupoCompra(c) !== 'EN_REVISION_DAF'
+        )
+        .map(
+          c => {
+
+            // Cada fila lleva a la pantalla donde realmente está:
+            // las pendientes a Solicitudes y las ya decididas al
+            // Historial. Antes todas iban a Solicitudes, así que
+            // una solicitud ya aprobada aterrizaba en una lista
+            // vacía.
+            const pendiente =
+              grupoCompra(c) === 'EN_ESPERA'
+
+            return {
+              id: c.id,
+              titulo: `${c.codigo || 'S/C'} · ${c.titulo || 'Sin título'}`,
+              subtitulo: c.estado_nombre || c.estado || '',
+              meta: c.area_nombre || '',
+              ruta: pendiente
+                ? '/admin/compras'
+                : '/admin/historial',
+              accion: pendiente
+                ? 'Ir a revisar'
+                : 'Ver en historial',
+            }
+          }
+        )
     }
 
 
@@ -1218,12 +1262,16 @@ function cerrarSesion() {
    ESTADÍSTICAS
 ========================================================= */
 
+/* Cinco tarjetas: Actividades, Pendientes, Total, Aceptadas y
+   Rechazadas. La rejilla era de 4 columnas fijas, así que la
+   quinta caía sola a una segunda fila. */
+
 .stats-grid {
 
   display: grid;
 
   grid-template-columns:
-    repeat(4,1fr);
+    repeat(5,1fr);
 
   gap: 14px;
 
@@ -1280,9 +1328,13 @@ function cerrarSesion() {
 
   color: var(--sigta-texto-suave);
 
-  font-size: 15px;
+  /* 13px en vez de 15: con cinco columnas la etiqueta es lo
+     primero que se parte en varias líneas. */
+  font-size: 13px;
 
   font-weight: 800;
+
+  letter-spacing: .4px;
 
   text-transform: uppercase;
 }
@@ -1302,9 +1354,11 @@ function cerrarSesion() {
 
 .stat-card small {
 
+  display: block;
+
   color: var(--sigta-texto-suave);
 
-  font-size: 14px;
+  font-size: 13px;
 
   line-height: 1.35;
 }

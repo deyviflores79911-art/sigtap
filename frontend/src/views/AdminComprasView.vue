@@ -12,23 +12,39 @@
 
         <div>
           <h1>
-            Solicitudes
+            {{
+              vista === 'PENDIENTES'
+                ? 'Solicitudes'
+                : 'Historial'
+            }}
           </h1>
 
-          <p>
-            Registros de solicitudes de compra y Caja Chica.
+          <p v-if="vista === 'PENDIENTES'">
+            {{ conteos.PENDIENTES }}
+            {{ conteos.PENDIENTES === 1 ? 'solicitud' : 'solicitudes' }}
+            de compra pendientes de aprobar o rechazar.
+          </p>
+
+          <p v-else>
+            {{ conteos.APROBADA }}
+            {{ conteos.APROBADA === 1 ? 'aprobada' : 'aprobadas' }}
+            y
+            {{ conteos.RECHAZADA }}
+            {{ conteos.RECHAZADA === 1 ? 'rechazada' : 'rechazadas' }}.
+            Solo consulta.
           </p>
         </div>
 
         <div class="header-actions">
 
           <select
-            v-model="filtroEstado"
+            v-if="vista === 'HISTORIAL'"
+            v-model="filtroHistorial"
             class="filtro-estado"
           >
-            <option value="">Todas las solicitudes</option>
-            <option value="APROBADA">Solicitudes aprobadas</option>
-            <option value="RECHAZADA">Solicitudes rechazadas</option>
+            <option value="">Aprobadas y rechazadas</option>
+            <option value="APROBADA">Solo aprobadas</option>
+            <option value="RECHAZADA">Solo rechazadas</option>
           </select>
 
           <button
@@ -75,7 +91,7 @@
         v-else-if="comprasFiltradas.length === 0"
         class="empty"
       >
-        No hay {{ etiquetaFiltroVacio(filtroEstado) }}.
+        {{ mensajeVacio }}
       </div>
 
 
@@ -580,6 +596,7 @@ import {
 } from 'vue'
 
 import {
+  useRoute,
   useRouter
 } from 'vue-router'
 
@@ -589,6 +606,9 @@ import AdminMenu
 
 const router =
   useRouter()
+
+const route =
+  useRoute()
 
 
 // ==========================================================
@@ -606,20 +626,129 @@ const cargando =
 // FILTRO
 // ==========================================================
 
-const filtroEstado =
+// Reparto de las solicitudes entre las dos entradas de menú que
+// comparten este componente:
+//
+//   "Solicitudes" (/admin/compras)   -> SOLO las que el Director
+//                                       decide: la DAF ya
+//                                       certificó y el expediente
+//                                       espera su autorización.
+//   "Historial"   (/admin/historial) -> SOLO las que él ya aprobó
+//                                       o rechazó.
+//
+// Mientras el expediente está en revisión de la DAF (evaluación y
+// certificación del presupuesto) NO aparece en ninguna de las dos:
+// no es trabajo suyo ni una decisión que haya tomado. Al aprobar o
+// rechazar, la solicitud cambia de estado y pasa sola al Historial.
+
+// bucketEstado() ya distingue los dos casos:
+//   EN_ESPERA        -> VERIFICADO_PENDIENTE_AUTORIZACION (él)
+//   EN_REVISION_DAF  -> pendiente DAF / pendiente certificación
+// así que basta con apoyarse en él.
+
+const vista =
+  computed(() =>
+    route.meta.vista === 'HISTORIAL'
+      ? 'HISTORIAL'
+      : 'PENDIENTES'
+  )
+
+
+const filtroHistorial =
   ref('')
+
+
+const conteos =
+  computed(() => {
+
+    const total = {
+      PENDIENTES: 0,
+      APROBADA: 0,
+      RECHAZADA: 0,
+    }
+
+    for (const compra of compras.value) {
+
+      const bucket =
+        bucketEstado(compra.estado)
+
+      if (bucket === 'EN_ESPERA') {
+        total.PENDIENTES += 1
+      }
+
+      else if (bucket === 'APROBADA') {
+        total.APROBADA += 1
+      }
+
+      else if (bucket === 'RECHAZADA') {
+        total.RECHAZADA += 1
+      }
+
+      // EN_REVISION_DAF no se cuenta: no es del Director.
+    }
+
+    total.HISTORIAL =
+      total.APROBADA
+      + total.RECHAZADA
+
+    return total
+  })
+
 
 const comprasFiltradas =
   computed(() => {
 
-    if (!filtroEstado.value) {
-      return compras.value
+    if (vista.value === 'PENDIENTES') {
+
+      return compras.value.filter(
+        compra =>
+          bucketEstado(compra.estado)
+          === 'EN_ESPERA'
+      )
     }
 
     return compras.value.filter(
-      compra =>
-        bucketEstado(compra.estado)
-        === filtroEstado.value
+      compra => {
+
+        const bucket =
+          bucketEstado(compra.estado)
+
+        // Solo lo ya decidido por el Director. Lo que sigue en
+        // revisión de la DAF no entra en el historial.
+        if (
+          bucket !== 'APROBADA'
+          && bucket !== 'RECHAZADA'
+        ) {
+          return false
+        }
+
+        if (!filtroHistorial.value) {
+          return true
+        }
+
+        return bucket === filtroHistorial.value
+      }
+    )
+  })
+
+
+const mensajeVacio =
+  computed(() => {
+
+    if (vista.value === 'PENDIENTES') {
+      return (
+        'No hay solicitudes esperando su autorización. '
+        + 'Aparecerán aquí cuando la DAF certifique el '
+        + 'presupuesto.'
+      )
+    }
+
+    return (
+      {
+        APROBADA: 'Todavía no hay solicitudes aprobadas.',
+        RECHAZADA: 'Todavía no hay solicitudes rechazadas.',
+      }[filtroHistorial.value]
+      || 'Todavía no hay solicitudes resueltas.'
     )
   })
 
