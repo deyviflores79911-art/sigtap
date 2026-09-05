@@ -110,6 +110,24 @@
         </span>
       </router-link>
 
+
+      <!--
+        ACTIVIDADES: informes que las jefaturas de UTIC y de
+        Mantenimiento remiten a la Dirección al cerrar un flujo.
+        Exclusivo del Director.
+      -->
+
+      <router-link
+        to="/admin/actividades"
+        class="menu-item"
+      >
+        <IconoSigta class="icon" nombre="actividades" />
+
+        <span>
+          Actividades
+        </span>
+      </router-link>
+
     </nav>
 
 

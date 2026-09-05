@@ -43,6 +43,9 @@ import AdminSMTPView
 import AdminPreferenciasView
   from '../views/AdminPreferenciasView.vue'
 
+import AdminActividadesView
+  from '../views/AdminActividadesView.vue'
+
 
 /* =========================================================
    SUPERUSUARIO
@@ -236,6 +239,24 @@ const router = createRouter({
         requiereAuth: true,
         admin: true,
         vista: 'HISTORIAL',
+      },
+    },
+
+
+    /* -----------------------------------------------------
+       ACTIVIDADES (solo Director)
+
+       Maqueta visual de los informes que remiten las
+       jefaturas de UTIC y Mantenimiento. No consume API.
+    ----------------------------------------------------- */
+
+    {
+      path: '/admin/actividades',
+      name: 'admin-actividades',
+      component: AdminActividadesView,
+      meta: {
+        requiereAuth: true,
+        admin: true,
       },
     },
 

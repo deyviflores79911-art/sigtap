@@ -76,67 +76,45 @@
       <section class="stats-grid">
 
 
-        <!-- USUARIOS -->
+        <!-- ACTIVIDADES -->
 
         <article
           class="stat-card"
-          @click="abrirStatModal('usuarios')"
+          @click="$router.push('/admin/actividades')"
         >
 
           <span>
-            Usuarios
+            Actividades
           </span>
 
           <strong>
-            {{ resumen.usuarios }}
+            {{ resumen.actividades }}
           </strong>
 
           <small>
-            Registrados en SIGTA
+            Informes remitidos por las jefaturas
           </small>
 
         </article>
 
 
-        <!-- TICKETS -->
+        <!-- PENDIENTES -->
 
         <article
           class="stat-card"
-          @click="abrirStatModal('tickets')"
+          @click="$router.push('/admin/compras')"
         >
 
           <span>
-            Requerimientos de soporte
+            Pendientes
           </span>
 
           <strong>
-            {{ resumen.tickets }}
+            {{ resumen.pendientes }}
           </strong>
 
           <small>
-            Registrados en Soporte Técnico
-          </small>
-
-        </article>
-
-
-        <!-- NUEVOS -->
-
-        <article
-          class="stat-card"
-          @click="abrirStatModal('nuevos')"
-        >
-
-          <span>
-            Requerimientos nuevos
-          </span>
-
-          <strong>
-            {{ resumen.nuevos }}
-          </strong>
-
-          <small>
-            Solicitudes registradas pendientes de atención UTIC
+            Solicitudes que esperan su decisión
           </small>
 
         </article>
@@ -159,6 +137,50 @@
 
           <small>
             Registradas en el proceso de Compras
+          </small>
+
+        </article>
+
+
+        <!-- ACEPTADAS -->
+
+        <article
+          class="stat-card"
+          @click="$router.push('/admin/historial')"
+        >
+
+          <span>
+            Aceptadas
+          </span>
+
+          <strong>
+            {{ resumen.aceptadas }}
+          </strong>
+
+          <small>
+            Solicitudes aprobadas
+          </small>
+
+        </article>
+
+
+        <!-- RECHAZADAS -->
+
+        <article
+          class="stat-card"
+          @click="$router.push('/admin/historial')"
+        >
+
+          <span>
+            Rechazadas
+          </span>
+
+          <strong>
+            {{ resumen.rechazadas }}
+          </strong>
+
+          <small>
+            Solicitudes rechazadas
           </small>
 
         </article>
@@ -292,6 +314,9 @@ import {
 import AdminMenu
   from '../components/AdminMenu.vue'
 
+import { INFORMES_MUESTRA }
+  from '../data/informesActividad.js'
+
 
 const router =
   useRouter()
@@ -319,7 +344,59 @@ const resumen =
     nuevos: 0,
 
     compras: 0,
+
+    pendientes: 0,
+
+    aceptadas: 0,
+
+    rechazadas: 0,
+
+    // Los informes de actividad todavía no tienen origen real:
+    // se leen de la misma maqueta que usa /admin/actividades
+    // para que ambas pantallas digan siempre lo mismo.
+    actividades: INFORMES_MUESTRA.length,
   })
+
+
+/* =========================================================
+   CLASIFICACIÓN DE SOLICITUDES DE COMPRA
+
+   Mismos grupos que usa la pantalla de Solicitudes: lo que no
+   está rechazado ni aprobado sigue esperando decisión.
+========================================================= */
+
+const ESTADOS_RECHAZADA = [
+  'RECHAZADO',
+  'ANULADO',
+]
+
+const ESTADOS_APROBADA = [
+  'APROBADO_PARA_DESEMBOLSO',
+  'FONDOS_DESEMBOLSADOS',
+  'COMPRA_REGISTRADA',
+  'COMPRADO_Y_ENTREGADO',
+  'DESCARGO_PENDIENTE_LIQUIDACION',
+  'CERRADO_ARCHIVADO',
+]
+
+
+function grupoCompra(compra) {
+
+  const estado =
+    String(compra?.estado || '')
+      .trim()
+      .toUpperCase()
+
+  if (ESTADOS_RECHAZADA.includes(estado)) {
+    return 'RECHAZADA'
+  }
+
+  if (ESTADOS_APROBADA.includes(estado)) {
+    return 'APROBADA'
+  }
+
+  return 'EN_ESPERA'
+}
 
 
 /* =========================================================
@@ -649,6 +726,24 @@ async function cargarResumen() {
 
     resumen.compras =
       compras.length
+
+
+    resumen.pendientes =
+      compras.filter(
+        compra => grupoCompra(compra) === 'EN_ESPERA'
+      ).length
+
+
+    resumen.aceptadas =
+      compras.filter(
+        compra => grupoCompra(compra) === 'APROBADA'
+      ).length
+
+
+    resumen.rechazadas =
+      compras.filter(
+        compra => grupoCompra(compra) === 'RECHAZADA'
+      ).length
 
 
     resumen.nuevos =
