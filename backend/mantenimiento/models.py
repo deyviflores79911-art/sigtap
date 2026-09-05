@@ -271,11 +271,12 @@ class RequerimientoMantenimiento(models.Model):
         ("SOLICITADA", "Solicitada"),
         ("NO_VIABLE", "No viable"),
         ("VIABLE", "Viable"),
-        ("ENTREGADA", "Componente entregado"),
+        ("PENDIENTE_RECEPCION_TECNICO", "Pendiente de recepción por el técnico"),
+        ("ENTREGADA", "Componente recibido por el técnico"),
     ]
 
     estado_compra_componente = models.CharField(
-        max_length=20,
+        max_length=30,
         choices=ESTADOS_COMPRA_COMPONENTE,
         blank=True
     )
@@ -304,6 +305,14 @@ class RequerimientoMantenimiento(models.Model):
     compra_completada = models.BooleanField(
         default=False
     )
+
+    # La entrega de Almacén debe ser aceptada expresamente por el técnico
+    # asignado antes de habilitar la reparación del equipo.
+    componente_recibido_por = models.CharField(max_length=150, blank=True)
+
+    componente_recibido_en = models.DateTimeField(null=True, blank=True)
+
+    observacion_recepcion_componente = models.TextField(blank=True)
 
 
     # ======================================================

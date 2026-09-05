@@ -17,6 +17,8 @@
         <button class="refresh" :disabled="cargando" @click="cargar">↻ Actualizar</button>
       </header>
 
+      <div v-if="errorCarga" class="error-carga"><b>No se pudieron cargar los requerimientos.</b><span>{{ errorCarga }}</span></div>
+
       <!-- ============================ RESUMEN ============================ -->
       <section v-if="vista==='resumen'">
         <div class="hero">
@@ -33,7 +35,7 @@
           <article @click="irA('ordenes')"><i class="blue">OT</i><div><small>Órdenes por recibir</small><b>{{ porRecibir.length }}</b><p>designadas por la jefatura</p></div></article>
           <article @click="irA('trabajo')"><i class="gold">RP</i><div><small>En reparación</small><b>{{ porReparar.length }}</b><p>trabajo en curso</p></div></article>
           <article @click="irA('trabajo')"><i class="green">PB</i><div><small>Por probar</small><b>{{ porProbar.length }}</b><p>pruebas e informe</p></div></article>
-          <article @click="irA('compras')"><i class="navy">CO</i><div><small>En espera de compra</small><b>{{ enEsperaCompra.length }}</b><p>flujo en pausa</p></div></article>
+          <article @click="irA('recepcion')"><i class="navy">AC</i><div><small>Por recibir</small><b>{{ porRecibirComponente.length }}</b><p>componente y acta</p></div></article>
         </div>
 
         <div class="panels">
@@ -42,8 +44,9 @@
             <button class="flow" @click="irA('ordenes')"><i class="blue">1</i><div><b>Recibir orden de trabajo</b><small>Tomar conocimiento del requerimiento designado</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('ordenes')"><i class="blue">2</i><div><b>Inspección técnica y diagnóstico</b><small>Determinar la falla y si requiere compra</small></div><strong>›</strong></button>
             <button class="flow" @click="irA('compras')"><i class="navy">3</i><div><b>Realizar requerimiento</b><small>Características del componente y cotización</small></div><strong>›</strong></button>
-            <button class="flow" @click="irA('trabajo')"><i class="gold">4</i><div><b>Reparación o instalación</b><small>Ejecutar y registrar la intervención</small></div><strong>›</strong></button>
-            <button class="flow" @click="irA('trabajo')"><i class="green">5</i><div><b>Pruebas e informe a la jefatura</b><small>Comprobar el funcionamiento y elevar el informe</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('recepcion')"><i class="navy">4</i><div><b>Recibir componente y acta</b><small>Confirmar la entrega de Almacén</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('trabajo')"><i class="gold">5</i><div><b>Reparación o instalación</b><small>Ejecutar y registrar la intervención</small></div><strong>›</strong></button>
+            <button class="flow" @click="irA('trabajo')"><i class="green">6</i><div><b>Pruebas e informe a la jefatura</b><small>Comprobar el funcionamiento y elevar el informe</small></div><strong>›</strong></button>
           </section>
           <section class="panel">
             <div class="panel-head"><div><small>SEGUIMIENTO</small><h3>Historial</h3></div></div>
@@ -54,6 +57,23 @@
       </section>
 
             <!-- ==================== A. ÓRDENES DE TRABAJO (MASTER-DETAIL) ==================== -->
+      <section v-else-if="vista==='recepcion'" class="gestion-tickets-layout">
+        <div class="gestion-left"><div class="gestion-left-header"><h3>Componentes pendientes</h3><span class="badge gold-badge">{{ porRecibirComponente.length }} requiere acción</span></div><div class="gestion-lista">
+          <article v-for="r in porRecibirComponente" :key="r.id" :class="['ticket-item', { activo: recepcionActiva?.id === r.id }]" @click="abrirRecepcion(r)"><div class="top"><span>{{ r.codigo }}</span><em class="e-clasificar">ACTA DISPONIBLE</em></div><h4>{{ r.titulo }}</h4><p>{{ r.producto_requerido || 'Componente de mantenimiento' }}</p><p class="item-meta">{{ r.codigo_compra_vinculada }} · {{ r.cantidad_requerida || 1 }} unid.</p></article>
+          <div v-if="!porRecibirComponente.length" class="empty-list">Bandeja al día. No tiene componentes ni actas pendientes.</div>
+        </div></div>
+        <section class="gestion-right">
+          <div v-if="!recepcionActiva" class="ticket-header-card selector-vacio"><span>←</span><h3>Seleccione un componente</h3><p>Revise el acta enviada por Almacén y confirme la recepción.</p></div>
+          <div v-else class="gestion-detalle-wrapper"><div class="ticket-header-card"><div class="t-head"><h2>{{ recepcionActiva.codigo }}</h2><span class="codigo-badge">Recepción de componente</span></div><p>{{ recepcionActiva.titulo }}</p><div class="t-meta"><span><b>Componente:</b> {{ recepcionActiva.producto_requerido || 's/d' }}</span><span><b>Cantidad:</b> {{ recepcionActiva.cantidad_requerida || 1 }} unid.</span></div></div>
+            <div class="workflow-card"><div class="wf-header">Flujo de recepción de componente</div><div class="wf-body">
+              <div class="wf-step" :class="{active:pasoRecepcion===1,completed:pasoRecepcion>1}"><div class="step-num">1</div><div class="step-content"><h4>Revisar acta de conformidad</h4><p>Verifique que el componente y el acta remitidos por Almacén correspondan al requerimiento.</p><div v-if="pasoRecepcion===1" class="step-form"><div class="evidence-box"><div class="evidence-info"><strong>Acta de conformidad</strong><span>{{ recepcionActiva.codigo_compra_vinculada }}</span></div><a v-if="recepcionActiva.compra_vinculada?.acta_conformidad" :href="recepcionActiva.compra_vinculada.acta_conformidad" target="_blank" class="evidence-btn">Abrir acta</a><span v-else class="sin-adjunto">Acta no disponible</span></div><div class="step-actions"><button class="reject" @click="cerrarRecepcion">Cancelar</button><button class="flex-btn primary" :disabled="!recepcionActiva.compra_vinculada?.acta_conformidad" @click="pasoRecepcion=2">Aprobar y continuar</button></div></div></div></div>
+              <div class="wf-step" :class="{active:pasoRecepcion===2,completed:pasoRecepcion>2,locked:pasoRecepcion<2}"><div class="step-num">2</div><div class="step-content"><h4>Confirmar recepción del componente</h4><p>Confirme que recibió físicamente el componente y el acta.</p><div v-if="pasoRecepcion===2" class="step-form"><label class="campo">Descripción de recepción<textarea v-model="formRecepcion.observacion" rows="3" placeholder="Estado del componente, embalaje u observación relevante..."></textarea></label><label class="confirmacion"><input v-model="formRecepcion.confirmado" type="checkbox"> Confirmo que recibí el componente y revisé el acta de conformidad.</label><div class="step-actions"><button class="reject" @click="pasoRecepcion=1">Retroceder</button><button class="flex-btn primary" :disabled="!formRecepcion.confirmado" @click="pasoRecepcion=3">Continuar</button></div></div></div></div>
+              <div class="wf-step" :class="{active:pasoRecepcion===3,locked:pasoRecepcion<3}"><div class="step-num">3</div><div class="step-content"><h4>Habilitar reparación y pruebas</h4><p>Al confirmar, el requerimiento pasará a su bandeja de reparación y pruebas.</p><div v-if="pasoRecepcion===3" class="step-form"><div class="step-actions"><button class="reject" @click="pasoRecepcion=2">Retroceder</button><button class="flex-btn primary" :disabled="procesando" @click="confirmarRecepcion">Confirmar recepción</button></div></div></div></div>
+            </div></div>
+          </div>
+        </section>
+      </section>
+
       <section v-else-if="vista==='ordenes'" class="gestion-tickets-layout">
         <div class="gestion-left">
           <div class="gestion-left-header">
@@ -178,76 +198,23 @@
       </section>
 
       <!-- ============= D. REPARACIÓN, PRUEBAS E INFORME ============= -->
-      <section v-else-if="vista==='trabajo'">
-        <div class="instruction"><b>Reparación, pruebas e informe</b><span>Registre la intervención, ejecute las pruebas técnicas y eleve el informe a la jefatura.</span></div>
-
-        <div v-if="!itemActivo" class="cards">
-          <article v-for="r in enTrabajo" :key="r.id" :class="{ retorno: Number(r.rework_count) > 0 }">
-            <div class="top"><span>{{ r.codigo }}</span><em>{{ etiqueta(r) }}</em></div>
-            <h3>{{ r.titulo }}</h3>
-            <div v-if="Number(r.rework_count) > 0" class="mini-alerta">⚠ Devuelta por la jefatura: el problema no quedó resuelto</div>
-            <ul class="datos">
-              <li><b>Prioridad</b><span>{{ r.prioridad_jefatura || 's/d' }}</span></li>
-              <li v-if="r.producto_requerido"><b>Componente</b><span>{{ r.producto_requerido }}</span></li>
-            </ul>
-            <p>{{ (r.diagnostico||r.descripcion||'').slice(0,140) }}</p>
-            <div class="actions">
-              <button @click="verItem(r)">Ver detalle</button>
-              <button class="primary" @click="abrirTrabajo(r)">{{ siguientePaso(r) }}</button>
-            </div>
-          </article>
-          <div v-if="!enTrabajo.length" class="empty"><span>✓</span><h3>Bandeja al día</h3><p>No hay órdenes en reparación ni pendientes de pruebas.</p></div>
-        </div>
-
-        <div v-else class="panel hoja">
-          <div class="hoja-head">
-            <div><small>HOJA DE TRABAJO</small><h3>{{ itemActivo.codigo }} — {{ itemActivo.titulo }}</h3></div>
-            <button class="refresh" @click="itemActivo=null">Volver</button>
+      <section v-else-if="vista==='trabajo'" class="gestion-tickets-layout">
+        <div class="gestion-left"><div class="gestion-left-header"><h3>Reparaciones pendientes</h3><span class="badge gold-badge">{{ enTrabajo.length }} requiere acción</span></div><div class="gestion-lista">
+          <article v-for="r in enTrabajo" :key="r.id" :class="['ticket-item', { activo: itemActivo?.id === r.id, retorno: Number(r.rework_count) > 0 }]" @click="abrirTrabajo(r)"><div class="top"><span>{{ r.codigo }}</span><em>{{ etiqueta(r) }}</em></div><h4>{{ r.titulo }}</h4><p>{{ r.producto_requerido || r.ubicacion || 'Equipo de mantenimiento' }}</p><p class="item-meta">{{ siguientePaso(r) }}</p></article>
+          <div v-if="!enTrabajo.length" class="empty-list">Bandeja al día. No hay reparaciones, pruebas ni informes pendientes.</div>
+        </div></div>
+        <section class="gestion-right">
+          <div v-if="!itemActivo" class="ticket-header-card selector-vacio"><span>←</span><h3>Seleccione un requerimiento</h3><p>Revise primero el detalle y continúe el trabajo paso a paso.</p></div>
+          <div v-else class="gestion-detalle-wrapper"><div class="ticket-header-card"><div class="t-head"><h2>{{ itemActivo.codigo }}</h2><span class="codigo-badge">Reparación y pruebas</span></div><p>{{ itemActivo.titulo }}</p><div class="t-meta"><span><b>Solicitante:</b> {{ itemActivo.solicitante_nombre || 's/d' }}</span><span><b>Ubicación:</b> {{ itemActivo.ubicacion || 's/d' }}</span></div><div class="desc-box">{{ itemActivo.diagnostico || itemActivo.descripcion }}</div></div>
+            <div class="workflow-card"><div class="wf-header">Flujo de reparación y pruebas</div><div class="wf-body">
+              <div class="wf-step" :class="{active:pasoTrabajo===1,completed:pasoTrabajo>1}"><div class="step-num">1</div><div class="step-content"><h4>Revisar requerimiento y documentación</h4><p>Revise el detalle, diagnóstico, evidencia y antecedentes antes de intervenir el equipo.</p><div class="step-form"><div class="revision-documentos"><div><b>Descripción del requerimiento</b><span>{{ itemActivo.descripcion || 'Sin descripción registrada.' }}</span></div><div><b>Diagnóstico técnico</b><span>{{ itemActivo.diagnostico || 'Sin diagnóstico registrado.' }}</span></div><div><b>Plan de solución</b><span>{{ itemActivo.plan_solucion || 'Sin plan registrado.' }}</span></div><a v-if="itemActivo.evidencia_archivo_url" :href="itemActivo.evidencia_archivo_url" target="_blank" class="evidence-btn">Abrir evidencia reportada</a><span v-else class="sin-adjunto">No existe evidencia adjunta.</span><a v-if="itemActivo.compra_vinculada?.acta_conformidad" :href="itemActivo.compra_vinculada.acta_conformidad" target="_blank" class="evidence-btn">Abrir acta de conformidad</a><span v-if="itemActivo.compra_vinculada && !itemActivo.compra_vinculada.acta_conformidad" class="sin-adjunto">La compra vinculada no tiene acta disponible.</span></div><button class="detalle-btn" @click="verItem(itemActivo)">Ver detalle completo</button><div v-if="pasoTrabajo===1" class="step-actions"><button class="reject" @click="cerrarTrabajo">Cancelar</button><button class="flex-btn primary" @click="pasoTrabajo=2">Siguiente</button></div></div></div></div>
+              <div class="wf-step" :class="{active:pasoTrabajo===2,completed:pasoTrabajo>2,locked:pasoTrabajo<2}"><div class="step-num">2</div><div class="step-content"><h4>Registrar reparación o instalación</h4><p>El técnico documenta el trabajo ejecutado. Puede completar o corregir la información antes de continuar.</p><div v-if="pasoTrabajo>=2" class="step-form"><label class="campo">Reparación o instalación realizada<textarea v-model="formTrabajo.trabajo_realizado" rows="5" placeholder="Trabajo ejecutado sobre el equipo o instalación"></textarea></label><label class="campo">Observaciones<textarea v-model="formTrabajo.observaciones_trabajo" rows="2" placeholder="Observaciones de la intervención"></textarea></label><div v-if="pasoTrabajo===2" class="step-actions"><button class="reject" @click="pasoTrabajo=1">Retroceder</button><button class="flex-btn primary" :disabled="procesando||!formTrabajo.trabajo_realizado.trim()" @click="registrarTrabajo">Guardar reparación y continuar</button></div></div></div></div>
+              <div class="wf-step" :class="{active:pasoTrabajo===3,completed:pasoTrabajo>3,locked:pasoTrabajo<3}"><div class="step-num">3</div><div class="step-content"><h4>Registrar pruebas técnicas</h4><p>El técnico registra las pruebas efectuadas y su resultado antes de preparar el informe.</p><div v-if="pasoTrabajo>=3" class="step-form"><label class="campo">Resultado de las pruebas técnicas<textarea v-model="formPruebas.resultado_pruebas" rows="4" placeholder="Pruebas efectuadas y comportamiento del equipo"></textarea></label><div v-if="pasoTrabajo===3" class="step-actions"><button class="reject" @click="pasoTrabajo=2">Retroceder</button><button class="flex-btn primary" :disabled="procesando||!formPruebas.resultado_pruebas.trim()" @click="registrarPruebas">Guardar pruebas y continuar</button></div></div></div></div>
+              <div class="wf-step" :class="{active:pasoTrabajo===4,completed:pasoTrabajo>4,locked:pasoTrabajo<4}"><div class="step-num">4</div><div class="step-content"><h4>Elaborar informe al Jefe de Mantenimiento</h4><p>Resuma el trabajo, las pruebas y el resultado; adjunte una fotografía si corresponde.</p><div v-if="pasoTrabajo>=4" class="step-form"><template v-if="pasoTrabajo===4"><label class="campo">Informe al Jefe de Mantenimiento<textarea v-model="formInforme.informe_trabajo" rows="4" placeholder="Trabajo realizado, componentes usados, pruebas y resultado"></textarea></label><label class="campo">Fotografía del trabajo<input type="file" accept="image/*" @change="onFotografia"></label></template><div v-else class="registro-resumen"><b>Informe preparado</b><span>{{ formInforme.informe_trabajo }}</span><b>Fotografía del trabajo</b><span>{{ formInforme.fotografia?.name || 'No se adjuntó fotografía.' }}</span></div><div v-if="pasoTrabajo===4" class="step-actions"><button class="reject" @click="pasoTrabajo=3">Retroceder</button><button class="flex-btn primary" :disabled="!formInforme.informe_trabajo.trim()" @click="pasoTrabajo=5">Continuar</button></div></div></div></div>
+              <div class="wf-step" :class="{active:pasoTrabajo===5,locked:pasoTrabajo<5}"><div class="step-num">5</div><div class="step-content"><h4>Enviar informe a la jefatura</h4><p>Revise la información. Al enviar, la jefatura recibirá el caso para verificar el funcionamiento.</p><div v-if="pasoTrabajo===5" class="step-form"><div class="envio-resumen"><b>Reparación:</b><span>{{ formTrabajo.trabajo_realizado }}</span><b>Pruebas:</b><span>{{ formPruebas.resultado_pruebas }}</span><b>Informe:</b><span>{{ formInforme.informe_trabajo }}</span></div><div class="step-actions"><button class="reject" @click="pasoTrabajo=4">Retroceder</button><button class="flex-btn primary" :disabled="procesando||!formInforme.informe_trabajo.trim()" @click="registrarInforme">Enviar informe a la jefatura</button></div></div></div></div>
+            </div></div>
           </div>
-
-          <div v-if="Number(itemActivo.rework_count) > 0" class="alerta">
-            <b>⚠ La jefatura devolvió este caso</b>
-            <span>El problema no quedó resuelto en la intervención anterior.</span>
-          </div>
-
-          <template v-if="!itemActivo.trabajo_realizado">
-            <label class="campo">Reparación o instalación realizada
-              <textarea v-model="formTrabajo.trabajo_realizado" rows="5" placeholder="Trabajo ejecutado sobre el equipo o instalación"></textarea>
-            </label>
-            <label class="campo">Observaciones
-              <textarea v-model="formTrabajo.observaciones_trabajo" rows="2"></textarea>
-            </label>
-            <div class="actions">
-              <button @click="itemActivo=null">Cancelar</button>
-              <button class="primary" :disabled="procesando||!formTrabajo.trabajo_realizado.trim()" @click="registrarTrabajo">Guardar reparación</button>
-            </div>
-          </template>
-
-          <template v-else-if="!itemActivo.resultado_pruebas">
-            <p class="copy"><b>Trabajo registrado:</b> {{ itemActivo.trabajo_realizado }}</p>
-            <label class="campo">Resultado de las pruebas técnicas
-              <textarea v-model="formPruebas.resultado_pruebas" rows="4" placeholder="Pruebas efectuadas y comportamiento del equipo"></textarea>
-            </label>
-            <div class="actions">
-              <button @click="itemActivo=null">Cancelar</button>
-              <button class="primary" :disabled="procesando||!formPruebas.resultado_pruebas.trim()" @click="registrarPruebas">Guardar pruebas técnicas</button>
-            </div>
-          </template>
-
-          <template v-else>
-            <p class="copy"><b>Pruebas:</b> {{ itemActivo.resultado_pruebas }}</p>
-            <label class="campo">Informe al Jefe de Mantenimiento
-              <textarea v-model="formInforme.informe_trabajo" rows="4" placeholder="Trabajo realizado, componentes usados, pruebas y resultado"></textarea>
-            </label>
-            <label class="campo">Fotografía del trabajo
-              <input type="file" accept="image/*" @change="onFotografia">
-            </label>
-            <div class="actions">
-              <button @click="itemActivo=null">Cancelar</button>
-              <button class="primary" :disabled="procesando||!formInforme.informe_trabajo.trim()" @click="registrarInforme">Enviar informe a la jefatura</button>
-            </div>
-          </template>
-        </div>
+        </section>
       </section>
 
       <!-- =========================== HISTORIAL =========================== -->
@@ -303,9 +270,13 @@ const vista = ref('resumen')
 const menuAbierto = ref(false)
 const items = ref([])
 const cargando = ref(false)
+const errorCarga = ref('')
 const procesando = ref(false)
 const itemActivo = ref(null)
+const pasoTrabajo = ref(1)
 const ordenAbierta = ref(null)
+const recepcionActiva = ref(null)
+const pasoRecepcion = ref(1)
 const modoComponente = ref(false)
 const detalle = ref(null)
 
@@ -318,15 +289,17 @@ const misItems = computed(() => items.value.filter(r => Number(r.auxiliar_asigna
 const enCompra = r => ['SOLICITADA', 'VIABLE'].includes(r.estado_compra_componente)
 
 const porRecibir = computed(() => misItems.value.filter(r => r.estado_codigo === 'DERIVADO'))
+const porRecibirComponente = computed(() => misItems.value.filter(r => r.estado_compra_componente === 'PENDIENTE_RECEPCION_TECNICO'))
 const enEsperaCompra = computed(() => misItems.value.filter(r => r.estado_codigo === 'EN_ESPERA_COMPRA' || enCompra(r)))
 const porReparar = computed(() => misItems.value.filter(r => r.estado_codigo === 'EN_MANTENIMIENTO' && !r.trabajo_realizado && !enCompra(r)))
 const porProbar = computed(() => misItems.value.filter(r => r.estado_codigo === 'EN_MANTENIMIENTO' && !!r.trabajo_realizado && !enCompra(r)))
-const enTrabajo = computed(() => [...porReparar.value, ...porProbar.value])
+const enTrabajo = computed(() => misItems.value.filter(r => r.estado_codigo === 'EN_MANTENIMIENTO' && !enCompra(r)))
 const conRetorno = computed(() => misItems.value.filter(r => Number(r.rework_count) > 0 && r.estado_codigo === 'EN_MANTENIMIENTO'))
 
 const menu = computed(() => [
   { id: 'resumen', icono: '⌂', nombre: 'Resumen' },
   { id: 'ordenes', icono: 'OT', nombre: 'Órdenes de trabajo', total: porRecibir.value.length },
+  { id: 'recepcion', icono: 'AC', nombre: 'Recibir componente y acta', total: porRecibirComponente.value.length },
   { id: 'trabajo', icono: 'RP', nombre: 'Reparación y pruebas', total: enTrabajo.value.length },
   { id: 'compras', icono: 'CO', nombre: 'En espera de compra', total: enEsperaCompra.value.length },
   { id: 'historial', icono: 'HI', nombre: 'Historial' },
@@ -335,6 +308,7 @@ const menu = computed(() => [
 const titulo = computed(() => ({
   resumen: 'Panel del Técnico de Mantenimiento',
   ordenes: ordenAbierta.value ? 'Inspección técnica y diagnóstico' : 'Bandeja de órdenes de trabajo',
+  recepcion: 'Recibir componente y acta',
   trabajo: 'Reparación, pruebas e informe',
   compras: 'Requerimientos en espera de compra',
   historial: 'Historial de requerimientos',
@@ -343,6 +317,7 @@ const titulo = computed(() => ({
 const subtitulo = computed(() => ({
   resumen: 'Diagnóstico, reparación y pruebas de los requerimientos asignados a usted.',
   ordenes: 'Requerimientos designados por la jefatura de mantenimiento.',
+  recepcion: 'Componentes entregados por Almacén que requieren su confirmación.',
   trabajo: 'Intervención técnica e informe dirigido a la jefatura.',
   compras: 'Requerimientos cuyo trabajo está en pausa hasta recibir el componente.',
   historial: 'Todos los requerimientos que usted atendió.',
@@ -368,14 +343,30 @@ function fecha(valor) {
 const base = '/api/mantenimiento/requerimientos'
 const token = () => localStorage.getItem('sigta_token')
 
+function cerrarSesionExpirada() {
+  localStorage.removeItem('sigta_token')
+  localStorage.removeItem('sigta_usuario')
+  router.replace({ path: '/login', query: { motivo: 'sesion-expirada' } })
+}
+
 async function cargar() {
   cargando.value = true
+  errorCarga.value = ''
   try {
     const r = await fetch(`${base}/`, { headers: { Authorization: `Token ${token()}` } })
+    if (r.status === 401) {
+      cerrarSesionExpirada()
+      return
+    }
+    if (!r.ok) throw new Error(`El servidor respondió con código ${r.status}.`)
     const d = await r.json()
     items.value = Array.isArray(d) ? d : (d.results || [])
     if (ordenAbierta.value) ordenAbierta.value = items.value.find(x => x.id === ordenAbierta.value.id) || null
     if (itemActivo.value) itemActivo.value = items.value.find(x => x.id === itemActivo.value.id) || null
+    if (recepcionActiva.value) recepcionActiva.value = items.value.find(x => x.id === recepcionActiva.value.id) || null
+  } catch (e) {
+    items.value = []
+    errorCarga.value = e.message || 'Intente actualizar nuevamente.'
   } finally {
     cargando.value = false
   }
@@ -392,6 +383,10 @@ async function postAccion(item, endpoint, body, esFormData = false) {
       body: esFormData ? body : JSON.stringify(body || {}),
     })
     const d = await r.json().catch(() => ({}))
+    if (r.status === 401) {
+      cerrarSesionExpirada()
+      throw new Error('La sesión expiró. Inicie sesión nuevamente.')
+    }
     if (!r.ok) throw new Error(d.detalle || Object.values(d)[0] || 'No fue posible completar la acción.')
     await cargar()
     return d
@@ -405,6 +400,9 @@ function irA(id) {
   menuAbierto.value = false
   ordenAbierta.value = null
   itemActivo.value = null
+  pasoTrabajo.value = 1
+  recepcionActiva.value = null
+  pasoRecepcion.value = 1
   modoComponente.value = false
 }
 
@@ -425,6 +423,30 @@ const formComponente = reactive({
 const formTrabajo = reactive({ trabajo_realizado: '', observaciones_trabajo: '' })
 const formPruebas = reactive({ resultado_pruebas: '' })
 const formInforme = reactive({ informe_trabajo: '', fotografia: null })
+const formRecepcion = reactive({ confirmado: false, observacion: '' })
+
+function abrirRecepcion(item) {
+  recepcionActiva.value = item
+  pasoRecepcion.value = 1
+  formRecepcion.confirmado = false
+  formRecepcion.observacion = ''
+}
+
+function cerrarRecepcion() {
+  recepcionActiva.value = null
+  pasoRecepcion.value = 1
+}
+
+async function confirmarRecepcion() {
+  try {
+    await postAccion(recepcionActiva.value, 'recibir-componente-acta', {
+      observacion_recepcion_componente: formRecepcion.observacion.trim(),
+    })
+    cerrarRecepcion()
+    vista.value = 'trabajo'
+    alert('Recepción registrada. Ya puede realizar la reparación y las pruebas.')
+  } catch (e) { alert(e.message) }
+}
 
 function recibirOrden(item) {
   ordenAbierta.value = item
@@ -517,11 +539,17 @@ async function enviarRequerimiento() {
 /* ---------- Reparación, pruebas e informe ---------- */
 function abrirTrabajo(item) {
   itemActivo.value = item
-  formTrabajo.trabajo_realizado = ''
-  formTrabajo.observaciones_trabajo = ''
-  formPruebas.resultado_pruebas = ''
-  formInforme.informe_trabajo = ''
+  pasoTrabajo.value = 1
+  formTrabajo.trabajo_realizado = item.trabajo_realizado || ''
+  formTrabajo.observaciones_trabajo = item.observaciones_trabajo || ''
+  formPruebas.resultado_pruebas = item.resultado_pruebas || ''
+  formInforme.informe_trabajo = item.informe_trabajo || ''
   formInforme.fotografia = null
+}
+
+function cerrarTrabajo() {
+  itemActivo.value = null
+  pasoTrabajo.value = 1
 }
 
 async function registrarTrabajo() {
@@ -530,6 +558,7 @@ async function registrarTrabajo() {
       trabajo_realizado: formTrabajo.trabajo_realizado.trim(),
       observaciones_trabajo: formTrabajo.observaciones_trabajo.trim(),
     })
+    pasoTrabajo.value = 3
   } catch (e) { alert(e.message) }
 }
 
@@ -538,6 +567,7 @@ async function registrarPruebas() {
     await postAccion(itemActivo.value, 'pruebas-tecnicas', {
       resultado_pruebas: formPruebas.resultado_pruebas.trim(),
     })
+    pasoTrabajo.value = 4
   } catch (e) { alert(e.message) }
 }
 
@@ -546,6 +576,11 @@ function onFotografia(evento) {
 }
 
 async function registrarInforme() {
+  if (!formInforme.informe_trabajo.trim()) {
+    pasoTrabajo.value = 4
+    alert('Debe registrar el informe de trabajo antes de enviarlo a la jefatura.')
+    return
+  }
   try {
     const datos = new FormData()
     datos.append('informe_trabajo', formInforme.informe_trabajo.trim())
@@ -620,6 +655,10 @@ onMounted(cargar)
 textarea { width: 100%; border: 1px solid var(--sigta-borde); border-radius: 6px; padding: 10px; font-family: inherit; font-size: 13px; resize: vertical; margin-bottom: 15px; }
 .full-select { width: 100%; border: 1px solid var(--sigta-borde); border-radius: 6px; padding: 10px; font-family: inherit; font-size: 13px; color: var(--sigta-texto); background: #fff; margin-bottom: 15px; }
 .step-btn { width: 100%; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; background: var(--sigta-azul); color: var(--sigta-blanco); font-size: 14px; text-align: center; margin-top:10px; }
+.error-carga{background:var(--sigta-error-fondo);border-left:4px solid var(--sigta-error);padding:12px 16px;border-radius:7px;margin:-10px 0 17px}.error-carga b,.error-carga span{display:block}.error-carga b{color:var(--sigta-error);font-size:13px}.error-carga span{color:var(--sigta-error);font-size:12px;margin-top:3px}
+.detalle-btn{width:100%;background:var(--sigta-blanco);border:1px solid var(--sigta-borde);color:var(--sigta-azul);padding:10px;border-radius:6px;font-weight:700;cursor:pointer;margin:0 0 14px}
+.revision-documentos,.registro-resumen,.envio-resumen{display:grid;gap:8px;background:#f8fafc;border:1px solid var(--sigta-borde-suave);border-radius:8px;padding:13px;margin:0 0 14px}.revision-documentos>div{display:grid;gap:3px;padding-bottom:8px;border-bottom:1px solid var(--sigta-borde-suave)}.revision-documentos>div:last-of-type{border-bottom:0;padding-bottom:0}.revision-documentos b,.registro-resumen b,.envio-resumen b{font-size:11px;color:var(--sigta-texto-suave)}.revision-documentos span,.registro-resumen span,.envio-resumen span{font-size:12px;color:var(--sigta-texto);line-height:1.45}.envio-resumen{grid-template-columns:auto 1fr}.envio-resumen b{align-self:start}
+.gold-badge{background:#fef3c7;color:#854d0e}.item-meta{margin-top:6px!important;color:var(--sigta-mostaza-oscuro)!important;font-weight:700}.selector-vacio{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--sigta-texto-suave)}.selector-vacio>span{font-size:30px;color:var(--sigta-exito)}.evidence-box{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f8fafc;border:1px solid var(--sigta-borde-suave);border-radius:8px;padding:12px;margin:14px 0}.evidence-info{display:flex;flex-direction:column;gap:3px}.evidence-info strong{font-size:13px}.evidence-info span,.sin-adjunto{font-size:11px;color:var(--sigta-texto-suave)}.evidence-btn{background:var(--sigta-azul);color:var(--sigta-blanco);padding:7px 11px;border-radius:6px;text-decoration:none;font-size:11px;font-weight:700}.confirmacion{display:flex;gap:8px;align-items:flex-start;margin:14px 0 18px;font-size:12px;font-weight:700;line-height:1.45}.confirmacion input{margin:2px 0 0;width:auto}
 
 @media(max-width:1050px){.stats{grid-template-columns:1fr 1fr}.panels{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}@media(max-width:760px){aside{position:static;width:100%}main{margin:0;padding:20px}.stats,.cards{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column;gap:12px}.detalle-fila{grid-template-columns:1fr}}
 </style>

@@ -189,6 +189,12 @@ class RequerimientoMantenimientoSerializer(
 
             "compra_completada",
 
+            "componente_recibido_por",
+
+            "componente_recibido_en",
+
+            "observacion_recepcion_componente",
+
             "motivo_rechazo",
 
             "validado_en",
@@ -296,6 +302,12 @@ class RequerimientoMantenimientoSerializer(
             "codigo_compra_vinculada",
 
             "compra_completada",
+
+            "componente_recibido_por",
+
+            "componente_recibido_en",
+
+            "observacion_recepcion_componente",
 
             "trabajo_realizado",
 
