@@ -1,6 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from django.utils import timezone
+from django.core.files.base import ContentFile
 
 from rest_framework import (
     status,
@@ -49,6 +50,7 @@ from .serializers import (
     EstadoMantenimientoSerializer,
     RequerimientoMantenimientoSerializer,
 )
+from soporte.informes_pdf import informe_requerimiento_mantenimiento
 
 
 # ==========================================================
@@ -991,11 +993,16 @@ class RequerimientoMantenimientoViewSet(
         ).strip()
         requerimiento.cantidad_requerida = cantidad
         requerimiento.costo_estimado = costo
-        informe_compra = request.FILES.get("informe_compra") or requerimiento.informe_compra
         cotizacion_compra = request.FILES.get("cotizacion_archivo") or requerimiento.cotizacion_archivo
-        if not borrador and (not informe_compra or not cotizacion_compra):
-            return Response({"detalle": "Adjunte el informe técnico con sus cuadros y la cotización antes de enviar a jefatura."}, status=400)
-        requerimiento.informe_compra = informe_compra
+        if borrador and request.FILES.get("informe_compra"):
+            requerimiento.informe_compra = request.FILES["informe_compra"]
+        if not borrador and not cotizacion_compra:
+            return Response({"detalle": "Adjunte la cotización antes de enviar a jefatura."}, status=400)
+        if not borrador:
+            requerimiento.informe_compra.save(
+                f"informe-requerimiento-{requerimiento.codigo}.pdf",
+                ContentFile(informe_requerimiento_mantenimiento(requerimiento)), save=False,
+            )
         if not borrador:
             requerimiento.estado_compra_componente = "SOLICITADA"
 

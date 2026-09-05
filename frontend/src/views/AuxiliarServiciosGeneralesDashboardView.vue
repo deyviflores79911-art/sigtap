@@ -160,17 +160,14 @@
                       <label class="campo">Costo estimado (Bs.)
                         <input v-monto inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" v-model="formComponente.costo_estimado" type="text" min="0" max="9999999999.99" step="0.01" class="full-select">
                       </label>
-                      <label class="campo">Informe técnico con cuadros (obligatorio)
-                        <input type="file" accept=".pdf,.doc,.docx,image/*" @change="e => formComponente.informe = e.target.files?.[0] || null">
-                        <a v-if="ordenAbierta?.informe_compra" :href="ordenAbierta.informe_compra" target="_blank">Ver informe guardado</a>
-                      </label>
+                      <a v-if="ordenAbierta?.informe_compra" :href="ordenAbierta.informe_compra" target="_blank">Ver informe de requerimiento generado</a>
                       <label class="campo">Cotización (obligatoria)
                         <input type="file" accept="application/pdf,image/*" @change="onCotizacion" class="full-select">
                       </label>
                       
                       <div class="step-actions mt-2">
                         <button class="reject" @click="retroceder">Retroceder</button>
-                        <button class="step-btn" :disabled="procesando" @click="guardarBorradorCompra">Guardar borrador</button><button class="primary flex-btn" :disabled="procesando||!formComponente.producto_requerido.trim() || !(formComponente.informe || ordenAbierta?.informe_compra) || !(formComponente.archivo || ordenAbierta?.cotizacion_archivo)" @click="enviarRequerimiento">Enviar requerimiento</button>
+                        <button class="step-btn" :disabled="procesando" @click="guardarBorradorCompra">Guardar borrador</button><button class="primary flex-btn" :disabled="procesando||!formComponente.producto_requerido.trim() || !(formComponente.archivo || ordenAbierta?.cotizacion_archivo)" @click="enviarRequerimiento">Enviar requerimiento</button>
                       </div>
                     </div>
                   </div>
@@ -461,7 +458,7 @@ function recibirOrden(item) {
   modoComponente.value = vista.value === 'cotizaciones'
   formDiagnostico.diagnostico = item.diagnostico || ''
   formDiagnostico.plan_solucion = item.plan_solucion || ''
-  formDiagnostico.requiere_compra = false
+  formDiagnostico.requiere_compra = vista.value === 'cotizaciones' || Boolean(item.requiere_reposicion)
   formComponente.producto_requerido = item.producto_requerido || ''
   formComponente.especificacion_producto = item.especificacion_producto || ''
   formComponente.cantidad_requerida = item.cantidad_requerida || 1

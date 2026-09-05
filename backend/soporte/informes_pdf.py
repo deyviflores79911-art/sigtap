@@ -258,3 +258,13 @@ def informe_jefe_carrera(ticket, contenido):
         ("INFORME DE JEFATURA UTIC", [("Conclusión", ticket.informe_final)]),
         ("INFORME DEL JEFE DE CARRERA", [("Conclusión y observaciones", contenido)]),
     ], [("Código", ticket.codigo), ("Fecha de emisión", _fecha()), ("Jefe de carrera", _nombre(ticket.solicitante)), ("Gestión", datetime.now().year)])
+
+
+def informe_requerimiento_mantenimiento(requerimiento):
+    return _documento_pdf("INFORME TÉCNICO DE REQUERIMIENTO", "Solicitud de componente para mantenimiento", requerimiento, [
+        ("DATOS DEL REQUERIMIENTO", [("Asunto", requerimiento.titulo), ("Solicitante", _nombre(requerimiento.solicitante)), ("Ubicación", requerimiento.ubicacion)]),
+        ("EVALUACIÓN TÉCNICA", [("Diagnóstico", requerimiento.diagnostico), ("Plan de solución", requerimiento.plan_solucion)]),
+    ], [("Código", requerimiento.codigo), ("Fecha de emisión", _fecha()), ("Técnico responsable", _nombre(requerimiento.auxiliar_asignado)), ("Gestión", datetime.now().year)], [
+        ("Componente requerido", requerimiento.producto_requerido), ("Cantidad", requerimiento.cantidad_requerida),
+        ("Especificaciones técnicas", requerimiento.especificacion_producto), ("Costo estimado", f"Bs. {_texto(requerimiento.costo_estimado)}"),
+    ])

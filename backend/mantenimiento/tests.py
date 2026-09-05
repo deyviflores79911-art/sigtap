@@ -295,7 +295,7 @@ class FlujoMantenimientoTests(APITestCase):
         self.assertEqual(solicitud.origen_modulo, "MANTENIMIENTO")
         self.assertEqual(solicitud.requerimiento_mantenimiento_id, pk)
         self.assertEqual(solicitud.estado, "CREADO_PENDIENTE_DAF")
-        self.assertEqual(solicitud.informe.read(), b"informe con cuadros")
+        self.assertEqual(solicitud.informe.read(5), b"%PDF-")
         self.assertEqual(solicitud.proforma.read(), b"cotizacion")
         self.assertTrue(solicitud.poa)
         self.assertTrue(solicitud.pedido)
